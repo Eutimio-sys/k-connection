@@ -469,7 +469,15 @@ export type Database = {
           withholding_tax_rate?: number | null
           worker_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "labor_expenses_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       leave_balances: {
         Row: {
