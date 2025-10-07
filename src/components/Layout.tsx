@@ -13,7 +13,8 @@ import {
   Menu,
   X,
   Kanban as KanbanIcon,
-  Wallet
+  Wallet,
+  Receipt
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -68,6 +69,7 @@ const Layout = () => {
     { icon: FolderKanban, label: "โครงการ", path: "/projects" },
     { icon: KanbanIcon, label: "ตารางงาน", path: "/kanban" },
     { icon: ShoppingCart, label: "ใบขอซื้อ", path: "/purchase-requests" },
+    { icon: Receipt, label: "บัญชี", path: "/accounting" },
     { icon: Wallet, label: "จ่ายเงินรายวัน", path: "/daily-payments" },
     { icon: Users, label: "พนักงาน", path: "/employees" },
     { icon: Settings, label: "ตั้งค่า", path: "/settings" },
