@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Mail, Calendar, Briefcase, FileText, ArrowLeft } from "lucide-react";
+import { Mail, Calendar, Briefcase, FileText, ArrowLeft, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import IncomeHistoryDialog from "@/components/IncomeHistoryDialog";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ const Profile = () => {
   const [documentTypes, setDocumentTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
+  const [incomeDialogOpen, setIncomeDialogOpen] = useState(false);
   const [selectedDocumentType, setSelectedDocumentType] = useState("");
   const [documentNotes, setDocumentNotes] = useState("");
 
@@ -113,50 +115,60 @@ const Profile = () => {
           </div>
           <p className="text-muted-foreground text-lg ml-14">จัดการข้อมูลส่วนตัวของคุณ</p>
         </div>
-        <Dialog open={documentDialogOpen} onOpenChange={setDocumentDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <FileText size={16} />
-              ขอเอกสาร
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>ขอเอกสาร</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>ประเภทเอกสาร *</Label>
-                <Select value={selectedDocumentType} onValueChange={setSelectedDocumentType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="เลือกประเภทเอกสาร" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {documentTypes.map((type) => (
-                      <SelectItem key={type.id} value={type.id}>
-                        {type.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>หมายเหตุ (ถ้ามี)</Label>
-                <Textarea
-                  value={documentNotes}
-                  onChange={(e) => setDocumentNotes(e.target.value)}
-                  rows={3}
-                  placeholder="ระบุรายละเอียดเพิ่มเติม เช่น จำนวนชุด หรือความต้องการพิเศษ"
-                />
-              </div>
-
-              <Button onClick={handleRequestDocument} className="w-full">
-                ส่งคำขอ
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => setIncomeDialogOpen(true)}
+          >
+            <DollarSign size={16} />
+            ดูรายได้
+          </Button>
+          <Dialog open={documentDialogOpen} onOpenChange={setDocumentDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <FileText size={16} />
+                ขอเอกสาร
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>ขอเอกสาร</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label>ประเภทเอกสาร *</Label>
+                  <Select value={selectedDocumentType} onValueChange={setSelectedDocumentType}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="เลือกประเภทเอกสาร" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {documentTypes.map((type) => (
+                        <SelectItem key={type.id} value={type.id}>
+                          {type.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>หมายเหตุ (ถ้ามี)</Label>
+                  <Textarea
+                    value={documentNotes}
+                    onChange={(e) => setDocumentNotes(e.target.value)}
+                    rows={3}
+                    placeholder="ระบุรายละเอียดเพิ่มเติม เช่น จำนวนชุด หรือความต้องการพิเศษ"
+                  />
+                </div>
+
+                <Button onClick={handleRequestDocument} className="w-full">
+                  ส่งคำขอ
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -293,6 +305,14 @@ const Profile = () => {
           )}
         </div>
       </div>
+
+      {profile && (
+        <IncomeHistoryDialog
+          open={incomeDialogOpen}
+          onOpenChange={setIncomeDialogOpen}
+          userId={profile.id}
+        />
+      )}
     </div>
   );
 };

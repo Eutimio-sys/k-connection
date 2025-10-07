@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CheckCircle, XCircle, FileText, Users, Calendar, ArrowLeft } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { CheckCircle, XCircle, FileText, Users, Calendar, ArrowLeft, History } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
@@ -18,6 +20,9 @@ const Approvals = () => {
   const [laborExpenses, setLaborExpenses] = useState<any[]>([]);
   const [materialExpenses, setMaterialExpenses] = useState<any[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
+  const [approvedLabor, setApprovedLabor] = useState<any[]>([]);
+  const [approvedMaterial, setApprovedMaterial] = useState<any[]>([]);
+  const [approvedLeave, setApprovedLeave] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedLaborExpense, setSelectedLaborExpense] = useState<any>(null);
   const [selectedMaterialExpense, setSelectedMaterialExpense] = useState<any>(null);
@@ -25,6 +30,10 @@ const Approvals = () => {
   const [laborDialogOpen, setLaborDialogOpen] = useState(false);
   const [materialDialogOpen, setMaterialDialogOpen] = useState(false);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [historyFilter, setHistoryFilter] = useState({
+    startDate: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0],
+  });
 
   useEffect(() => {
     fetchAllPendingItems();
