@@ -96,7 +96,7 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
       if (!error && data) {
         setMaterialItems(data as any);
       }
-    } else {
+    } else if (expenseType === "labor") {
       const { data, error } = await supabase
         .from("labor_expenses")
         .select(`
@@ -115,6 +115,63 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
       if (!error && data) {
         setLaborItems(data as any);
       }
+    } else if (expenseType === "salary") {
+      // Parse year and month from filterDate
+      const [year, month] = filterDate.split("-").map(Number);
+
+      // Fetch tax/social security records for the selected month/year
+      const { data: taxData, error: taxError } = await supabase
+        .from("employee_tax_social_security")
+        .select("*")
+        .eq("year", year)
+        .eq("month", month);
+
+      if (taxError) {
+        console.error("Error fetching salary data:", taxError);
+        setSalaryItems([]);
+        return;
+      }
+
+      if (!taxData || taxData.length === 0) {
+        setSalaryItems([]);
+        return;
+      }
+
+      // Get unique user IDs
+      const userIds = [...new Set(taxData.map((t: any) => t.user_id))];
+
+      // Fetch user profiles
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("id, full_name, position, phone")
+        .in("id", userIds);
+
+      // Fetch latest salary records for these users
+      const { data: salariesData } = await supabase
+        .from("salary_records")
+        .select("user_id, salary_amount, effective_date")
+        .in("user_id", userIds)
+        .order("effective_date", { ascending: false });
+
+      // Map salary to users (latest salary per user)
+      const latestSalaryByUser: Record<string, number> = {};
+      (salariesData || []).forEach((rec: any) => {
+        if (latestSalaryByUser[rec.user_id] === undefined) {
+          latestSalaryByUser[rec.user_id] = Number(rec.salary_amount) || 0;
+        }
+      });
+
+      // Combine tax data with user profiles and salary
+      const combinedData = taxData.map((tax: any) => {
+        const profile = (profilesData || []).find((p: any) => p.id === tax.user_id);
+        return {
+          ...tax,
+          user: profile || { id: tax.user_id, full_name: "ไม่ทราบชื่อ", position: null, phone: null },
+          salary: latestSalaryByUser[tax.user_id] || 0,
+        };
+      });
+
+      setSalaryItems(combinedData);
     }
   };
 
