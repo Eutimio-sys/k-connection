@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, FileText, ArrowLeft, Eye, Pencil, DollarSign, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -21,6 +22,7 @@ const HRManagement = () => {
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
   const [companies, setCompanies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("all");
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -94,7 +96,7 @@ const HRManagement = () => {
         .from("document_requests")
         .select(`
           *,
-          user:profiles!document_requests_user_id_fkey(full_name, position, department),
+          user:profiles!document_requests_user_id_fkey(full_name, position, department, company_id),
           document_type:document_types(name, description),
           processor:profiles!document_requests_processed_by_fkey(full_name)
         `)
@@ -222,6 +224,15 @@ const HRManagement = () => {
     return <div className="p-8 text-center"><p>กำลังโหลด...</p></div>;
   }
 
+  // Filter data based on selected company
+  const filteredEmployees = selectedCompanyId === "all" 
+    ? employees 
+    : employees.filter(emp => emp.company_id === selectedCompanyId);
+
+  const filteredDocumentRequests = selectedCompanyId === "all"
+    ? documentRequests
+    : documentRequests.filter(req => req.user?.company_id === selectedCompanyId);
+
   return (
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between">
@@ -239,6 +250,27 @@ const HRManagement = () => {
         <AddEmployeeDialog onSuccess={fetchData} companies={companies} />
       </div>
 
+      <Card className="bg-gradient-to-r from-background to-muted/20">
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-4">
+            <Label className="font-medium whitespace-nowrap">กรองตามบริษัท:</Label>
+            <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
+              <SelectTrigger className="w-[300px]">
+                <SelectValue placeholder="เลือกบริษัท" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">ทั้งหมด</SelectItem>
+                {companies.map((company) => (
+                  <SelectItem key={company.id} value={company.id}>
+                    {company.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
       <Tabs defaultValue="employees" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3 max-w-2xl">
           <TabsTrigger value="employees">พนักงาน</TabsTrigger>
@@ -251,7 +283,7 @@ const HRManagement = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users size={20} />
-                รายชื่อพนักงานทั้งหมด ({employees.length})
+                รายชื่อพนักงานทั้งหมด ({filteredEmployees.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -269,7 +301,7 @@ const HRManagement = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {employees.map((emp) => (
+                  {filteredEmployees.map((emp) => (
                     <TableRow key={emp.id}>
                       <TableCell className="font-medium">{emp.full_name}</TableCell>
                       <TableCell>{emp.company?.name || "-"}</TableCell>
@@ -363,12 +395,12 @@ const HRManagement = () => {
                         className="w-full border rounded-md p-2"
                         value={selectedEmployeeForTax?.id || ""}
                         onChange={(e) => {
-                          const emp = employees.find(emp => emp.id === e.target.value);
+                          const emp = filteredEmployees.find(emp => emp.id === e.target.value);
                           setSelectedEmployeeForTax(emp);
                         }}
                       >
                         <option value="">เลือกพนักงาน</option>
-                        {employees.map((emp) => (
+                        {filteredEmployees.map((emp) => (
                           <option key={emp.id} value={emp.id}>
                             {emp.full_name} - {emp.position || "ไม่ระบุตำแหน่ง"}
                           </option>
@@ -444,7 +476,7 @@ const HRManagement = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {employees.map((emp) => (
+                  {filteredEmployees.map((emp) => (
                     <EmployeeTaxRow key={emp.id} employee={emp} />
                   ))}
                 </TableBody>
@@ -458,11 +490,11 @@ const HRManagement = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText size={20} />
-                คำขอเอกสาร ({documentRequests.length})
+                คำขอเอกสาร ({filteredDocumentRequests.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {documentRequests.length === 0 ? (
+              {filteredDocumentRequests.length === 0 ? (
                 <p className="text-center py-8 text-muted-foreground">ยังไม่มีคำขอเอกสาร</p>
               ) : (
                 <Table>
@@ -477,7 +509,7 @@ const HRManagement = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {documentRequests.map((request) => (
+                    {filteredDocumentRequests.map((request) => (
                       <TableRow key={request.id}>
                         <TableCell>
                           <div>
