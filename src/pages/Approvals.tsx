@@ -299,7 +299,20 @@ const Approvals = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { error } = await supabase
+    // Get the leave request details first
+    const { data: leaveRequest } = await supabase
+      .from("leave_requests")
+      .select("*")
+      .eq("id", requestId)
+      .single();
+
+    if (!leaveRequest) {
+      toast.error("ไม่พบข้อมูลคำขอลา");
+      return;
+    }
+
+    // Update leave request status
+    const { error: updateError } = await supabase
       .from("leave_requests")
       .update({ 
         status: "approved", 
@@ -310,13 +323,51 @@ const Approvals = () => {
       })
       .eq("id", requestId);
 
-    if (error) {
+    if (updateError) {
       toast.error("เกิดข้อผิดพลาดในการอนุมัติ");
-      console.error(error);
-    } else {
-      toast.success("อนุมัติสำเร็จ");
-      fetchAllPendingItems();
+      console.error(updateError);
+      return;
     }
+
+    // Update leave balance
+    const currentYear = new Date(leaveRequest.start_date).getFullYear();
+    const { data: balance } = await supabase
+      .from("leave_balances")
+      .select("*")
+      .eq("user_id", leaveRequest.user_id)
+      .eq("year", currentYear)
+      .maybeSingle();
+
+    if (balance) {
+      let updateField = "";
+      if (leaveRequest.leave_type === "vacation") {
+        updateField = "vacation_used";
+      } else if (leaveRequest.leave_type === "sick") {
+        updateField = "sick_used";
+      } else if (leaveRequest.leave_type === "personal") {
+        updateField = "personal_used";
+      }
+
+      if (updateField) {
+        const currentUsed = Number(balance[updateField]) || 0;
+        const newUsed = currentUsed + Number(leaveRequest.days_count);
+
+        const { error: balanceError } = await supabase
+          .from("leave_balances")
+          .update({ [updateField]: newUsed })
+          .eq("user_id", leaveRequest.user_id)
+          .eq("year", currentYear);
+
+        if (balanceError) {
+          console.error("Error updating leave balance:", balanceError);
+          toast.error("อนุมัติสำเร็จ แต่ไม่สามารถอัพเดทยอดวันลาได้");
+        } else {
+          toast.success("อนุมัติสำเร็จและอัพเดทยอดวันลาแล้ว");
+        }
+      }
+    }
+
+    fetchAllPendingItems();
   };
 
   const handleRejectLeaveRequest = async (requestId: string) => {
