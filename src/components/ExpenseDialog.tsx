@@ -19,8 +19,18 @@ interface ExpenseItem {
   notes: string;
 }
 
-const ExpenseDialog = ({ children, onSuccess, expense }: { children: React.ReactNode; onSuccess: () => void; expense?: any }) => {
-  const [open, setOpen] = useState(false);
+interface ExpenseDialogProps {
+  children?: React.ReactNode;
+  onSuccess: () => void;
+  expense?: any;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onOpenChange }: ExpenseDialogProps) => {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
   const [loading, setLoading] = useState(false);
   const [vendors, setVendors] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);

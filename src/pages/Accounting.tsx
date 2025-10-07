@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import ExpenseDialog from "@/components/ExpenseDialog";
+import ExpenseDetailDialog from "@/components/ExpenseDetailDialog";
 import { Plus, FileText, ExternalLink, Edit, Filter } from "lucide-react";
 import { format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,8 +16,9 @@ import { Label } from "@/components/ui/label";
 const Accounting = () => {
   const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingExpense, setEditingExpense] = useState<any>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState<any>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: "",
@@ -100,6 +102,11 @@ const Accounting = () => {
       style: "currency",
       currency: "THB",
     }).format(amount);
+  };
+
+  const handleExpenseClick = (expense: any) => {
+    setSelectedExpense(expense);
+    setDetailDialogOpen(true);
   };
 
   return (
@@ -207,7 +214,13 @@ const Accounting = () => {
                 <div className="flex justify-between items-start">
                   <div>
                     <CardTitle className="text-xl mb-2">
-                      เลขที่บิล: {expense.invoice_number}
+                      เลขที่บิล:{" "}
+                      <button
+                        onClick={() => handleExpenseClick(expense)}
+                        className="text-primary hover:underline cursor-pointer"
+                      >
+                        {expense.invoice_number}
+                      </button>
                       {expense.tax_invoice_number && (
                         <span className="text-sm text-muted-foreground ml-2">
                           (พิม: {expense.tax_invoice_number})
@@ -292,6 +305,15 @@ const Accounting = () => {
             </Card>
           ))}
         </div>
+      )}
+
+      {selectedExpense && (
+        <ExpenseDetailDialog
+          expense={selectedExpense}
+          open={detailDialogOpen}
+          onOpenChange={setDetailDialogOpen}
+          onSuccess={fetchExpenses}
+        />
       )}
     </div>
   );
