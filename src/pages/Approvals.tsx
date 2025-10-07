@@ -41,7 +41,7 @@ const Approvals = () => {
         worker:workers(full_name),
         project:projects(name),
         company:companies(name),
-        labor_expense_items(*,category:expense_categories(name)),
+        labor_expense_items(*),
         labor_expense_deductions(*)
       `)
       .eq("status", "pending")
@@ -55,7 +55,7 @@ const Approvals = () => {
         vendor:vendors(name),
         project:projects(name),
         company:companies(name),
-        expense_items(*,category:expense_categories(name))
+        expense_items(*)
       `)
       .eq("status", "pending")
       .order("created_at", { ascending: false });
@@ -71,8 +71,42 @@ const Approvals = () => {
       .eq("status", "pending")
       .order("created_at", { ascending: false });
 
-    setLaborExpenses(laborData || []);
-    setMaterialExpenses(materialData || []);
+    // Fetch category names for labor expense items
+    const laborWithCategories = await Promise.all(
+      (laborData || []).map(async (expense) => {
+        const itemsWithCategories = await Promise.all(
+          (expense.labor_expense_items || []).map(async (item: any) => {
+            const { data: category } = await supabase
+              .from('expense_categories')
+              .select('name')
+              .eq('id', item.category_id)
+              .single();
+            return { ...item, category };
+          })
+        );
+        return { ...expense, labor_expense_items: itemsWithCategories };
+      })
+    );
+
+    // Fetch category names for material expense items
+    const materialWithCategories = await Promise.all(
+      (materialData || []).map(async (expense) => {
+        const itemsWithCategories = await Promise.all(
+          (expense.expense_items || []).map(async (item: any) => {
+            const { data: category } = await supabase
+              .from('expense_categories')
+              .select('name')
+              .eq('id', item.category_id)
+              .single();
+            return { ...item, category };
+          })
+        );
+        return { ...expense, expense_items: itemsWithCategories };
+      })
+    );
+
+    setLaborExpenses(laborWithCategories);
+    setMaterialExpenses(materialWithCategories);
     setLeaveRequests(leaveData || []);
     setLoading(false);
   };

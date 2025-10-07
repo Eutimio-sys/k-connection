@@ -51,7 +51,6 @@ const Accounting = () => {
         vendor:vendors(name),
         project:projects(name),
         company:companies(name),
-        updated_by_profile:profiles!expenses_updated_by_fkey(full_name),
         expense_items(
           *,
           category:expense_categories(name)
@@ -77,7 +76,21 @@ const Accounting = () => {
       toast.error("เกิดข้อผิดพลาดในการโหลดข้อมูล");
       console.error(error);
     } else {
-      setExpenses(data || []);
+      // Fetch updated_by profile data separately if needed
+      const expensesWithProfiles = await Promise.all(
+        (data || []).map(async (expense) => {
+          if (expense.updated_by && expense.status === 'approved') {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('id', expense.updated_by)
+              .single();
+            return { ...expense, updated_by_profile: profile };
+          }
+          return expense;
+        })
+      );
+      setExpenses(expensesWithProfiles);
     }
     setLoading(false);
   };
