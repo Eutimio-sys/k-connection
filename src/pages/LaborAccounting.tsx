@@ -18,8 +18,8 @@ const LaborAccounting = () => {
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: "",
-    projectId: "",
-    workerId: "",
+    projectId: "all",
+    workerId: "all",
   });
   const [projects, setProjects] = useState<any[]>([]);
   const [workers, setWorkers] = useState<any[]>([]);
@@ -57,10 +57,10 @@ const LaborAccounting = () => {
     if (filters.endDate) {
       query = query.lte("invoice_date", filters.endDate);
     }
-    if (filters.projectId) {
+    if (filters.projectId && filters.projectId !== "all") {
       query = query.eq("project_id", filters.projectId);
     }
-    if (filters.workerId) {
+    if (filters.workerId && filters.workerId !== "all") {
       query = query.eq("worker_id", filters.workerId);
     }
 
@@ -133,7 +133,7 @@ const LaborAccounting = () => {
                     <SelectValue placeholder="ทั้งหมด" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">ทั้งหมด</SelectItem>
+                    <SelectItem value="all">ทั้งหมด</SelectItem>
                     {projects.map((p) => (
                       <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     ))}
@@ -147,7 +147,7 @@ const LaborAccounting = () => {
                     <SelectValue placeholder="ทั้งหมด" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">ทั้งหมด</SelectItem>
+                    <SelectItem value="all">ทั้งหมด</SelectItem>
                     {workers.map((w) => (
                       <SelectItem key={w.id} value={w.id}>{w.full_name}</SelectItem>
                     ))}
@@ -156,7 +156,7 @@ const LaborAccounting = () => {
               </div>
             </div>
             <div className="flex justify-end mt-4 gap-2">
-              <Button variant="outline" onClick={() => setFilters({ startDate: "", endDate: "", projectId: "", workerId: "" })}>
+              <Button variant="outline" onClick={() => setFilters({ startDate: "", endDate: "", projectId: "all", workerId: "all" })}>
                 ล้างตัวกรอง
               </Button>
               <Button onClick={fetchExpenses}>ค้นหา</Button>

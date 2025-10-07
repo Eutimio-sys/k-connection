@@ -20,8 +20,8 @@ const Accounting = () => {
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: "",
-    projectId: "",
-    vendorId: "",
+    projectId: "all",
+    vendorId: "all",
   });
   const [projects, setProjects] = useState<any[]>([]);
   const [vendors, setVendors] = useState<any[]>([]);
@@ -61,10 +61,10 @@ const Accounting = () => {
     if (filters.endDate) {
       query = query.lte("invoice_date", filters.endDate);
     }
-    if (filters.projectId) {
+    if (filters.projectId && filters.projectId !== "all") {
       query = query.eq("project_id", filters.projectId);
     }
-    if (filters.vendorId) {
+    if (filters.vendorId && filters.vendorId !== "all") {
       query = query.eq("vendor_id", filters.vendorId);
     }
 
@@ -152,7 +152,7 @@ const Accounting = () => {
                     <SelectValue placeholder="ทั้งหมด" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">ทั้งหมด</SelectItem>
+                    <SelectItem value="all">ทั้งหมด</SelectItem>
                     {projects.map((p) => (
                       <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     ))}
@@ -166,7 +166,7 @@ const Accounting = () => {
                     <SelectValue placeholder="ทั้งหมด" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">ทั้งหมด</SelectItem>
+                    <SelectItem value="all">ทั้งหมด</SelectItem>
                     {vendors.map((v) => (
                       <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
                     ))}
@@ -175,7 +175,7 @@ const Accounting = () => {
               </div>
             </div>
             <div className="flex justify-end mt-4 gap-2">
-              <Button variant="outline" onClick={() => setFilters({ startDate: "", endDate: "", projectId: "", vendorId: "" })}>
+              <Button variant="outline" onClick={() => setFilters({ startDate: "", endDate: "", projectId: "all", vendorId: "all" })}>
                 ล้างตัวกรอง
               </Button>
               <Button onClick={fetchExpenses}>ค้นหา</Button>
