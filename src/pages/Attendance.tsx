@@ -34,11 +34,11 @@ const Attendance = () => {
       
       if (profile) setUserRole(profile.role);
 
-      // Fetch projects for location selection
+      // Fetch active projects (not completed)
       const { data: projectsData } = await supabase
         .from("projects")
         .select("id, name")
-        .eq("status", "active")
+        .neq("status", "completed")
         .order("name");
       setProjects(projectsData || []);
 
