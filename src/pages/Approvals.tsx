@@ -126,6 +126,142 @@ const Approvals = () => {
     setLeaveDialogOpen(true);
   };
 
+  const handleApproveLaborExpense = async (expenseId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("labor_expenses")
+      .update({ 
+        status: "approved", 
+        updated_by: user.id,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", expenseId);
+
+    if (error) {
+      toast.error("เกิดข้อผิดพลาดในการอนุมัติ");
+      console.error(error);
+    } else {
+      toast.success("อนุมัติสำเร็จ");
+      fetchAllPendingItems();
+    }
+  };
+
+  const handleRejectLaborExpense = async (expenseId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("labor_expenses")
+      .update({ 
+        status: "rejected", 
+        updated_by: user.id,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", expenseId);
+
+    if (error) {
+      toast.error("เกิดข้อผิดพลาดในการปฏิเสธ");
+      console.error(error);
+    } else {
+      toast.success("ปฏิเสธสำเร็จ");
+      fetchAllPendingItems();
+    }
+  };
+
+  const handleApproveMaterialExpense = async (expenseId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("expenses")
+      .update({ 
+        status: "approved", 
+        updated_by: user.id,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", expenseId);
+
+    if (error) {
+      toast.error("เกิดข้อผิดพลาดในการอนุมัติ");
+      console.error(error);
+    } else {
+      toast.success("อนุมัติสำเร็จ");
+      fetchAllPendingItems();
+    }
+  };
+
+  const handleRejectMaterialExpense = async (expenseId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("expenses")
+      .update({ 
+        status: "rejected", 
+        updated_by: user.id,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", expenseId);
+
+    if (error) {
+      toast.error("เกิดข้อผิดพลาดในการปฏิเสธ");
+      console.error(error);
+    } else {
+      toast.success("ปฏิเสธสำเร็จ");
+      fetchAllPendingItems();
+    }
+  };
+
+  const handleApproveLeaveRequest = async (requestId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("leave_requests")
+      .update({ 
+        status: "approved", 
+        approved_by: user.id,
+        approved_at: new Date().toISOString(),
+        updated_by: user.id,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", requestId);
+
+    if (error) {
+      toast.error("เกิดข้อผิดพลาดในการอนุมัติ");
+      console.error(error);
+    } else {
+      toast.success("อนุมัติสำเร็จ");
+      fetchAllPendingItems();
+    }
+  };
+
+  const handleRejectLeaveRequest = async (requestId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("leave_requests")
+      .update({ 
+        status: "rejected", 
+        approved_by: user.id,
+        approved_at: new Date().toISOString(),
+        updated_by: user.id,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", requestId);
+
+    if (error) {
+      toast.error("เกิดข้อผิดพลาดในการปฏิเสธ");
+      console.error(error);
+    } else {
+      toast.success("ปฏิเสธสำเร็จ");
+      fetchAllPendingItems();
+    }
+  };
+
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(amount);
 
@@ -212,13 +348,24 @@ const Approvals = () => {
                           {formatCurrency(expense.net_amount || expense.total_amount)}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            onClick={() => handleLaborClick(expense)}
-                            variant="outline"
-                          >
-                            ดูรายละเอียด
-                          </Button>
+                          <div className="flex gap-2 justify-end">
+                            <Button
+                              size="sm"
+                              onClick={() => handleApproveLaborExpense(expense.id)}
+                              variant="success"
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              อนุมัติ
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleRejectLaborExpense(expense.id)}
+                              variant="destructive"
+                            >
+                              <XCircle className="h-4 w-4 mr-1" />
+                              ปฏิเสธ
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -276,13 +423,24 @@ const Approvals = () => {
                           {formatCurrency(expense.total_amount)}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            onClick={() => handleMaterialClick(expense)}
-                            variant="outline"
-                          >
-                            ดูรายละเอียด
-                          </Button>
+                          <div className="flex gap-2 justify-end">
+                            <Button
+                              size="sm"
+                              onClick={() => handleApproveMaterialExpense(expense.id)}
+                              variant="success"
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              อนุมัติ
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleRejectMaterialExpense(expense.id)}
+                              variant="destructive"
+                            >
+                              <XCircle className="h-4 w-4 mr-1" />
+                              ปฏิเสธ
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -352,13 +510,24 @@ const Approvals = () => {
                         <TableCell className="font-medium">{request.days_count} วัน</TableCell>
                         <TableCell className="max-w-xs truncate">{request.reason}</TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            onClick={() => handleLeaveClick(request)}
-                            variant="outline"
-                          >
-                            ดูรายละเอียด
-                          </Button>
+                          <div className="flex gap-2 justify-end">
+                            <Button
+                              size="sm"
+                              onClick={() => handleApproveLeaveRequest(request.id)}
+                              variant="success"
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              อนุมัติ
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleRejectLeaveRequest(request.id)}
+                              variant="destructive"
+                            >
+                              <XCircle className="h-4 w-4 mr-1" />
+                              ปฏิเสธ
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
