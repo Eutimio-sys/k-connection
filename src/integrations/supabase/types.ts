@@ -519,6 +519,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "labor_expense_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "labor_expense_items_labor_expense_id_fkey"
             columns: ["labor_expense_id"]
             isOneToOne: false
