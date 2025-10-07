@@ -18,7 +18,6 @@ interface EmployeeEditDialogProps {
 
 export const EmployeeEditDialog = ({ open, onOpenChange, employee, onSuccess }: EmployeeEditDialogProps) => {
   const [saving, setSaving] = useState(false);
-  const [companies, setCompanies] = useState<any[]>([]);
   const [leaveBalance, setLeaveBalance] = useState<any>(null);
   const [formData, setFormData] = useState({
     full_name: employee?.full_name || "",
@@ -32,24 +31,13 @@ export const EmployeeEditDialog = ({ open, onOpenChange, employee, onSuccess }: 
     emergency_phone: employee?.emergency_phone || "",
     hire_date: employee?.hire_date || "",
     role: employee?.role || "worker",
-    company_id: employee?.company_id || "",
   });
 
   useEffect(() => {
-    fetchCompanies();
     if (employee?.id) {
       fetchLeaveBalance();
     }
   }, [employee]);
-
-  const fetchCompanies = async () => {
-    const { data } = await supabase
-      .from("companies")
-      .select("*")
-      .eq("is_active", true)
-      .order("name");
-    setCompanies(data || []);
-  };
 
   const fetchLeaveBalance = async () => {
     const currentYear = new Date().getFullYear();
@@ -178,22 +166,6 @@ export const EmployeeEditDialog = ({ open, onOpenChange, employee, onSuccess }: 
                   <SelectItem value="accountant">บัญชี</SelectItem>
                   <SelectItem value="manager">ผู้จัดการ</SelectItem>
                   <SelectItem value="admin">ผู้ดูแลระบบ</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="company">บริษัท</Label>
-              <Select value={formData.company_id} onValueChange={(value) => setFormData({ ...formData, company_id: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="เลือกบริษัท" />
-                </SelectTrigger>
-                <SelectContent>
-                  {companies.map((company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.name}
-                    </SelectItem>
-                  ))}
                 </SelectContent>
               </Select>
             </div>
