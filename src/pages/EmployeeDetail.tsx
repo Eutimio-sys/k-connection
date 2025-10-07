@@ -19,6 +19,7 @@ const EmployeeDetail = () => {
   const [salaryRecords, setSalaryRecords] = useState<any[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
   const [leaveBalance, setLeaveBalance] = useState<any>(null);
+  const [taxRecords, setTaxRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [salaryForm, setSalaryForm] = useState({
@@ -57,6 +58,16 @@ const EmployeeDetail = () => {
       .order("effective_date", { ascending: false });
 
     setSalaryRecords(salaryData || []);
+
+    // Fetch tax and social security records
+    const { data: taxData } = await supabase
+      .from("employee_tax_social_security")
+      .select("*")
+      .eq("user_id", id)
+      .order("year", { ascending: false })
+      .order("month", { ascending: false });
+
+    setTaxRecords(taxData || []);
 
     // Fetch leave requests
     const { data: leaveData } = await supabase
@@ -305,36 +316,81 @@ const EmployeeDetail = () => {
               {salaryRecords.length === 0 ? (
                 <p className="text-center py-8 text-muted-foreground">ยังไม่มีข้อมูลเงินเดือน</p>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>วันที่มีผล</TableHead>
-                      <TableHead className="text-right">จำนวนเงิน</TableHead>
-                      <TableHead>หมายเหตุ</TableHead>
-                      <TableHead>บันทึกโดย</TableHead>
-                      <TableHead>วันที่บันทึก</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {salaryRecords.map((record) => (
-                      <TableRow key={record.id}>
-                        <TableCell className="font-medium">
-                          {new Date(record.effective_date).toLocaleDateString("th-TH")}
-                        </TableCell>
-                        <TableCell className="text-right font-semibold text-primary">
-                          {formatCurrency(record.salary_amount)}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {record.notes || "-"}
-                        </TableCell>
-                        <TableCell>{record.creator?.full_name || "-"}</TableCell>
-                        <TableCell>
-                          {new Date(record.created_at).toLocaleDateString("th-TH")}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="font-semibold mb-3">ประวัติเงินเดือน</h3>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>วันที่มีผล</TableHead>
+                          <TableHead className="text-right">จำนวนเงิน</TableHead>
+                          <TableHead>หมายเหตุ</TableHead>
+                          <TableHead>บันทึกโดย</TableHead>
+                          <TableHead>วันที่บันทึก</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {salaryRecords.map((record) => (
+                          <TableRow key={record.id}>
+                            <TableCell className="font-medium">
+                              {new Date(record.effective_date).toLocaleDateString("th-TH")}
+                            </TableCell>
+                            <TableCell className="text-right font-semibold text-primary">
+                              {formatCurrency(record.salary_amount)}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {record.notes || "-"}
+                            </TableCell>
+                            <TableCell>{record.creator?.full_name || "-"}</TableCell>
+                            <TableCell>
+                              {new Date(record.created_at).toLocaleDateString("th-TH")}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-3">ประวัติภาษีและประกันสังคม</h3>
+                    {taxRecords.length === 0 ? (
+                      <p className="text-center py-8 text-muted-foreground">ยังไม่มีข้อมูลภาษีและประกันสังคม</p>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>ปี/เดือน</TableHead>
+                            <TableHead className="text-right">ภาษี</TableHead>
+                            <TableHead className="text-right">ประกันสังคม</TableHead>
+                            <TableHead className="text-right">รวม</TableHead>
+                            <TableHead>หมายเหตุ</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {taxRecords.map((record) => (
+                            <TableRow key={record.id}>
+                              <TableCell className="font-medium">
+                                {record.month}/{record.year}
+                              </TableCell>
+                              <TableCell className="text-right text-red-600">
+                                {formatCurrency(record.tax_amount)}
+                              </TableCell>
+                              <TableCell className="text-right text-orange-600">
+                                {formatCurrency(record.social_security_amount)}
+                              </TableCell>
+                              <TableCell className="text-right font-semibold">
+                                {formatCurrency(record.tax_amount + record.social_security_amount)}
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {record.notes || "-"}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </div>
+                </div>
               )}
             </CardContent>
           </Card>
