@@ -20,6 +20,8 @@ const VendorsSettings = () => {
     phone: "",
     email: "",
     address: "",
+    bank_name: "",
+    bank_account: "",
     notes: "",
   });
 
@@ -39,7 +41,7 @@ const VendorsSettings = () => {
     else {
       toast.success("เพิ่มร้านค้าสำเร็จ");
       setDialogOpen(false);
-      setFormData({ name: "", contact_person: "", phone: "", email: "", address: "", notes: "" });
+      setFormData({ name: "", contact_person: "", phone: "", email: "", address: "", bank_name: "", bank_account: "", notes: "" });
       fetchVendors();
     }
   };
@@ -87,6 +89,14 @@ const VendorsSettings = () => {
                   <Label>ที่อยู่</Label>
                   <Textarea value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} rows={2} />
                 </div>
+                <div>
+                  <Label>ธนาคาร</Label>
+                  <Input value={formData.bank_name} onChange={e => setFormData({...formData, bank_name: e.target.value})} placeholder="เช่น ธนาคารกสิกรไทย" />
+                </div>
+                <div>
+                  <Label>เลขบัญชี</Label>
+                  <Input value={formData.bank_account} onChange={e => setFormData({...formData, bank_account: e.target.value})} placeholder="xxx-x-xxxxx-x" />
+                </div>
                 <div className="col-span-2">
                   <Label>หมายเหตุ</Label>
                   <Textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} rows={2} />
@@ -110,6 +120,8 @@ const VendorsSettings = () => {
                 <TableHead>ชื่อร้านค้า</TableHead>
                 <TableHead>ผู้ติดต่อ</TableHead>
                 <TableHead>เบอร์โทร</TableHead>
+                <TableHead>ธนาคาร</TableHead>
+                <TableHead>เลขบัญชี</TableHead>
                 <TableHead>สถานะ</TableHead>
                 <TableHead className="text-right">จัดการ</TableHead>
               </TableRow>
@@ -120,6 +132,8 @@ const VendorsSettings = () => {
                   <TableCell className="font-medium">{vendor.name}</TableCell>
                   <TableCell>{vendor.contact_person || "-"}</TableCell>
                   <TableCell>{vendor.phone || "-"}</TableCell>
+                  <TableCell>{vendor.bank_name || "-"}</TableCell>
+                  <TableCell className="font-mono text-sm">{vendor.bank_account || "-"}</TableCell>
                   <TableCell>
                     <Badge variant={vendor.is_active ? "default" : "secondary"}>
                       {vendor.is_active ? "ใช้งาน" : "ปิดใช้งาน"}

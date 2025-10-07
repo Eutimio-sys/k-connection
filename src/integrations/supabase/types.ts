@@ -398,6 +398,8 @@ export type Database = {
       vendors: {
         Row: {
           address: string | null
+          bank_account: string | null
+          bank_name: string | null
           contact_person: string | null
           created_at: string
           email: string | null
@@ -410,6 +412,8 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          bank_account?: string | null
+          bank_name?: string | null
           contact_person?: string | null
           created_at?: string
           email?: string | null
@@ -422,6 +426,8 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          bank_account?: string | null
+          bank_name?: string | null
           contact_person?: string | null
           created_at?: string
           email?: string | null
@@ -436,6 +442,8 @@ export type Database = {
       }
       workers: {
         Row: {
+          bank_account: string | null
+          bank_name: string | null
           created_at: string
           daily_rate: number | null
           full_name: string
@@ -448,6 +456,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          bank_account?: string | null
+          bank_name?: string | null
           created_at?: string
           daily_rate?: number | null
           full_name: string
@@ -460,6 +470,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          bank_account?: string | null
+          bank_name?: string | null
           created_at?: string
           daily_rate?: number | null
           full_name?: string

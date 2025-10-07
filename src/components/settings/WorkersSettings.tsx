@@ -20,6 +20,8 @@ const WorkersSettings = () => {
     id_card: "",
     daily_rate: "",
     specialty: "",
+    bank_name: "",
+    bank_account: "",
     notes: "",
   });
 
@@ -42,7 +44,7 @@ const WorkersSettings = () => {
     else {
       toast.success("เพิ่มช่างสำเร็จ");
       setDialogOpen(false);
-      setFormData({ full_name: "", phone: "", id_card: "", daily_rate: "", specialty: "", notes: "" });
+      setFormData({ full_name: "", phone: "", id_card: "", daily_rate: "", specialty: "", bank_name: "", bank_account: "", notes: "" });
       fetchWorkers();
     }
   };
@@ -92,6 +94,14 @@ const WorkersSettings = () => {
                   <Label>ความเชี่ยวชาญ</Label>
                   <Input value={formData.specialty} onChange={e => setFormData({...formData, specialty: e.target.value})} placeholder="เช่น ช่างไม้, ช่างปูน" />
                 </div>
+                <div>
+                  <Label>ธนาคาร</Label>
+                  <Input value={formData.bank_name} onChange={e => setFormData({...formData, bank_name: e.target.value})} placeholder="เช่น ธนาคารกสิกรไทย" />
+                </div>
+                <div className="col-span-2">
+                  <Label>เลขบัญชี</Label>
+                  <Input value={formData.bank_account} onChange={e => setFormData({...formData, bank_account: e.target.value})} placeholder="xxx-x-xxxxx-x" />
+                </div>
                 <div className="col-span-2">
                   <Label>หมายเหตุ</Label>
                   <Textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} rows={2} />
@@ -116,6 +126,8 @@ const WorkersSettings = () => {
                 <TableHead>เบอร์โทร</TableHead>
                 <TableHead>ค่าแรง/วัน</TableHead>
                 <TableHead>ความเชี่ยวชาญ</TableHead>
+                <TableHead>ธนาคาร</TableHead>
+                <TableHead>เลขบัญชี</TableHead>
                 <TableHead>สถานะ</TableHead>
                 <TableHead className="text-right">จัดการ</TableHead>
               </TableRow>
@@ -127,6 +139,8 @@ const WorkersSettings = () => {
                   <TableCell>{worker.phone || "-"}</TableCell>
                   <TableCell>{worker.daily_rate ? `฿${formatCurrency(worker.daily_rate)}` : "-"}</TableCell>
                   <TableCell>{worker.specialty || "-"}</TableCell>
+                  <TableCell>{worker.bank_name || "-"}</TableCell>
+                  <TableCell className="font-mono text-sm">{worker.bank_account || "-"}</TableCell>
                   <TableCell>
                     <Badge variant={worker.is_active ? "default" : "secondary"}>
                       {worker.is_active ? "ใช้งาน" : "ปิดใช้งาน"}
