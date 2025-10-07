@@ -8,12 +8,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 const WorkersSettings = () => {
   const [workers, setWorkers] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingWorker, setEditingWorker] = useState<any>(null);
   const [formData, setFormData] = useState({
     full_name: "",
     phone: "",
@@ -36,16 +37,50 @@ const WorkersSettings = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { error } = await supabase.from("workers").insert({
+    const dataToSubmit = {
       ...formData,
       daily_rate: formData.daily_rate ? parseFloat(formData.daily_rate) : null,
-    });
+    };
+    
+    let error;
+    if (editingWorker) {
+      const result = await supabase.from("workers").update(dataToSubmit).eq("id", editingWorker.id);
+      error = result.error;
+    } else {
+      const result = await supabase.from("workers").insert(dataToSubmit);
+      error = result.error;
+    }
+    
     if (error) toast.error("เกิดข้อผิดพลาด");
     else {
-      toast.success("เพิ่มช่างสำเร็จ");
+      toast.success(editingWorker ? "แก้ไขช่างสำเร็จ" : "เพิ่มช่างสำเร็จ");
       setDialogOpen(false);
+      setEditingWorker(null);
       setFormData({ full_name: "", phone: "", id_card: "", daily_rate: "", specialty: "", bank_name: "", bank_account: "", notes: "" });
       fetchWorkers();
+    }
+  };
+
+  const handleEdit = (worker: any) => {
+    setEditingWorker(worker);
+    setFormData({
+      full_name: worker.full_name,
+      phone: worker.phone || "",
+      id_card: worker.id_card || "",
+      daily_rate: worker.daily_rate ? worker.daily_rate.toString() : "",
+      specialty: worker.specialty || "",
+      bank_name: worker.bank_name || "",
+      bank_account: worker.bank_account || "",
+      notes: worker.notes || "",
+    });
+    setDialogOpen(true);
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) {
+      setEditingWorker(null);
+      setFormData({ full_name: "", phone: "", id_card: "", daily_rate: "", specialty: "", bank_name: "", bank_account: "", notes: "" });
     }
   };
 
@@ -61,7 +96,7 @@ const WorkersSettings = () => {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>จัดการช่าง</CardTitle>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-2">
               <Plus size={16} />
@@ -70,7 +105,7 @@ const WorkersSettings = () => {
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>เพิ่มช่างใหม่</DialogTitle>
+              <DialogTitle>{editingWorker ? "แก้ไขช่าง" : "เพิ่มช่างใหม่"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -146,7 +181,10 @@ const WorkersSettings = () => {
                       {worker.is_active ? "ใช้งาน" : "ปิดใช้งาน"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right space-x-2">
+                    <Button size="sm" variant="ghost" onClick={() => handleEdit(worker)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                     <Button size="sm" variant="outline" onClick={() => toggleActive(worker.id, worker.is_active)}>
                       {worker.is_active ? "ปิดใช้งาน" : "เปิดใช้งาน"}
                     </Button>

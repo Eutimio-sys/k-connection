@@ -8,12 +8,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 const VendorsSettings = () => {
   const [vendors, setVendors] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingVendor, setEditingVendor] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: "",
     contact_person: "",
@@ -36,13 +37,45 @@ const VendorsSettings = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { error } = await supabase.from("vendors").insert(formData);
+    let error;
+    if (editingVendor) {
+      const result = await supabase.from("vendors").update(formData).eq("id", editingVendor.id);
+      error = result.error;
+    } else {
+      const result = await supabase.from("vendors").insert(formData);
+      error = result.error;
+    }
+    
     if (error) toast.error("เกิดข้อผิดพลาด");
     else {
-      toast.success("เพิ่มร้านค้าสำเร็จ");
+      toast.success(editingVendor ? "แก้ไขร้านค้าสำเร็จ" : "เพิ่มร้านค้าสำเร็จ");
       setDialogOpen(false);
+      setEditingVendor(null);
       setFormData({ name: "", contact_person: "", phone: "", email: "", address: "", bank_name: "", bank_account: "", notes: "" });
       fetchVendors();
+    }
+  };
+
+  const handleEdit = (vendor: any) => {
+    setEditingVendor(vendor);
+    setFormData({
+      name: vendor.name,
+      contact_person: vendor.contact_person || "",
+      phone: vendor.phone || "",
+      email: vendor.email || "",
+      address: vendor.address || "",
+      bank_name: vendor.bank_name || "",
+      bank_account: vendor.bank_account || "",
+      notes: vendor.notes || "",
+    });
+    setDialogOpen(true);
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) {
+      setEditingVendor(null);
+      setFormData({ name: "", contact_person: "", phone: "", email: "", address: "", bank_name: "", bank_account: "", notes: "" });
     }
   };
 
@@ -56,7 +89,7 @@ const VendorsSettings = () => {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>จัดการร้านค้า</CardTitle>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-2">
               <Plus size={16} />
@@ -65,7 +98,7 @@ const VendorsSettings = () => {
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>เพิ่มร้านค้าใหม่</DialogTitle>
+              <DialogTitle>{editingVendor ? "แก้ไขร้านค้า" : "เพิ่มร้านค้าใหม่"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -139,11 +172,14 @@ const VendorsSettings = () => {
                       {vendor.is_active ? "ใช้งาน" : "ปิดใช้งาน"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
-                    <Button size="sm" variant="outline" onClick={() => toggleActive(vendor.id, vendor.is_active)}>
-                      {vendor.is_active ? "ปิดใช้งาน" : "เปิดใช้งาน"}
-                    </Button>
-                  </TableCell>
+                <TableCell className="text-right space-x-2">
+                  <Button size="sm" variant="ghost" onClick={() => handleEdit(vendor)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => toggleActive(vendor.id, vendor.is_active)}>
+                    {vendor.is_active ? "ปิดใช้งาน" : "เปิดใช้งาน"}
+                  </Button>
+                </TableCell>
                 </TableRow>
               ))}
             </TableBody>

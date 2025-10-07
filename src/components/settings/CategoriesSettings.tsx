@@ -8,12 +8,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 const CategoriesSettings = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<any>(null);
   const [formData, setFormData] = useState({ name: "", description: "" });
 
   useEffect(() => {
@@ -27,13 +28,36 @@ const CategoriesSettings = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { error } = await supabase.from("expense_categories").insert(formData);
+    let error;
+    if (editingCategory) {
+      const result = await supabase.from("expense_categories").update(formData).eq("id", editingCategory.id);
+      error = result.error;
+    } else {
+      const result = await supabase.from("expense_categories").insert(formData);
+      error = result.error;
+    }
+    
     if (error) toast.error("เกิดข้อผิดพลาด");
     else {
-      toast.success("เพิ่มหมวดหมู่สำเร็จ");
+      toast.success(editingCategory ? "แก้ไขหมวดหมู่สำเร็จ" : "เพิ่มหมวดหมู่สำเร็จ");
       setDialogOpen(false);
+      setEditingCategory(null);
       setFormData({ name: "", description: "" });
       fetchCategories();
+    }
+  };
+
+  const handleEdit = (category: any) => {
+    setEditingCategory(category);
+    setFormData({ name: category.name, description: category.description || "" });
+    setDialogOpen(true);
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) {
+      setEditingCategory(null);
+      setFormData({ name: "", description: "" });
     }
   };
 
@@ -47,7 +71,7 @@ const CategoriesSettings = () => {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>จัดการหมวดหมู่ค่าใช้จ่าย</CardTitle>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-2">
               <Plus size={16} />
@@ -56,7 +80,7 @@ const CategoriesSettings = () => {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>เพิ่มหมวดหมู่ใหม่</DialogTitle>
+              <DialogTitle>{editingCategory ? "แก้ไขหมวดหมู่" : "เพิ่มหมวดหมู่ใหม่"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -95,7 +119,10 @@ const CategoriesSettings = () => {
                     {cat.is_active ? "ใช้งาน" : "ปิดใช้งาน"}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right space-x-2">
+                  <Button size="sm" variant="ghost" onClick={() => handleEdit(cat)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
                   <Button size="sm" variant="outline" onClick={() => toggleActive(cat.id, cat.is_active)}>
                     {cat.is_active ? "ปิดใช้งาน" : "เปิดใช้งาน"}
                   </Button>

@@ -10,30 +10,39 @@ import { Building2 } from "lucide-react";
 
 interface CompanyDialogProps {
   onSuccess?: () => void;
+  editData?: any;
+  trigger?: React.ReactNode;
 }
 
-const CompanyDialog = ({ onSuccess }: CompanyDialogProps) => {
+const CompanyDialog = ({ onSuccess, editData, trigger }: CompanyDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: "",
-    tax_id: "",
-    address: "",
-    phone: "",
+    name: editData?.name || "",
+    tax_id: editData?.tax_id || "",
+    address: editData?.address || "",
+    phone: editData?.phone || "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.from("companies").insert(formData);
+    let error;
+    if (editData) {
+      const result = await supabase.from("companies").update(formData).eq("id", editData.id);
+      error = result.error;
+    } else {
+      const result = await supabase.from("companies").insert(formData);
+      error = result.error;
+    }
 
     if (error) {
       toast.error("เกิดข้อผิดพลาด: " + error.message);
     } else {
-      toast.success("เพิ่มบริษัทสำเร็จ");
+      toast.success(editData ? "แก้ไขบริษัทสำเร็จ" : "เพิ่มบริษัทสำเร็จ");
       setOpen(false);
-      setFormData({ name: "", tax_id: "", address: "", phone: "" });
+      if (!editData) setFormData({ name: "", tax_id: "", address: "", phone: "" });
       onSuccess?.();
     }
     setLoading(false);
@@ -42,14 +51,16 @@ const CompanyDialog = ({ onSuccess }: CompanyDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
-          <Building2 size={16} />
-          เพิ่มบริษัท
-        </Button>
+        {trigger || (
+          <Button variant="outline" size="sm" className="gap-2">
+            <Building2 size={16} />
+            เพิ่มบริษัท
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>เพิ่มบริษัทใหม่</DialogTitle>
+          <DialogTitle>{editData ? "แก้ไขข้อมูลบริษัท" : "เพิ่มบริษัทใหม่"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

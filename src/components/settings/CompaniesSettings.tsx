@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import CompanyDialog from "@/components/CompanyDialog";
+import { Pencil } from "lucide-react";
 
 const CompaniesSettings = () => {
   const [companies, setCompanies] = useState<any[]>([]);
@@ -61,7 +62,16 @@ const CompaniesSettings = () => {
                       {company.is_active ? "ใช้งาน" : "ปิดใช้งาน"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right space-x-2">
+                    <CompanyDialog 
+                      editData={company} 
+                      onSuccess={fetchCompanies}
+                      trigger={
+                        <Button size="sm" variant="ghost">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      }
+                    />
                     <Button size="sm" variant="outline" onClick={() => toggleActive(company.id, company.is_active)}>
                       {company.is_active ? "ปิดใช้งาน" : "เปิดใช้งาน"}
                     </Button>
