@@ -32,38 +32,44 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4">
-      <Card className="w-full max-w-md shadow-elegant">
-        <CardHeader className="space-y-3 text-center">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary to-primary/70 rounded-2xl flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-page p-4">
+      <Card className="w-full max-w-md shadow-elegant border-border rounded-2xl animate-scale-in">
+        <CardHeader className="space-y-4 text-center pb-6">
+          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary to-accent rounded-2xl flex items-center justify-center shadow-primary">
             <Building2 className="w-8 h-8 text-white" />
           </div>
-          <CardTitle className="text-3xl font-bold">ระบบบริหารจัดการก่อสร้าง</CardTitle>
-          <CardDescription>ระบบจัดการครบครันสำหรับบริษัทรับเหมา</CardDescription>
+          <CardTitle className="text-2xl md:text-3xl font-bold">ระบบบริหารจัดการก่อสร้าง</CardTitle>
+          <CardDescription className="text-base">เข้าสู่ระบบเพื่อเริ่มใช้งาน</CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSignIn} className="space-y-4">
-            <div>
-              <Label>อีเมล</Label>
+        <CardContent className="pt-0">
+          <form onSubmit={handleSignIn} className="space-y-5">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">อีเมล</Label>
               <Input 
                 type="email" 
                 value={email} 
                 onChange={e => setEmail(e.target.value)} 
                 required 
-                placeholder="กรอกอีเมล"
+                placeholder="example@email.com"
+                className="h-11 rounded-xl border-border focus:border-primary"
               />
             </div>
-            <div>
-              <Label>รหัสผ่าน</Label>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">รหัสผ่าน</Label>
               <Input 
                 type="password" 
                 value={password} 
                 onChange={e => setPassword(e.target.value)} 
                 required 
-                placeholder="กรอกรหัสผ่าน"
+                placeholder="••••••••"
+                className="h-11 rounded-xl border-border focus:border-primary"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button 
+              type="submit" 
+              className="w-full h-11 text-base font-medium" 
+              disabled={loading}
+            >
               {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
             </Button>
           </form>

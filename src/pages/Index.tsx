@@ -164,33 +164,38 @@ const Index = () => {
   }
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="text-center mb-12">
-        <h1 className="text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-4">
+    <div className="min-h-screen bg-gradient-page p-6 md:p-8 space-y-8">
+      <div className="text-center mb-12 animate-fade-in">
+        <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-3">
           ระบบบริหารงานก่อสร้าง
         </h1>
-        <p className="text-muted-foreground text-xl">
+        <p className="text-muted-foreground text-lg md:text-xl">
           เลือกฟังก์ชันที่ต้องการใช้งาน
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {visibleMenuItems.map((item) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 animate-scale-in">
+        {visibleMenuItems.map((item, index) => (
           <Card 
             key={item.title}
-            className="hover:shadow-elegant transition-all cursor-pointer group hover:scale-105"
+            className="group cursor-pointer border-border hover:border-primary/30 hover:shadow-xl transition-all duration-200 hover:-translate-y-1 rounded-2xl overflow-hidden"
             onClick={() => navigate(item.url)}
+            style={{ animationDelay: `${index * 50}ms` }}
           >
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between mb-4">
-                <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${item.gradient} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                  <item.icon className="w-8 h-8 text-white" />
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between mb-3">
+                <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center group-hover:scale-110 transition-transform shadow-md`}>
+                  <item.icon className="w-7 h-7 text-white" />
                 </div>
               </div>
-              <CardTitle className="text-xl">{item.title}</CardTitle>
+              <CardTitle className="text-lg font-semibold group-hover:text-primary transition-colors">
+                {item.title}
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">{item.description}</p>
+            <CardContent className="pt-0">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {item.description}
+              </p>
             </CardContent>
           </Card>
         ))}

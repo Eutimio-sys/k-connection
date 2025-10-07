@@ -29,34 +29,40 @@ const menuItems = [
 
 export function AppSidebar() {
   return (
-    <Sidebar>
-      <SidebarHeader className="border-b border-sidebar-border p-4">
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center">
+    <Sidebar className="border-r border-sidebar-border">
+      <SidebarHeader className="border-b border-sidebar-border/50 p-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center shadow-primary">
             <Building2 className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h2 className="font-bold text-sidebar-foreground">ระบบบริหารงาน</h2>
-            <p className="text-xs text-sidebar-foreground/60">ก่อสร้าง</p>
+            <h2 className="font-bold text-sidebar-foreground text-base">ระบบบริหารงาน</h2>
+            <p className="text-xs text-sidebar-foreground/70">Construction ERP</p>
           </div>
         </div>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="px-3 py-4">
         <SidebarGroup>
-          <SidebarGroupLabel>เมนูหลัก</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/60 text-xs font-semibold uppercase tracking-wider mb-2 px-3">
+            เมนูหลัก
+          </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="space-y-1">
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
                       className={({ isActive }) =>
-                        isActive ? "bg-sidebar-accent" : ""
+                        `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
+                          isActive 
+                            ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md font-medium" 
+                            : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                        }`
                       }
                     >
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.title}</span>
+                      <item.icon className="w-5 h-5" />
+                      <span className="text-sm">{item.title}</span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
