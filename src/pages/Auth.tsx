@@ -17,7 +17,7 @@ const Auth = () => {
   useEffect(() => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) navigate("/dashboard");
+      if (session) navigate("/");
     };
     checkUser();
   }, [navigate]);
@@ -27,7 +27,7 @@ const Auth = () => {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) toast.error("เข้าสู่ระบบไม่สำเร็จ");
-    else { toast.success("เข้าสู่ระบบสำเร็จ"); navigate("/dashboard"); }
+    else { toast.success("เข้าสู่ระบบสำเร็จ"); navigate("/"); }
     setLoading(false);
   };
 
