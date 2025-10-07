@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, MapPin, Calendar, TrendingUp, Building2, User, ShoppingCart, Package, Wrench, DollarSign, Info } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, TrendingUp, Building2, User, ShoppingCart, Package, Wrench, DollarSign, Info, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
 import IncomeHistoryDialog from "@/components/IncomeHistoryDialog";
 
@@ -44,6 +44,18 @@ const ProjectDetail = () => {
 
   useEffect(() => {
     fetchData();
+  }, [id]);
+
+  // Refresh data when page becomes visible (user returns to this tab/page)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [id]);
 
   const fetchData = async () => {
@@ -141,14 +153,14 @@ const ProjectDetail = () => {
   const formatCurrency = (amount: number) => new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(amount);
 
   const totalPurchases = purchases.reduce((sum, p) => sum + (p.status === "approved" ? p.estimated_price : 0), 0);
-  const totalMaterialExpenses = materialExpenses.reduce((sum, e) => sum + (e.status === "paid" ? e.total_amount : 0), 0);
-  const totalLaborExpenses = laborExpenses.reduce((sum, e) => sum + (e.status === "paid" ? e.total_amount : 0), 0);
+  const totalMaterialExpenses = materialExpenses.reduce((sum, e) => sum + (e.status !== "cancelled" ? e.total_amount : 0), 0);
+  const totalLaborExpenses = laborExpenses.reduce((sum, e) => sum + (e.status !== "cancelled" ? e.total_amount : 0), 0);
   const totalExpenses = totalPurchases + totalMaterialExpenses + totalLaborExpenses;
   const totalIncome = projectIncome.reduce((sum, i) => sum + parseFloat(i.amount || 0), 0);
 
   // Calculate totals by category type
   const totalMaterialByCategory = materialExpenses.reduce((acc, expense) => {
-    if (expense.status === "paid" && expense.items) {
+    if (expense.status !== "cancelled" && expense.items) {
       expense.items.forEach((item: any) => {
         const categoryName = item.category?.name || "อื่นๆ";
         acc[categoryName] = (acc[categoryName] || 0) + (item.amount || 0);
@@ -158,7 +170,7 @@ const ProjectDetail = () => {
   }, {} as Record<string, number>);
 
   const totalLaborByCategory = laborExpenses.reduce((acc, expense) => {
-    if (expense.status === "paid" && expense.items) {
+    if (expense.status !== "cancelled" && expense.items) {
       expense.items.forEach((item: any) => {
         const categoryName = item.category?.name || "อื่นๆ";
         acc[categoryName] = (acc[categoryName] || 0) + (item.amount || 0);
@@ -191,10 +203,24 @@ const ProjectDetail = () => {
 
   return (
     <div className="p-8 space-y-6">
-      <Button variant="outline" onClick={() => navigate("/projects")} className="gap-2">
-        <ArrowLeft size={20} />
-        กลับ
-      </Button>
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={() => navigate("/projects")} className="gap-2">
+          <ArrowLeft size={20} />
+          กลับ
+        </Button>
+        <Button 
+          variant="outline" 
+          onClick={() => {
+            fetchData();
+            toast.success("รีเฟรชข้อมูลแล้ว");
+          }} 
+          className="gap-2"
+          disabled={loading}
+        >
+          <RefreshCcw size={20} className={loading ? "animate-spin" : ""} />
+          รีเฟรช
+        </Button>
+      </div>
 
       <div className="flex items-start justify-between">
         <div>
