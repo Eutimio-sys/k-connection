@@ -1,5 +1,9 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Settings as SettingsIcon } from "lucide-react";
+import CompaniesSettings from "@/components/settings/CompaniesSettings";
+import CategoriesSettings from "@/components/settings/CategoriesSettings";
+import VendorsSettings from "@/components/settings/VendorsSettings";
+import WorkersSettings from "@/components/settings/WorkersSettings";
 
 const Settings = () => {
   return (
@@ -8,18 +12,33 @@ const Settings = () => {
         <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
           ตั้งค่าระบบ
         </h1>
-        <p className="text-muted-foreground text-lg">
-          จัดการการตั้งค่าและข้อมูลพื้นฐานของระบบ
-        </p>
+        <p className="text-muted-foreground text-lg">จัดการข้อมูลพื้นฐานและการตั้งค่าต่างๆ</p>
       </div>
 
-      <Card className="p-12 text-center">
-        <SettingsIcon className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-        <CardTitle className="mb-2">ฟีเจอร์กำลังพัฒนา</CardTitle>
-        <p className="text-muted-foreground">
-          หน้าตั้งค่ากำลังอยู่ในขั้นตอนการพัฒนา
-        </p>
-      </Card>
+      <Tabs defaultValue="companies" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="companies">บริษัท</TabsTrigger>
+          <TabsTrigger value="categories">หมวดหมู่</TabsTrigger>
+          <TabsTrigger value="vendors">ร้านค้า</TabsTrigger>
+          <TabsTrigger value="workers">ช่าง</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="companies">
+          <CompaniesSettings />
+        </TabsContent>
+
+        <TabsContent value="categories">
+          <CategoriesSettings />
+        </TabsContent>
+
+        <TabsContent value="vendors">
+          <VendorsSettings />
+        </TabsContent>
+
+        <TabsContent value="workers">
+          <WorkersSettings />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

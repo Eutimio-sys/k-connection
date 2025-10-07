@@ -47,6 +47,93 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_payments: {
+        Row: {
+          amount: number
+          category_id: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          notes: string | null
+          paid_at: string | null
+          paid_by: string | null
+          payment_date: string
+          project_id: string
+          status: string
+          updated_at: string
+          worker_id: string | null
+        }
+        Insert: {
+          amount: number
+          category_id?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          payment_date?: string
+          project_id: string
+          status?: string
+          updated_at?: string
+          worker_id?: string | null
+        }
+        Update: {
+          amount?: number
+          category_id?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          payment_date?: string
+          project_id?: string
+          status?: string
+          updated_at?: string
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_payments_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_payments_paid_by_fkey"
+            columns: ["paid_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_payments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_payments_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expense_categories: {
         Row: {
           created_at: string
@@ -243,6 +330,148 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tasks: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: string
+          project_id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string
+          project_id: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string
+          project_id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendors: {
+        Row: {
+          address: string | null
+          contact_person: string | null
+          created_at: string
+          email: string | null
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          contact_person?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          contact_person?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      workers: {
+        Row: {
+          created_at: string
+          daily_rate: number | null
+          full_name: string
+          id: string
+          id_card: string | null
+          is_active: boolean
+          notes: string | null
+          phone: string | null
+          specialty: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          daily_rate?: number | null
+          full_name: string
+          id?: string
+          id_card?: string | null
+          is_active?: boolean
+          notes?: string | null
+          phone?: string | null
+          specialty?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          daily_rate?: number | null
+          full_name?: string
+          id?: string
+          id_card?: string | null
+          is_active?: boolean
+          notes?: string | null
+          phone?: string | null
+          specialty?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {

@@ -8,6 +8,7 @@ import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
+import Kanban from "./pages/Kanban";
 import PurchaseRequests from "./pages/PurchaseRequests";
 import Employees from "./pages/Employees";
 import Settings from "./pages/Settings";
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/projects" element={<Projects />} />
             <Route path="/projects/:id" element={<ProjectDetail />} />
+            <Route path="/kanban" element={<Kanban />} />
             <Route path="/purchase-requests" element={<PurchaseRequests />} />
             <Route path="/employees" element={<Employees />} />
             <Route path="/settings" element={<Settings />} />

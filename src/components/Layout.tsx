@@ -11,7 +11,8 @@ import {
   Settings,
   LogOut,
   Menu,
-  X
+  X,
+  Kanban as KanbanIcon
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -64,6 +65,7 @@ const Layout = () => {
   const navItems = [
     { icon: LayoutDashboard, label: "แดชบอร์ด", path: "/dashboard" },
     { icon: FolderKanban, label: "โครงการ", path: "/projects" },
+    { icon: KanbanIcon, label: "ตารางงาน", path: "/kanban" },
     { icon: ShoppingCart, label: "ใบขอซื้อ", path: "/purchase-requests" },
     { icon: Users, label: "พนักงาน", path: "/employees" },
     { icon: Settings, label: "ตั้งค่า", path: "/settings" },
