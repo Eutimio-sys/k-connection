@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Plus, Trash2, Upload, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface ExpenseItem {
   category_id: string;
@@ -43,6 +44,7 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
   const [projectId, setProjectId] = useState("");
   const [companyId, setCompanyId] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
+  const [hasVat, setHasVat] = useState(false);
   const [vatRate, setVatRate] = useState("7");
   const [notes, setNotes] = useState("");
   const [receiptImage, setReceiptImage] = useState<File | null>(null);
@@ -54,8 +56,33 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
   useEffect(() => {
     if (open) {
       fetchData();
+      // Populate form data when editing
+      if (expense) {
+        setInvoiceNumber(expense.invoice_number || "");
+        setTaxInvoiceNumber(expense.tax_invoice_number || "");
+        setVendorId(expense.vendor_id || "");
+        setProjectId(expense.project_id || "");
+        setCompanyId(expense.company_id || "");
+        setInvoiceDate(expense.invoice_date || new Date().toISOString().split('T')[0]);
+        setHasVat(expense.vat_amount > 0);
+        setVatRate(expense.vat_rate?.toString() || "7");
+        setNotes(expense.notes || "");
+        setReceiptImagePreview(expense.receipt_image_url || "");
+        
+        // Populate items
+        if (expense.expense_items && expense.expense_items.length > 0) {
+          setItems(expense.expense_items.map((item: any) => ({
+            category_id: item.category_id,
+            description: item.description,
+            unit_price: item.unit_price?.toString() || "",
+            quantity: item.quantity?.toString() || "1",
+            amount: item.amount || 0,
+            notes: item.notes || ""
+          })));
+        }
+      }
     }
-  }, [open]);
+  }, [open, expense]);
 
   const fetchData = async () => {
     const [vendorsRes, projectsRes, companiesRes, categoriesRes] = await Promise.all([
@@ -101,6 +128,7 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
   };
 
   const calculateVAT = () => {
+    if (!hasVat) return 0;
     const subtotal = calculateSubtotal();
     return (subtotal * parseFloat(vatRate)) / 100;
   };
@@ -255,6 +283,7 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
     setProjectId("");
     setCompanyId("");
     setInvoiceDate(new Date().toISOString().split('T')[0]);
+    setHasVat(false);
     setVatRate("7");
     setNotes("");
     setReceiptImage(null);
@@ -486,19 +515,30 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
               </span>
             </div>
             <div className="flex justify-between items-center text-sm">
-              <div className="flex items-center gap-2">
-                <span>VAT:</span>
-                <Input
-                  type="number"
-                  value={vatRate}
-                  onChange={(e) => setVatRate(e.target.value)}
-                  className="w-20 h-8"
-                  step="0.01"
-                />
-                <span>%</span>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Checkbox 
+                    id="hasVat" 
+                    checked={hasVat} 
+                    onCheckedChange={(checked) => setHasVat(checked as boolean)}
+                  />
+                  <Label htmlFor="hasVat" className="cursor-pointer mb-0">มี VAT</Label>
+                </div>
+                {hasVat && (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={vatRate}
+                      onChange={(e) => setVatRate(e.target.value)}
+                      className="w-20 h-8"
+                      step="0.01"
+                    />
+                    <span>%</span>
+                  </div>
+                )}
               </div>
               <span className="font-medium">
-                {calculateVAT().toLocaleString('th-TH', { style: 'currency', currency: 'THB' })}
+                {hasVat ? calculateVAT().toLocaleString('th-TH', { style: 'currency', currency: 'THB' }) : '฿0.00'}
               </span>
             </div>
             <div className="flex justify-between items-center pt-2 border-t">

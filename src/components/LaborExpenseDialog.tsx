@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface ExpenseItem {
   category_id: string;
@@ -39,6 +40,7 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
   const [categories, setCategories] = useState<any[]>([]);
   const [items, setItems] = useState<ExpenseItem[]>([{ category_id: "", description: "", amount: 0, notes: "" }]);
   const [deductions, setDeductions] = useState<Deduction[]>([]);
+  const [hasWithholdingTax, setHasWithholdingTax] = useState(false);
   const [withholdingTaxRate, setWithholdingTaxRate] = useState(3);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
@@ -116,6 +118,7 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
   };
 
   const calculateWithholdingTax = (subtotal: number) => {
+    if (!hasWithholdingTax) return 0;
     return (subtotal * withholdingTaxRate) / 100;
   };
 
@@ -271,6 +274,7 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
   const resetForm = () => {
     setItems([{ category_id: "", description: "", amount: 0, notes: "" }]);
     setDeductions([]);
+    setHasWithholdingTax(false);
     setWithholdingTaxRate(3);
     setImageFile(null);
     setImagePreview("");
@@ -457,22 +461,34 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
               <span>ยอดรวม:</span>
               <span className="font-medium">{new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(subtotal)}</span>
             </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="withholding_tax_rate" className="mb-0">หัก ณ ที่จ่าย (%):</Label>
+            <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Input
-                  id="withholding_tax_rate"
-                  name="withholding_tax_rate"
-                  type="number"
-                  step="0.01"
-                  value={withholdingTaxRate}
-                  onChange={(e) => setWithholdingTaxRate(parseFloat(e.target.value) || 0)}
-                  className="w-20"
+                <Checkbox 
+                  id="hasWithholdingTax" 
+                  checked={hasWithholdingTax} 
+                  onCheckedChange={(checked) => setHasWithholdingTax(checked as boolean)}
                 />
-                <span className="font-medium w-32 text-right text-destructive">
-                  -{new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(withholdingTax)}
-                </span>
+                <Label htmlFor="hasWithholdingTax" className="cursor-pointer mb-0">มีหัก ณ ที่จ่าย</Label>
               </div>
+              {hasWithholdingTax && (
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="withholding_tax_rate" className="mb-0">หัก ณ ที่จ่าย (%):</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="withholding_tax_rate"
+                      name="withholding_tax_rate"
+                      type="number"
+                      step="0.01"
+                      value={withholdingTaxRate}
+                      onChange={(e) => setWithholdingTaxRate(parseFloat(e.target.value) || 0)}
+                      className="w-20"
+                    />
+                    <span className="font-medium w-32 text-right text-destructive">
+                      -{new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(withholdingTax)}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
             {totalDeductions > 0 && (
               <div className="flex justify-between text-destructive">

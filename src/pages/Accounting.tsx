@@ -51,6 +51,7 @@ const Accounting = () => {
         vendor:vendors(name),
         project:projects(name),
         company:companies(name),
+        updated_by_profile:profiles!expenses_updated_by_fkey(full_name),
         expense_items(
           *,
           category:expense_categories(name)

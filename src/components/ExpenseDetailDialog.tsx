@@ -174,6 +174,12 @@ const ExpenseDetailDialog = ({ expense, open, onOpenChange, onSuccess }: Expense
                   {format(new Date(expense.invoice_date), "dd/MM/yyyy")}
                 </p>
               </div>
+              {expense.status === 'approved' && expense.updated_by_profile && (
+                <div className="col-span-2">
+                  <p className="text-sm text-muted-foreground">ผู้อนุมัติ</p>
+                  <p className="font-medium">{expense.updated_by_profile.full_name}</p>
+                </div>
+              )}
               {expense.receipt_image_url && (
                 <div className="col-span-2">
                   <p className="text-sm text-muted-foreground mb-1">รูปบิล</p>
