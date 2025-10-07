@@ -2,22 +2,45 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Calendar, Building, User, FileText } from "lucide-react";
+import { Calendar, Building, User, FileText, Filter } from "lucide-react";
 import { toast } from "sonner";
 import LaborExpenseDialog from "@/components/LaborExpenseDialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const LaborAccounting = () => {
   const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    startDate: "",
+    endDate: "",
+    projectId: "",
+    workerId: "",
+  });
+  const [projects, setProjects] = useState<any[]>([]);
+  const [workers, setWorkers] = useState<any[]>([]);
 
   useEffect(() => {
     fetchExpenses();
+    fetchFilterData();
   }, []);
+
+  const fetchFilterData = async () => {
+    const [projectsRes, workersRes] = await Promise.all([
+      supabase.from("projects").select("id, name").order("name"),
+      supabase.from("workers").select("id, full_name").eq("is_active", true).order("full_name"),
+    ]);
+    setProjects(projectsRes.data || []);
+    setWorkers(workersRes.data || []);
+  };
 
   const fetchExpenses = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    let query = supabase
       .from("labor_expenses")
       .select(`
         *,
@@ -26,8 +49,22 @@ const LaborAccounting = () => {
         company:companies(name),
         items:labor_expense_items(*, category:expense_categories(name)),
         deductions:labor_expense_deductions(*)
-      `)
-      .order("created_at", { ascending: false });
+      `);
+
+    if (filters.startDate) {
+      query = query.gte("invoice_date", filters.startDate);
+    }
+    if (filters.endDate) {
+      query = query.lte("invoice_date", filters.endDate);
+    }
+    if (filters.projectId) {
+      query = query.eq("project_id", filters.projectId);
+    }
+    if (filters.workerId) {
+      query = query.eq("worker_id", filters.workerId);
+    }
+
+    const { data, error } = await query.order("created_at", { ascending: false });
 
     if (error) {
       toast.error("เกิดข้อผิดพลาด");
@@ -60,8 +97,73 @@ const LaborAccounting = () => {
           </h1>
           <p className="text-muted-foreground text-lg">จัดการและติดตามค่าใช้จ่ายด้านแรงงาน</p>
         </div>
-        <LaborExpenseDialog onSuccess={fetchExpenses} />
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowFilters(!showFilters)} className="gap-2">
+            <Filter className="h-4 w-4" />
+            ตัวกรอง
+          </Button>
+          <LaborExpenseDialog onSuccess={fetchExpenses} />
+        </div>
       </div>
+
+      {showFilters && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-4 gap-4">
+              <div>
+                <Label>วันที่เริ่มต้น</Label>
+                <Input
+                  type="date"
+                  value={filters.startDate}
+                  onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>วันที่สิ้นสุด</Label>
+                <Input
+                  type="date"
+                  value={filters.endDate}
+                  onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>โครงการ</Label>
+                <Select value={filters.projectId} onValueChange={(value) => setFilters({ ...filters, projectId: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="ทั้งหมด" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">ทั้งหมด</SelectItem>
+                    {projects.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>ช่าง</Label>
+                <Select value={filters.workerId} onValueChange={(value) => setFilters({ ...filters, workerId: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="ทั้งหมด" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">ทั้งหมด</SelectItem>
+                    {workers.map((w) => (
+                      <SelectItem key={w.id} value={w.id}>{w.full_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end mt-4 gap-2">
+              <Button variant="outline" onClick={() => setFilters({ startDate: "", endDate: "", projectId: "", workerId: "" })}>
+                ล้างตัวกรอง
+              </Button>
+              <Button onClick={fetchExpenses}>ค้นหา</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {loading ? (
         <div className="text-center py-12">

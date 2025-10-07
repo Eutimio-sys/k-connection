@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   LayoutDashboard, 
   FolderKanban, 
-  ShoppingCart, 
   FileText, 
   Users, 
   Settings, 
@@ -13,7 +12,8 @@ import {
   Clock, 
   Calendar,
   Wallet,
-  UserCog
+  UserCog,
+  CheckCircle
 } from "lucide-react";
 
 type UserRole = 'admin' | 'manager' | 'accountant' | 'worker';
@@ -70,12 +70,12 @@ const Index = () => {
       roles: ['admin', 'manager', 'accountant', 'worker']
     },
     {
-      title: "ใบขอซื้อ",
-      description: "จัดการใบขอซื้อและอนุมัติ",
-      url: "/purchase-requests",
-      icon: ShoppingCart,
+      title: "อนุมัติรายการ",
+      description: "อนุมัติบัญชีและคำขอต่างๆ",
+      url: "/approvals",
+      icon: CheckCircle,
       gradient: "from-accent to-orange-600",
-      roles: ['admin', 'manager', 'accountant']
+      roles: ['admin', 'manager']
     },
     {
       title: "บัญชีวัสดุ",

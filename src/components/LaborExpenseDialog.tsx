@@ -54,14 +54,24 @@ const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
     if (categoriesRes.data) setCategories(categoriesRes.data);
   };
 
-  const generateInvoiceNumber = () => {
-    const company = companies.find(c => c.id === selectedCompany);
-    const companyCode = company?.code || "COMP";
-    const date = new Date();
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${companyCode.toLowerCase()}${day}${month}${year}`;
+  const generateInvoiceNumber = async () => {
+    if (!selectedCompany || !selectedProject) return null;
+    
+    const invoiceDate = new Date().toISOString().split('T')[0];
+    
+    const { data, error } = await supabase.rpc('generate_invoice_number', {
+      p_company_id: selectedCompany,
+      p_project_id: selectedProject,
+      p_invoice_date: invoiceDate,
+      p_expense_type: 'labor'
+    });
+    
+    if (error) {
+      console.error('Error generating invoice number:', error);
+      return null;
+    }
+    
+    return data;
   };
 
   const addItem = () => {
@@ -128,7 +138,6 @@ const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const invoiceNumber = generateInvoiceNumber();
     const workerId = formData.get("worker_id") as string;
     const projectId = selectedProject;
     const companyId = selectedCompany;
@@ -137,6 +146,14 @@ const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
 
     if (!projectId || !companyId || items.some(i => !i.category_id || !i.description)) {
       toast.error("กรุณากรอกข้อมูลให้ครบถ้วน");
+      setLoading(false);
+      return;
+    }
+
+    // Generate invoice number
+    const invoiceNumber = await generateInvoiceNumber();
+    if (!invoiceNumber) {
+      toast.error("ไม่สามารถสร้างเลขที่บิลได้");
       setLoading(false);
       return;
     }
@@ -273,7 +290,7 @@ const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>เลขที่ใบเสร็จ (สร้างอัตโนมัติ)</Label>
-              <Input value={generateInvoiceNumber()} disabled className="bg-muted" />
+              <Input value="สร้างอัตโนมัติเมื่อบันทึก" disabled className="bg-muted" />
             </div>
             <div>
               <Label htmlFor="invoice_date">วันที่</Label>

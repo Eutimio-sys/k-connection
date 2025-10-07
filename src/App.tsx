@@ -10,8 +10,8 @@ import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 import Kanban from "./pages/Kanban";
-import PurchaseRequests from "./pages/PurchaseRequests";
 import DailyPayments from "./pages/DailyPayments";
+import Approvals from "./pages/Approvals";
 import Employees from "./pages/Employees";
 import EmployeeDetail from "./pages/EmployeeDetail";
 import HRManagement from "./pages/HRManagement";
@@ -39,7 +39,7 @@ const App = () => (
             <Route path="/projects" element={<Projects />} />
             <Route path="/projects/:id" element={<ProjectDetail />} />
             <Route path="/kanban" element={<Kanban />} />
-            <Route path="/purchase-requests" element={<PurchaseRequests />} />
+            <Route path="/approvals" element={<Approvals />} />
             <Route path="/accounting" element={<Accounting />} />
             <Route path="/labor-accounting" element={<LaborAccounting />} />
             <Route path="/daily-payments" element={<DailyPayments />} />

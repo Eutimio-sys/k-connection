@@ -19,7 +19,7 @@ interface ExpenseItem {
   notes: string;
 }
 
-const ExpenseDialog = ({ children, onSuccess }: { children: React.ReactNode; onSuccess: () => void }) => {
+const ExpenseDialog = ({ children, onSuccess, expense }: { children: React.ReactNode; onSuccess: () => void; expense?: any }) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [vendors, setVendors] = useState<any[]>([]);
@@ -116,11 +116,24 @@ const ExpenseDialog = ({ children, onSuccess }: { children: React.ReactNode; onS
     setReceiptImagePreview("");
   };
 
+  const generateAutoInvoiceNumber = async () => {
+    if (!projectId || !companyId || !invoiceDate) return null;
+    
+    const { data, error } = await supabase.rpc('generate_invoice_number', {
+      p_company_id: companyId,
+      p_project_id: projectId,
+      p_invoice_date: invoiceDate,
+      p_expense_type: 'material'
+    });
+    
+    return data;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validation
-    if (!invoiceNumber || !projectId || !companyId) {
+    if (!projectId || !companyId) {
       toast.error("กรุณากรอกข้อมูลให้ครบถ้วน");
       return;
     }
@@ -136,6 +149,19 @@ const ExpenseDialog = ({ children, onSuccess }: { children: React.ReactNode; onS
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
+
+      // Generate auto invoice number if not manually set
+      let finalInvoiceNumber = invoiceNumber;
+      if (!finalInvoiceNumber) {
+        const autoNumber = await generateAutoInvoiceNumber();
+        if (autoNumber) {
+          finalInvoiceNumber = autoNumber;
+        } else {
+          toast.error("ไม่สามารถสร้างเลขที่บิลอัตโนมัติได้");
+          setLoading(false);
+          return;
+        }
+      }
 
       let receiptImageUrl = null;
 
@@ -165,7 +191,7 @@ const ExpenseDialog = ({ children, onSuccess }: { children: React.ReactNode; onS
       const { data: expense, error: expenseError } = await supabase
         .from("expenses")
         .insert({
-          invoice_number: invoiceNumber,
+          invoice_number: finalInvoiceNumber,
           tax_invoice_number: taxInvoiceNumber || null,
           vendor_id: vendorId || null,
           project_id: projectId,
@@ -236,12 +262,11 @@ const ExpenseDialog = ({ children, onSuccess }: { children: React.ReactNode; onS
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>เลขที่บิล *</Label>
+              <Label>เลขที่บิล (เว้นว่างเพื่อสร้างอัตโนมัติ)</Label>
               <Input
                 value={invoiceNumber}
                 onChange={(e) => setInvoiceNumber(e.target.value)}
-                placeholder="INV-001"
-                required
+                placeholder="จะสร้างอัตโนมัติ"
               />
             </div>
             <div className="space-y-2">

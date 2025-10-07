@@ -6,20 +6,43 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import ExpenseDialog from "@/components/ExpenseDialog";
-import { Plus, FileText, ExternalLink } from "lucide-react";
+import { Plus, FileText, ExternalLink, Edit, Filter } from "lucide-react";
 import { format } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const Accounting = () => {
   const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingExpense, setEditingExpense] = useState<any>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    startDate: "",
+    endDate: "",
+    projectId: "",
+    vendorId: "",
+  });
+  const [projects, setProjects] = useState<any[]>([]);
+  const [vendors, setVendors] = useState<any[]>([]);
 
   useEffect(() => {
     fetchExpenses();
+    fetchFilterData();
   }, []);
+
+  const fetchFilterData = async () => {
+    const [projectsRes, vendorsRes] = await Promise.all([
+      supabase.from("projects").select("id, name").order("name"),
+      supabase.from("vendors").select("id, name").eq("is_active", true).order("name"),
+    ]);
+    setProjects(projectsRes.data || []);
+    setVendors(vendorsRes.data || []);
+  };
 
   const fetchExpenses = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    let query = supabase
       .from("expenses")
       .select(`
         *,
@@ -30,8 +53,22 @@ const Accounting = () => {
           *,
           category:expense_categories(name)
         )
-      `)
-      .order("created_at", { ascending: false });
+      `);
+
+    if (filters.startDate) {
+      query = query.gte("invoice_date", filters.startDate);
+    }
+    if (filters.endDate) {
+      query = query.lte("invoice_date", filters.endDate);
+    }
+    if (filters.projectId) {
+      query = query.eq("project_id", filters.projectId);
+    }
+    if (filters.vendorId) {
+      query = query.eq("vendor_id", filters.vendorId);
+    }
+
+    const { data, error } = await query.order("created_at", { ascending: false });
 
     if (error) {
       toast.error("เกิดข้อผิดพลาดในการโหลดข้อมูล");
@@ -74,13 +111,78 @@ const Accounting = () => {
           </h1>
           <p className="text-muted-foreground text-lg">จัดการค่าใช้จ่ายวัสดุและอุปกรณ์</p>
         </div>
-        <ExpenseDialog onSuccess={fetchExpenses}>
-          <Button size="lg" className="gap-2">
-            <Plus className="h-5 w-5" />
-            เพิ่มบิล/ค่าใช้จ่าย
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowFilters(!showFilters)} className="gap-2">
+            <Filter className="h-4 w-4" />
+            ตัวกรอง
           </Button>
-        </ExpenseDialog>
+          <ExpenseDialog onSuccess={fetchExpenses}>
+            <Button size="lg" className="gap-2">
+              <Plus className="h-5 w-5" />
+              เพิ่มบิล/ค่าใช้จ่าย
+            </Button>
+          </ExpenseDialog>
+        </div>
       </div>
+
+      {showFilters && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-4 gap-4">
+              <div>
+                <Label>วันที่เริ่มต้น</Label>
+                <Input
+                  type="date"
+                  value={filters.startDate}
+                  onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>วันที่สิ้นสุด</Label>
+                <Input
+                  type="date"
+                  value={filters.endDate}
+                  onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>โครงการ</Label>
+                <Select value={filters.projectId} onValueChange={(value) => setFilters({ ...filters, projectId: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="ทั้งหมด" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">ทั้งหมด</SelectItem>
+                    {projects.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>ร้านค้า</Label>
+                <Select value={filters.vendorId} onValueChange={(value) => setFilters({ ...filters, vendorId: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="ทั้งหมด" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">ทั้งหมด</SelectItem>
+                    {vendors.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end mt-4 gap-2">
+              <Button variant="outline" onClick={() => setFilters({ startDate: "", endDate: "", projectId: "", vendorId: "" })}>
+                ล้างตัวกรอง
+              </Button>
+              <Button onClick={fetchExpenses}>ค้นหา</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {loading ? (
         <Card>

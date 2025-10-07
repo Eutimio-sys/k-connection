@@ -545,6 +545,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "labor_expenses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "labor_expenses_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
@@ -1126,7 +1133,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_invoice_number: {
+        Args: {
+          p_company_id: string
+          p_expense_type: string
+          p_invoice_date: string
+          p_project_id: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       leave_type: "sick" | "personal" | "vacation" | "maternity" | "unpaid"
