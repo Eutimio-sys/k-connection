@@ -20,12 +20,13 @@ const DailyPaymentDialog = ({ onSuccess }: DailyPaymentDialogProps) => {
   const [workers, setWorkers] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [paymentAccounts, setPaymentAccounts] = useState<any[]>([]);
+  const [paymentTypes, setPaymentTypes] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     project_id: "",
     worker_id: "",
     category_id: "",
     payment_account_id: "",
-    payment_type: "",
+    payment_type_id: "",
     payment_date: new Date().toISOString().split('T')[0],
     amount: "",
     description: "",
@@ -38,6 +39,7 @@ const DailyPaymentDialog = ({ onSuccess }: DailyPaymentDialogProps) => {
       supabase.from("workers").select("*").eq("is_active", true).then(({ data }) => setWorkers(data || []));
       supabase.from("expense_categories").select("*").eq("is_active", true).then(({ data }) => setCategories(data || []));
       supabase.from("payment_accounts").select("*").eq("is_active", true).order("name").then(({ data }) => setPaymentAccounts(data || []));
+      supabase.from("payment_types").select("*").eq("is_active", true).order("name").then(({ data }) => setPaymentTypes(data || []));
     }
   }, [open]);
 
@@ -68,7 +70,7 @@ const DailyPaymentDialog = ({ onSuccess }: DailyPaymentDialogProps) => {
         worker_id: "",
         category_id: "",
         payment_account_id: "",
-        payment_type: "",
+        payment_type_id: "",
         payment_date: new Date().toISOString().split('T')[0],
         amount: "",
         description: "",
@@ -165,15 +167,16 @@ const DailyPaymentDialog = ({ onSuccess }: DailyPaymentDialogProps) => {
 
             <div>
               <Label>ประเภทการโอน *</Label>
-              <Select value={formData.payment_type} onValueChange={v => setFormData({...formData, payment_type: v})} required>
+              <Select value={formData.payment_type_id} onValueChange={v => setFormData({...formData, payment_type_id: v})} required>
                 <SelectTrigger>
                   <SelectValue placeholder="เลือกประเภท" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="transfer">โอนเงิน</SelectItem>
-                  <SelectItem value="cash">เงินสด</SelectItem>
-                  <SelectItem value="cheque">เช็ค</SelectItem>
-                  <SelectItem value="other">อื่นๆ</SelectItem>
+                  {paymentTypes.map(type => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

@@ -8,6 +8,7 @@ import CategoriesSettings from "@/components/settings/CategoriesSettings";
 import VendorsSettings from "@/components/settings/VendorsSettings";
 import WorkersSettings from "@/components/settings/WorkersSettings";
 import PaymentAccountsSettings from "@/components/settings/PaymentAccountsSettings";
+import PaymentTypesSettings from "@/components/settings/PaymentTypesSettings";
 import DocumentTypesSettings from "@/components/settings/DocumentTypesSettings";
 
 const Settings = () => {
@@ -28,12 +29,13 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="companies" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="companies">บริษัท</TabsTrigger>
           <TabsTrigger value="categories">หมวดหมู่</TabsTrigger>
           <TabsTrigger value="vendors">ร้านค้า</TabsTrigger>
           <TabsTrigger value="workers">ช่าง</TabsTrigger>
           <TabsTrigger value="payments">บัญชีจ่ายเงิน</TabsTrigger>
+          <TabsTrigger value="payment-types">ประเภทการโอน</TabsTrigger>
           <TabsTrigger value="documents">ประเภทเอกสาร</TabsTrigger>
         </TabsList>
 
@@ -55,6 +57,10 @@ const Settings = () => {
 
         <TabsContent value="payments">
           <PaymentAccountsSettings />
+        </TabsContent>
+
+        <TabsContent value="payment-types">
+          <PaymentTypesSettings />
         </TabsContent>
 
         <TabsContent value="documents">

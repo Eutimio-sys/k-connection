@@ -120,6 +120,7 @@ export type Database = {
           payment_account_id: string | null
           payment_date: string
           payment_type: string | null
+          payment_type_id: string | null
           project_id: string
           status: string
           updated_at: string
@@ -140,6 +141,7 @@ export type Database = {
           payment_account_id?: string | null
           payment_date?: string
           payment_type?: string | null
+          payment_type_id?: string | null
           project_id: string
           status?: string
           updated_at?: string
@@ -160,6 +162,7 @@ export type Database = {
           payment_account_id?: string | null
           payment_date?: string
           payment_type?: string | null
+          payment_type_id?: string | null
           project_id?: string
           status?: string
           updated_at?: string
@@ -192,6 +195,13 @@ export type Database = {
             columns: ["payment_account_id"]
             isOneToOne: false
             referencedRelation: "payment_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_payments_payment_type_id_fkey"
+            columns: ["payment_type_id"]
+            isOneToOne: false
+            referencedRelation: "payment_types"
             referencedColumns: ["id"]
           },
           {
@@ -741,6 +751,33 @@ export type Database = {
           is_active?: boolean
           name?: string
           notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      payment_types: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
           updated_at?: string
         }
         Relationships: []

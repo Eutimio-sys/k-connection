@@ -30,13 +30,15 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split("T")[0]);
   const [paymentAccounts, setPaymentAccounts] = useState<any[]>([]);
+  const [paymentTypes, setPaymentTypes] = useState<any[]>([]);
   const [paymentAccountId, setPaymentAccountId] = useState("");
-  const [paymentType, setPaymentType] = useState("");
+  const [paymentTypeId, setPaymentTypeId] = useState("");
 
   useEffect(() => {
     if (open) {
       fetchExpenseItems();
       supabase.from("payment_accounts").select("*").eq("is_active", true).order("name").then(({ data }) => setPaymentAccounts(data || []));
+      supabase.from("payment_types").select("*").eq("is_active", true).order("name").then(({ data }) => setPaymentTypes(data || []));
     }
   }, [open, expenseType]);
 
@@ -84,7 +86,7 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
       toast.error("กรุณาเลือกรายการอย่างน้อย 1 รายการ");
       return;
     }
-    if (!paymentAccountId || !paymentType) {
+    if (!paymentAccountId || !paymentTypeId) {
       toast.error("กรุณาเลือกบัญชีที่ใช้โอนและประเภทการโอน");
       return;
     }
@@ -116,7 +118,7 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
         expense_type: expenseType,
         expense_item_id: item.id,
         payment_account_id: paymentAccountId,
-        payment_type: paymentType,
+        payment_type_id: paymentTypeId,
         created_by: user.id,
         status: "pending",
       };
@@ -132,7 +134,7 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
       setOpen(false);
       setSelectedItems([]);
       setPaymentAccountId("");
-      setPaymentType("");
+      setPaymentTypeId("");
       onSuccess?.();
     }
     setLoading(false);
@@ -189,15 +191,16 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
             </div>
             <div>
               <Label>ประเภทการโอน *</Label>
-              <Select value={paymentType} onValueChange={setPaymentType} required>
+              <Select value={paymentTypeId} onValueChange={setPaymentTypeId} required>
                 <SelectTrigger>
                   <SelectValue placeholder="เลือกประเภท" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="transfer">โอนเงิน</SelectItem>
-                  <SelectItem value="cash">เงินสด</SelectItem>
-                  <SelectItem value="cheque">เช็ค</SelectItem>
-                  <SelectItem value="other">อื่นๆ</SelectItem>
+                  {paymentTypes.map(type => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

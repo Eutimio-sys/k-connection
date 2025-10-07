@@ -33,6 +33,7 @@ const DailyPayments = () => {
         worker:workers(full_name, bank_name, bank_account),
         category:expense_categories(name),
         payment_account:payment_accounts(name, bank_name, account_number),
+        payment_type:payment_types(name),
         creator:profiles!created_by(full_name)
       `)
       .eq("payment_date", selectedDate)
@@ -182,13 +183,7 @@ const DailyPayments = () => {
                     </div>
                     <div>
                       <p className="font-medium">ประเภทการโอน</p>
-                      <p>
-                        {payment.payment_type === "transfer" && "โอนเงิน"}
-                        {payment.payment_type === "cash" && "เงินสด"}
-                        {payment.payment_type === "cheque" && "เช็ค"}
-                        {payment.payment_type === "other" && "อื่นๆ"}
-                        {!payment.payment_type && "-"}
-                      </p>
+                      <p>{payment.payment_type?.name || "-"}</p>
                     </div>
                   </div>
 
