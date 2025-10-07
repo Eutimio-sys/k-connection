@@ -356,7 +356,55 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
               </Select>
             </div>
             <div className="space-y-2 col-span-2">
-              <Label>ร้านค้า</Label>
+              <div className="flex items-center justify-between">
+                <Label>ร้านค้า</Label>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button type="button" variant="ghost" size="sm" className="h-8 gap-1">
+                      <Plus className="h-3 w-3" />
+                      เพิ่มร้านค้า
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>เพิ่มร้านค้าใหม่</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={async (e) => {
+                      e.preventDefault();
+                      const formData = new FormData(e.currentTarget);
+                      const { error } = await supabase.from("vendors").insert({
+                        name: formData.get("name") as string,
+                        contact_person: formData.get("contact_person") as string || null,
+                        phone: formData.get("phone") as string || null,
+                        is_active: true,
+                      });
+                      if (error) {
+                        toast.error("เกิดข้อผิดพลาด: " + error.message);
+                      } else {
+                        toast.success("เพิ่มร้านค้าสำเร็จ");
+                        fetchData();
+                        (e.target as HTMLFormElement).reset();
+                      }
+                    }} className="space-y-4">
+                      <div>
+                        <Label htmlFor="vendor-name">ชื่อร้านค้า *</Label>
+                        <Input id="vendor-name" name="name" required />
+                      </div>
+                      <div>
+                        <Label htmlFor="vendor-contact">ผู้ติดต่อ</Label>
+                        <Input id="vendor-contact" name="contact_person" />
+                      </div>
+                      <div>
+                        <Label htmlFor="vendor-phone">เบอร์โทร</Label>
+                        <Input id="vendor-phone" name="phone" />
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button type="submit">บันทึก</Button>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
               <Select value={vendorId} onValueChange={setVendorId}>
                 <SelectTrigger>
                   <SelectValue placeholder="เลือกร้านค้า (ถ้ามี)" />

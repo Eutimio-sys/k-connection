@@ -345,7 +345,60 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
           </div>
 
           <div>
-            <Label htmlFor="worker_id">ช่าง</Label>
+            <div className="flex items-center justify-between mb-2">
+              <Label htmlFor="worker_id">ช่าง</Label>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button type="button" variant="ghost" size="sm" className="h-8 gap-1">
+                    <Plus className="h-3 w-3" />
+                    เพิ่มช่าง
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>เพิ่มช่างใหม่</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.currentTarget);
+                    const { error } = await supabase.from("workers").insert({
+                      full_name: formData.get("full_name") as string,
+                      phone: formData.get("phone") as string || null,
+                      specialty: formData.get("specialty") as string || null,
+                      daily_rate: formData.get("daily_rate") ? parseFloat(formData.get("daily_rate") as string) : null,
+                      is_active: true,
+                    });
+                    if (error) {
+                      toast.error("เกิดข้อผิดพลาด: " + error.message);
+                    } else {
+                      toast.success("เพิ่มช่างสำเร็จ");
+                      fetchData();
+                      (e.target as HTMLFormElement).reset();
+                    }
+                  }} className="space-y-4">
+                    <div>
+                      <Label htmlFor="worker-name">ชื่อ-นามสกุล *</Label>
+                      <Input id="worker-name" name="full_name" required />
+                    </div>
+                    <div>
+                      <Label htmlFor="worker-phone">เบอร์โทร</Label>
+                      <Input id="worker-phone" name="phone" />
+                    </div>
+                    <div>
+                      <Label htmlFor="worker-specialty">ความเชี่ยวชาญ</Label>
+                      <Input id="worker-specialty" name="specialty" placeholder="เช่น ช่างไฟ, ช่างประปา" />
+                    </div>
+                    <div>
+                      <Label htmlFor="worker-rate">ค่าแรงรายวัน (บาท)</Label>
+                      <Input id="worker-rate" name="daily_rate" type="number" step="0.01" />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button type="submit">บันทึก</Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
             <Select name="worker_id">
               <SelectTrigger>
                 <SelectValue placeholder="เลือกช่าง" />
