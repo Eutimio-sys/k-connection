@@ -4,13 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Calendar, Building, User, FileText, Filter } from "lucide-react";
+import { Calendar, Building, User, FileText, Filter, Download } from "lucide-react";
 import { toast } from "sonner";
 import LaborExpenseDialog from "@/components/LaborExpenseDialog";
 import LaborExpenseDetailDialog from "@/components/LaborExpenseDetailDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { exportLaborExpensesToExcel } from "@/utils/exportExcel";
 
 const LaborAccounting = () => {
   const [expenses, setExpenses] = useState<any[]>([]);
@@ -134,6 +135,15 @@ const LaborAccounting = () => {
           <p className="text-muted-foreground text-lg">จัดการและติดตามค่าใช้จ่ายด้านแรงงาน</p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => exportLaborExpensesToExcel(expenses)} 
+            className="gap-2"
+            disabled={expenses.length === 0}
+          >
+            <Download className="h-4 w-4" />
+            Export Excel
+          </Button>
           <Button variant="outline" onClick={() => setShowFilters(!showFilters)} className="gap-2">
             <Filter className="h-4 w-4" />
             ตัวกรอง

@@ -7,11 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import ExpenseDialog from "@/components/ExpenseDialog";
 import ExpenseDetailDialog from "@/components/ExpenseDetailDialog";
-import { Plus, FileText, ExternalLink, Edit, Filter } from "lucide-react";
+import { Plus, FileText, ExternalLink, Edit, Filter, Download } from "lucide-react";
 import { format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { exportExpensesToExcel } from "@/utils/exportExcel";
 
 const Accounting = () => {
   const [expenses, setExpenses] = useState<any[]>([]);
@@ -147,6 +148,15 @@ const Accounting = () => {
           <p className="text-muted-foreground text-lg">จัดการค่าใช้จ่ายวัสดุและอุปกรณ์</p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => exportExpensesToExcel(expenses)} 
+            className="gap-2"
+            disabled={expenses.length === 0}
+          >
+            <Download className="h-4 w-4" />
+            Export Excel
+          </Button>
           <Button variant="outline" onClick={() => setShowFilters(!showFilters)} className="gap-2">
             <Filter className="h-4 w-4" />
             ตัวกรอง

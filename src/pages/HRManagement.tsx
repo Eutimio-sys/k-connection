@@ -8,18 +8,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Users, FileText, ArrowLeft, Eye, Pencil, DollarSign, Plus } from "lucide-react";
+import { Users, FileText, ArrowLeft, Eye, Pencil, DollarSign, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { EmployeeEditDialog } from "@/components/EmployeeEditDialog";
+import AddEmployeeDialog from "@/components/AddEmployeeDialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const HRManagement = () => {
   const navigate = useNavigate();
   const [employees, setEmployees] = useState<any[]>([]);
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
+  const [companies, setCompanies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState<any>(null);
   const [taxDialogOpen, setTaxDialogOpen] = useState(false);
   const [selectedEmployeeForTax, setSelectedEmployeeForTax] = useState<any>(null);
   const [taxFormData, setTaxFormData] = useState({
@@ -38,15 +43,29 @@ const HRManagement = () => {
     setLoading(true);
 
     try {
-      // 1) Fetch all employees
+      // Fetch employees with company info
       const { data: employeesData, error: employeesError } = await supabase
         .from("profiles")
-        .select("*")
+        .select(`
+          *,
+          company:companies(name)
+        `)
         .order("full_name");
 
       if (employeesError) throw employeesError;
 
-      // 2) Fetch all salary records
+      // Fetch companies
+      const { data: companiesData, error: companiesError } = await supabase
+        .from("companies")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+
+      if (companiesError) throw companiesError;
+
+      setCompanies(companiesData || []);
+
+      // Fetch all salary records
       const { data: salariesData, error: salariesError } = await supabase
         .from("salary_records")
         .select("user_id, salary_amount, effective_date")
@@ -70,7 +89,6 @@ const HRManagement = () => {
 
       setEmployees(processedEmployees);
 
-
       // Fetch document requests
       const { data: requestsData, error: requestsError } = await supabase
         .from("document_requests")
@@ -92,6 +110,25 @@ const HRManagement = () => {
     }
 
     setLoading(false);
+  };
+
+  const handleDeleteEmployee = async () => {
+    if (!employeeToDelete) return;
+
+    // We can't actually delete from auth.users, so we'll just mark as inactive or remove from profiles
+    const { error } = await supabase
+      .from("profiles")
+      .delete()
+      .eq("id", employeeToDelete.id);
+
+    if (error) {
+      toast.error("เกิดข้อผิดพลาด: " + error.message);
+    } else {
+      toast.success("ลบพนักงานสำเร็จ");
+      setDeleteDialogOpen(false);
+      setEmployeeToDelete(null);
+      fetchData();
+    }
   };
 
   const handleProcessRequest = async (requestId: string, status: string) => {
@@ -199,6 +236,7 @@ const HRManagement = () => {
           </div>
           <p className="text-muted-foreground text-lg ml-14">จัดการข้อมูลพนักงานและคำขอเอกสาร</p>
         </div>
+        <AddEmployeeDialog onSuccess={fetchData} companies={companies} />
       </div>
 
       <Tabs defaultValue="employees" className="space-y-6">
@@ -221,12 +259,12 @@ const HRManagement = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>ชื่อ-นามสกุล</TableHead>
+                    <TableHead>บริษัท</TableHead>
                     <TableHead>ตำแหน่ง</TableHead>
                     <TableHead>แผนก</TableHead>
                     <TableHead>เบอร์โทร</TableHead>
                     <TableHead>บทบาท</TableHead>
                     <TableHead>เงินเดือนปัจจุบัน</TableHead>
-                    <TableHead>วันที่เริ่มงาน</TableHead>
                     <TableHead className="text-right">จัดการ</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -234,15 +272,13 @@ const HRManagement = () => {
                   {employees.map((emp) => (
                     <TableRow key={emp.id}>
                       <TableCell className="font-medium">{emp.full_name}</TableCell>
+                      <TableCell>{emp.company?.name || "-"}</TableCell>
                       <TableCell>{emp.position || "-"}</TableCell>
                       <TableCell>{emp.department || "-"}</TableCell>
                       <TableCell>{emp.phone || "-"}</TableCell>
                       <TableCell>{getRoleBadge(emp.role)}</TableCell>
                       <TableCell className="font-medium text-primary">
                         {formatCurrency(emp.current_salary)}
-                      </TableCell>
-                      <TableCell>
-                        {emp.hire_date ? new Date(emp.hire_date).toLocaleDateString("th-TH") : "-"}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -266,6 +302,18 @@ const HRManagement = () => {
                           >
                             <Eye size={14} />
                             รายละเอียด
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setEmployeeToDelete(emp);
+                              setDeleteDialogOpen(true);
+                            }}
+                            className="gap-1 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 size={14} />
+                            ลบ
                           </Button>
                         </div>
                       </TableCell>
@@ -509,6 +557,24 @@ const HRManagement = () => {
           onSuccess={fetchData}
         />
       )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>ยืนยันการลบพนักงาน</AlertDialogTitle>
+            <AlertDialogDescription>
+              คุณต้องการลบ {employeeToDelete?.full_name} ออกจากระบบใช่หรือไม่? 
+              การดำเนินการนี้ไม่สามารถย้อนกลับได้
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteEmployee} className="bg-destructive">
+              ลบ
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

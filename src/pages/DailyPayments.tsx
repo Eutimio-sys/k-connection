@@ -3,23 +3,44 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, DollarSign, CheckCircle, XCircle } from "lucide-react";
+import { Calendar, DollarSign, CheckCircle, XCircle, Download, Filter } from "lucide-react";
 import { toast } from "sonner";
 import DailyPaymentFromExpenseDialog from "@/components/DailyPaymentFromExpenseDialog";
 import DailyPaymentDetailDialog from "@/components/DailyPaymentDetailDialog";
 import DailyPaymentDialog from "@/components/DailyPaymentDialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { exportDailyPaymentsToExcel } from "@/utils/exportExcel";
 
 const DailyPayments = () => {
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [selectedCompany, setSelectedCompany] = useState("all");
+  const [selectedProject, setSelectedProject] = useState("all");
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
   const [userRole, setUserRole] = useState<string>("");
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
-  }, [selectedDate]);
+    fetchFilterData();
+  }, [selectedDate, startDate, endDate, selectedCompany, selectedProject]);
+
+  const fetchFilterData = async () => {
+    const [companiesRes, projectsRes] = await Promise.all([
+      supabase.from("companies").select("id, name").eq("is_active", true).order("name"),
+      supabase.from("projects").select("id, name").order("name"),
+    ]);
+    setCompanies(companiesRes.data || []);
+    setProjects(projectsRes.data || []);
+  };
 
   const fetchData = async () => {
     setLoading(true);
