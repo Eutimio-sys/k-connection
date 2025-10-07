@@ -3,18 +3,24 @@ import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { 
-  Building2, 
-  LayoutDashboard, 
-  FolderKanban, 
-  ShoppingCart, 
-  Users, 
+  Building2,
+  Home,
+  LayoutDashboard,
+  FolderKanban,
+  Users,
   Settings,
   LogOut,
   Menu,
   X,
   Kanban as KanbanIcon,
   Wallet,
-  Receipt
+  FileText,
+  DollarSign,
+  CheckCircle,
+  Clock,
+  Calendar,
+  User,
+  UserCog,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -65,13 +71,19 @@ const Layout = () => {
   };
 
   const navItems = [
+    { icon: Home, label: "หน้าแรก", path: "/" },
     { icon: LayoutDashboard, label: "แดชบอร์ด", path: "/dashboard" },
     { icon: FolderKanban, label: "โครงการ", path: "/projects" },
     { icon: KanbanIcon, label: "ตารางงาน", path: "/kanban" },
-    { icon: ShoppingCart, label: "ใบขอซื้อ", path: "/purchase-requests" },
-    { icon: Receipt, label: "บัญชี", path: "/accounting" },
-    { icon: Wallet, label: "จ่ายเงินรายวัน", path: "/daily-payments" },
+    { icon: CheckCircle, label: "อนุมัติรายการ", path: "/approvals" },
+    { icon: FileText, label: "บัญชีวัสดุ", path: "/accounting" },
+    { icon: Wallet, label: "บัญชีค่าแรง", path: "/labor-accounting" },
+    { icon: DollarSign, label: "จ่ายเงินรายวัน", path: "/daily-payments" },
     { icon: Users, label: "พนักงาน", path: "/employees" },
+    { icon: UserCog, label: "จัดการ HR", path: "/hr-management" },
+    { icon: Clock, label: "เช็คอิน/เอาท์", path: "/attendance" },
+    { icon: Calendar, label: "ระบบลา", path: "/leave" },
+    { icon: User, label: "โปรไฟล์", path: "/profile" },
     { icon: Settings, label: "ตั้งค่า", path: "/settings" },
   ];
 
