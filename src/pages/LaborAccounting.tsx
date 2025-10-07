@@ -70,7 +70,33 @@ const LaborAccounting = () => {
       toast.error("เกิดข้อผิดพลาด");
       console.error(error);
     } else {
-      setExpenses(data || []);
+      // Fetch creator and updater profiles separately
+      const expensesWithProfiles = await Promise.all(
+        (data || []).map(async (expense) => {
+          const profiles: any = {};
+          
+          if (expense.created_by) {
+            const { data: creator } = await supabase
+              .from('profiles')
+              .select('id, full_name, email')
+              .eq('id', expense.created_by)
+              .maybeSingle();
+            profiles.created_by_profile = creator;
+          }
+          
+          if (expense.updated_by) {
+            const { data: updater } = await supabase
+              .from('profiles')
+              .select('id, full_name, email')
+              .eq('id', expense.updated_by)
+              .maybeSingle();
+            profiles.updated_by_profile = updater;
+          }
+          
+          return { ...expense, ...profiles };
+        })
+      );
+      setExpenses(expensesWithProfiles);
     }
     setLoading(false);
   };

@@ -42,9 +42,7 @@ const Approvals = () => {
         project:projects(name),
         company:companies(name),
         labor_expense_items(*),
-        labor_expense_deductions(*),
-        created_by_profile:profiles!labor_expenses_created_by_fkey(id, full_name, email),
-        updated_by_profile:profiles!labor_expenses_updated_by_fkey(id, full_name, email)
+        labor_expense_deductions(*)
       `)
       .eq("status", "pending")
       .order("created_at", { ascending: false });
@@ -57,9 +55,7 @@ const Approvals = () => {
         vendor:vendors(name),
         project:projects(name),
         company:companies(name),
-        expense_items(*),
-        created_by_profile:profiles!expenses_created_by_fkey(id, full_name, email),
-        updated_by_profile:profiles!expenses_updated_by_fkey(id, full_name, email)
+        expense_items(*)
       `)
       .eq("status", "pending")
       .order("created_at", { ascending: false });
@@ -70,8 +66,7 @@ const Approvals = () => {
       .select(`
         *,
         user:profiles!leave_requests_user_id_fkey(full_name, position, department),
-        approver:profiles!leave_requests_approved_by_fkey(full_name),
-        updated_by_profile:profiles!leave_requests_updated_by_fkey(id, full_name, email)
+        approver:profiles!leave_requests_approved_by_fkey(full_name)
       `)
       .eq("status", "pending")
       .order("created_at", { ascending: false });
@@ -110,9 +105,81 @@ const Approvals = () => {
       })
     );
 
-    setLaborExpenses(laborWithCategories);
-    setMaterialExpenses(materialWithCategories);
-    setLeaveRequests(leaveData || []);
+    // Fetch profiles for labor expenses
+    const laborWithProfiles = await Promise.all(
+      (laborWithCategories || []).map(async (expense) => {
+        const profiles: any = {};
+        
+        if (expense.created_by) {
+          const { data: creator } = await supabase
+            .from('profiles')
+            .select('id, full_name, email')
+            .eq('id', expense.created_by)
+            .maybeSingle();
+          profiles.created_by_profile = creator;
+        }
+        
+        if (expense.updated_by) {
+          const { data: updater } = await supabase
+            .from('profiles')
+            .select('id, full_name, email')
+            .eq('id', expense.updated_by)
+            .maybeSingle();
+          profiles.updated_by_profile = updater;
+        }
+        
+        return { ...expense, ...profiles };
+      })
+    );
+
+    // Fetch profiles for material expenses
+    const materialWithProfiles = await Promise.all(
+      (materialWithCategories || []).map(async (expense) => {
+        const profiles: any = {};
+        
+        if (expense.created_by) {
+          const { data: creator } = await supabase
+            .from('profiles')
+            .select('id, full_name, email')
+            .eq('id', expense.created_by)
+            .maybeSingle();
+          profiles.created_by_profile = creator;
+        }
+        
+        if (expense.updated_by) {
+          const { data: updater } = await supabase
+            .from('profiles')
+            .select('id, full_name, email')
+            .eq('id', expense.updated_by)
+            .maybeSingle();
+          profiles.updated_by_profile = updater;
+        }
+        
+        return { ...expense, ...profiles };
+      })
+    );
+
+    // Fetch profiles for leave requests
+    const leaveWithProfiles = await Promise.all(
+      (leaveData || []).map(async (request) => {
+        const profiles: any = {};
+        
+        if (request.updated_by) {
+          const { data: updater } = await supabase
+            .from('profiles')
+            .select('id, full_name, email')
+            .eq('id', request.updated_by)
+            .maybeSingle();
+          profiles.updated_by_profile = updater;
+        }
+        
+        return { ...request, ...profiles };
+      })
+    );
+
+    setLaborExpenses(laborWithProfiles);
+    setMaterialExpenses(materialWithProfiles);
+    setLeaveRequests(leaveWithProfiles);
     setLoading(false);
   };
 
