@@ -11,18 +11,14 @@ import { toast } from "sonner";
 
 interface ExpenseItem {
   id: string;
-  description: string;
-  amount: number;
-  category_id: string;
-  category: { name: string };
-  expense: {
-    id: string;
-    invoice_number: string;
-    project_id: string;
-    project: { name: string };
-    vendor?: { id: string; name: string; bank_name: string; bank_account: string };
-    worker?: { id: string; full_name: string; bank_name: string; bank_account: string };
-  };
+  invoice_number: string;
+  project_id: string;
+  total_amount: number;
+  net_amount?: number;
+  notes?: string;
+  project: { name: string };
+  vendor?: { id: string; name: string; bank_name: string; bank_account: string };
+  worker?: { id: string; full_name: string; bank_name: string; bank_account: string };
 }
 
 const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
@@ -41,50 +37,37 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
   const fetchExpenseItems = async () => {
     if (expenseType === "material") {
       const { data, error } = await supabase
-        .from("expense_items")
+        .from("expenses")
         .select(`
-          *,
-          category:expense_categories(name),
-          expense:expenses!inner(
-            id,
-            invoice_number,
-            project_id,
-            status,
-            project:projects(name),
-            vendor:vendors(id, name, bank_name, bank_account)
-          )
+          id,
+          invoice_number,
+          project_id,
+          total_amount,
+          notes,
+          project:projects(name),
+          vendor:vendors(id, name, bank_name, bank_account)
         `)
-        .eq("expense.status", "approved");
+        .eq("status", "approved");
 
       if (!error && data) {
-        const filtered = data.filter((item: any) => item.expense?.status === "approved");
-        setMaterialItems(filtered as any);
+        setMaterialItems(data as any);
       }
     } else {
       const { data, error } = await supabase
-        .from("labor_expense_items")
+        .from("labor_expenses")
         .select(`
-          *,
-          category:expense_categories(name),
-          labor_expense:labor_expenses!inner(
-            id,
-            invoice_number,
-            project_id,
-            status,
-            project:projects(name),
-            worker:workers(id, full_name, bank_name, bank_account)
-          )
+          id,
+          invoice_number,
+          project_id,
+          net_amount,
+          notes,
+          project:projects(name),
+          worker:workers(id, full_name, bank_name, bank_account)
         `)
-        .eq("labor_expense.status", "approved");
+        .eq("status", "approved");
 
       if (!error && data) {
-        // Transform to match the expected structure
-        const transformed = data.map((item: any) => ({
-          ...item,
-          expense: item.labor_expense
-        }));
-        const filtered = transformed.filter((item: any) => item.expense?.status === "approved");
-        setLaborItems(filtered as any);
+        setLaborItems(data as any);
       }
     }
   };
@@ -109,15 +92,16 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
       const item = items.find(i => i.id === itemId);
       if (!item) return null;
 
-      const payee = expenseType === "material" ? item.expense.vendor : item.expense.worker;
+      const payee = expenseType === "material" ? item.vendor : item.worker;
+      const amount = expenseType === "material" ? item.total_amount : (item.net_amount || 0);
 
       return {
-        project_id: item.expense.project_id,
-        worker_id: expenseType === "labor" ? item.expense.worker?.id : null,
+        project_id: item.project_id,
+        worker_id: expenseType === "labor" ? item.worker?.id : null,
         payment_date: paymentDate,
-        amount: item.amount,
-        category_id: item.category_id,
-        description: `${item.expense.invoice_number} - ${item.description}`,
+        amount: amount,
+        category_id: null,
+        description: `${item.invoice_number}${item.notes ? ` - ${item.notes}` : ''}`,
         notes: `${payee?.bank_name || ""} ${payee?.bank_account || ""}`,
         expense_type: expenseType,
         expense_item_id: item.id,
@@ -184,14 +168,15 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
               <div className="space-y-2">
                 {items.map((item) => {
                   const payee = expenseType === "material" 
-                    ? item.expense.vendor?.name 
-                    : item.expense.worker?.full_name;
+                    ? item.vendor?.name 
+                    : item.worker?.full_name;
                   const bank = expenseType === "material"
-                    ? item.expense.vendor?.bank_name
-                    : item.expense.worker?.bank_name;
+                    ? item.vendor?.bank_name
+                    : item.worker?.bank_name;
                   const account = expenseType === "material"
-                    ? item.expense.vendor?.bank_account
-                    : item.expense.worker?.bank_account;
+                    ? item.vendor?.bank_account
+                    : item.worker?.bank_account;
+                  const amount = expenseType === "material" ? item.total_amount : (item.net_amount || 0);
 
                   return (
                     <div key={item.id} className="flex items-start gap-3 p-3 border rounded hover:bg-muted/50">
@@ -206,16 +191,17 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
                         }}
                       />
                       <div className="flex-1 text-sm">
-                        <p className="font-medium">{item.description}</p>
+                        <p className="font-medium">{item.invoice_number}</p>
                         <p className="text-muted-foreground">
-                          โครงการ: {item.expense.project.name} | หมวด: {item.category.name}
+                          โครงการ: {item.project.name}
                         </p>
                         <p className="text-muted-foreground">
                           {payee && `${payee} | `}
                           {bank && `${bank} `}
                           {account}
                         </p>
-                        <p className="font-semibold text-accent mt-1">{formatCurrency(item.amount)}</p>
+                        {item.notes && <p className="text-xs text-muted-foreground">{item.notes}</p>}
+                        <p className="font-semibold text-accent mt-1">{formatCurrency(amount)}</p>
                       </div>
                     </div>
                   );
@@ -232,7 +218,10 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
               รวม: {formatCurrency(
                 items
                   .filter(i => selectedItems.includes(i.id))
-                  .reduce((sum, i) => sum + i.amount, 0)
+                  .reduce((sum, i) => {
+                    const amount = expenseType === "material" ? i.total_amount : (i.net_amount || 0);
+                    return sum + amount;
+                  }, 0)
               )}
             </div>
           </div>
