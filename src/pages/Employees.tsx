@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Plus, Mail, Phone, Eye } from "lucide-react";
+import { Users, Plus, Mail, Phone, Eye, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 const Employees = () => {
@@ -74,10 +74,15 @@ const Employees = () => {
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
-            จัดการพนักงาน
-          </h1>
-          <p className="text-muted-foreground text-lg">บริหารข้อมูลพนักงานและสิทธิ์การเข้าถึง</p>
+          <div className="flex items-center gap-4 mb-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+              <ArrowLeft size={16} />
+            </Button>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              จัดการพนักงาน
+            </h1>
+          </div>
+          <p className="text-muted-foreground text-lg ml-14">บริหารข้อมูลพนักงานและสิทธิ์การเข้าถึง</p>
         </div>
       </div>
 

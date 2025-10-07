@@ -1,4 +1,4 @@
-import { Building2, LayoutDashboard, FolderKanban, ShoppingCart, FileText, Users, Settings, User, Clock, Calendar } from "lucide-react";
+import { Building2, Home, LayoutDashboard, FolderKanban, ShoppingCart, FileText, Users, Settings, User, Clock, Calendar } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
   Sidebar,
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/sidebar";
 
 const menuItems = [
+  { title: "หน้าแรก", url: "/", icon: Home },
   { title: "แดชบอร์ด", url: "/dashboard", icon: LayoutDashboard },
   { title: "โครงการ", url: "/projects", icon: FolderKanban },
   { title: "ใบขอซื้อ", url: "/purchase-requests", icon: ShoppingCart },

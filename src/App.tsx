@@ -14,6 +14,7 @@ import PurchaseRequests from "./pages/PurchaseRequests";
 import DailyPayments from "./pages/DailyPayments";
 import Employees from "./pages/Employees";
 import EmployeeDetail from "./pages/EmployeeDetail";
+import HRManagement from "./pages/HRManagement";
 import Settings from "./pages/Settings";
 import Accounting from "./pages/Accounting";
 import LaborAccounting from "./pages/LaborAccounting";
@@ -42,8 +43,9 @@ const App = () => (
             <Route path="/accounting" element={<Accounting />} />
             <Route path="/labor-accounting" element={<LaborAccounting />} />
             <Route path="/daily-payments" element={<DailyPayments />} />
-          <Route path="/employees" element={<Employees />} />
-          <Route path="/employees/:id" element={<EmployeeDetail />} />
+            <Route path="/employees" element={<Employees />} />
+            <Route path="/employees/:id" element={<EmployeeDetail />} />
+            <Route path="/hr-management" element={<HRManagement />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/attendance" element={<Attendance />} />
             <Route path="/leave" element={<LeaveManagement />} />

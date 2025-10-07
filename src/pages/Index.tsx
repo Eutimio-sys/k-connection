@@ -12,7 +12,8 @@ import {
   User, 
   Clock, 
   Calendar,
-  Wallet
+  Wallet,
+  UserCog
 } from "lucide-react";
 
 type UserRole = 'admin' | 'manager' | 'accountant' | 'worker';
@@ -122,6 +123,14 @@ const Index = () => {
       url: "/employees",
       icon: Users,
       gradient: "from-indigo-500 to-indigo-600",
+      roles: ['admin', 'manager']
+    },
+    {
+      title: "จัดการ HR",
+      description: "ระบบจัดการทรัพยากรบุคคล",
+      url: "/hr-management",
+      icon: UserCog,
+      gradient: "from-violet-500 to-violet-600",
       roles: ['admin', 'manager']
     },
     {

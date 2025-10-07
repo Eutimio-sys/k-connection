@@ -197,6 +197,80 @@ export type Database = {
           },
         ]
       }
+      document_requests: {
+        Row: {
+          created_at: string
+          document_type_id: string
+          id: string
+          notes: string | null
+          processed_at: string | null
+          processed_by: string | null
+          requested_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          document_type_id: string
+          id?: string
+          notes?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          requested_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          document_type_id?: string
+          id?: string
+          notes?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          requested_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_requests_document_type_id_fkey"
+            columns: ["document_type_id"]
+            isOneToOne: false
+            referencedRelation: "document_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_types: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       expense_categories: {
         Row: {
           code: string | null

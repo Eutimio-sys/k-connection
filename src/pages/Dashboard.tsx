@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FolderKanban, ShoppingCart, Building2, TrendingUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { FolderKanban, ShoppingCart, Building2, TrendingUp, ArrowLeft } from "lucide-react";
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({ totalProjects: 0, activeProjects: 0, pendingRequests: 0, totalCompanies: 0 });
 
   useEffect(() => {
@@ -28,7 +31,17 @@ const Dashboard = () => {
 
   return (
     <div className="p-8 space-y-8">
-      <div><h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">แดชบอร์ด</h1><p className="text-muted-foreground text-lg">ภาพรวมระบบ</p></div>
+      <div>
+        <div className="flex items-center gap-4 mb-2">
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+            <ArrowLeft size={16} />
+          </Button>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            แดชบอร์ด
+          </h1>
+        </div>
+        <p className="text-muted-foreground text-lg ml-14">ภาพรวมระบบ</p>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {cards.map(c => (
           <Card key={c.title} className="hover:shadow-elegant transition-shadow">

@@ -5,14 +5,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { User, Mail, Phone, MapPin, Calendar, Briefcase, AlertCircle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { User, Mail, Phone, MapPin, Calendar, Briefcase, AlertCircle, FileText, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 const Profile = () => {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [leaveBalance, setLeaveBalance] = useState<any>(null);
+  const [documentTypes, setDocumentTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
+  const [selectedDocumentType, setSelectedDocumentType] = useState("");
+  const [documentNotes, setDocumentNotes] = useState("");
   const [formData, setFormData] = useState({
     full_name: "",
     phone: "",
@@ -27,7 +35,18 @@ const Profile = () => {
 
   useEffect(() => {
     fetchProfile();
+    fetchDocumentTypes();
   }, []);
+
+  const fetchDocumentTypes = async () => {
+    const { data } = await supabase
+      .from("document_types")
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
+    
+    setDocumentTypes(data || []);
+  };
 
   const fetchProfile = async () => {
     setLoading(true);
@@ -91,17 +110,96 @@ const Profile = () => {
     setSaving(false);
   };
 
+  const handleRequestDocument = async () => {
+    if (!selectedDocumentType) {
+      toast.error("กรุณาเลือกประเภทเอกสาร");
+      return;
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (user) {
+      const { error } = await supabase
+        .from("document_requests")
+        .insert({
+          user_id: user.id,
+          document_type_id: selectedDocumentType,
+          notes: documentNotes,
+        });
+
+      if (error) {
+        toast.error("เกิดข้อผิดพลาด: " + error.message);
+      } else {
+        toast.success("ส่งคำขอเอกสารสำเร็จ");
+        setDocumentDialogOpen(false);
+        setSelectedDocumentType("");
+        setDocumentNotes("");
+      }
+    }
+  };
+
   if (loading) {
     return <div className="p-8 text-center"><p>กำลังโหลด...</p></div>;
   }
 
   return (
     <div className="p-8 space-y-6">
-      <div>
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
-          โปรไฟล์ของฉัน
-        </h1>
-        <p className="text-muted-foreground text-lg">จัดการข้อมูลส่วนตัวของคุณ</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-4 mb-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+              <ArrowLeft size={16} />
+            </Button>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              โปรไฟล์ของฉัน
+            </h1>
+          </div>
+          <p className="text-muted-foreground text-lg ml-14">จัดการข้อมูลส่วนตัวของคุณ</p>
+        </div>
+        <Dialog open={documentDialogOpen} onOpenChange={setDocumentDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <FileText size={16} />
+              ขอเอกสาร
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>ขอเอกสาร</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>ประเภทเอกสาร *</Label>
+                <Select value={selectedDocumentType} onValueChange={setSelectedDocumentType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="เลือกประเภทเอกสาร" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {documentTypes.map((type) => (
+                      <SelectItem key={type.id} value={type.id}>
+                        {type.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>หมายเหตุ (ถ้ามี)</Label>
+                <Textarea
+                  value={documentNotes}
+                  onChange={(e) => setDocumentNotes(e.target.value)}
+                  rows={3}
+                  placeholder="ระบุรายละเอียดเพิ่มเติม เช่น จำนวนชุด หรือความต้องการพิเศษ"
+                />
+              </div>
+
+              <Button onClick={handleRequestDocument} className="w-full">
+                ส่งคำขอ
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
