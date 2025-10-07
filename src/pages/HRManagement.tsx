@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Users, FileText, ArrowLeft, Eye, Pencil, DollarSign, Plus } from "lucide-react";
@@ -36,32 +36,43 @@ const HRManagement = () => {
 
   const fetchData = async () => {
     setLoading(true);
-    
-    // Fetch all employees with their latest salary
+
+    // 1) Fetch all employees
     const { data: employeesData, error: employeesError } = await supabase
       .from("profiles")
-      .select(`
-        *,
-        salary_records(salary_amount, effective_date)
-      `)
+      .select("*")
       .order("full_name");
 
     if (employeesError) {
-      toast.error("เกิดข้อผิดพลาด");
-    } else {
-      // Process employees to get latest salary
-      const processedEmployees = (employeesData || []).map((emp: any) => {
-        const salaries = emp.salary_records || [];
-        const latestSalary = salaries.sort(
-          (a: any, b: any) => new Date(b.effective_date).getTime() - new Date(a.effective_date).getTime()
-        )[0];
-        return {
-          ...emp,
-          current_salary: latestSalary?.salary_amount || null,
-        };
-      });
-      setEmployees(processedEmployees);
+      toast.error("เกิดข้อผิดพลาด: " + employeesError.message);
+      setLoading(false);
+      return;
     }
+
+    // 2) Fetch all salary records minimal fields and compute latest per user
+    const { data: salariesData, error: salariesError } = await supabase
+      .from("salary_records")
+      .select("user_id, salary_amount, effective_date")
+      .order("effective_date", { ascending: false });
+
+    if (salariesError) {
+      toast.error("เกิดข้อผิดพลาด: " + salariesError.message);
+    }
+
+    const latestSalaryByUser: Record<string, number> = {};
+    (salariesData || []).forEach((rec: any) => {
+      if (latestSalaryByUser[rec.user_id] === undefined) {
+        latestSalaryByUser[rec.user_id] = Number(rec.salary_amount) || 0;
+      }
+    });
+
+    const processedEmployees = (employeesData || []).map((emp: any) => ({
+      ...emp,
+      current_salary: latestSalaryByUser[emp.id] ?? null,
+    }));
+
+    setEmployees(processedEmployees);
+
 
     // Fetch document requests
     const { data: requestsData, error: requestsError } = await supabase
@@ -295,6 +306,7 @@ const HRManagement = () => {
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>บันทึกภาษีและประกันสังคม</DialogTitle>
+                    <DialogDescription>แบบฟอร์มบันทึกภาษีและประกันสังคมประจำเดือนสำหรับพนักงาน</DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
                     <div>
