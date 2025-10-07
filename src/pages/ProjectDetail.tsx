@@ -23,9 +23,9 @@ const ProjectDetail = () => {
   
   // Filter states
   const [materialDateFilter, setMaterialDateFilter] = useState("");
-  const [materialCategoryFilter, setMaterialCategoryFilter] = useState("");
+  const [materialCategoryFilter, setMaterialCategoryFilter] = useState("all");
   const [laborDateFilter, setLaborDateFilter] = useState("");
-  const [laborCategoryFilter, setLaborCategoryFilter] = useState("");
+  const [laborCategoryFilter, setLaborCategoryFilter] = useState("all");
 
   useEffect(() => {
     fetchData();
@@ -114,14 +114,14 @@ const ProjectDetail = () => {
   // Filter functions
   const filteredMaterialExpenses = materialExpenses.filter(expense => {
     const dateMatch = !materialDateFilter || expense.invoice_date === materialDateFilter;
-    const categoryMatch = !materialCategoryFilter || 
+    const categoryMatch = !materialCategoryFilter || materialCategoryFilter === "all" ||
       expense.items?.some((item: any) => item.category_id === materialCategoryFilter);
     return dateMatch && categoryMatch;
   });
 
   const filteredLaborExpenses = laborExpenses.filter(expense => {
     const dateMatch = !laborDateFilter || expense.invoice_date === laborDateFilter;
-    const categoryMatch = !laborCategoryFilter || 
+    const categoryMatch = !laborCategoryFilter || laborCategoryFilter === "all" ||
       expense.items?.some((item: any) => item.category_id === laborCategoryFilter);
     return dateMatch && categoryMatch;
   });
@@ -296,7 +296,7 @@ const ProjectDetail = () => {
                       <SelectValue placeholder="หมวดหมู่" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">ทั้งหมด</SelectItem>
+                      <SelectItem value="all">ทั้งหมด</SelectItem>
                       {categories.map(cat => (
                         <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                       ))}
@@ -373,7 +373,7 @@ const ProjectDetail = () => {
                       <SelectValue placeholder="หมวดหมู่" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">ทั้งหมด</SelectItem>
+                      <SelectItem value="all">ทั้งหมด</SelectItem>
                       {categories.map(cat => (
                         <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                       ))}
