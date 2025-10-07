@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      attendance: {
+        Row: {
+          check_in_time: string
+          check_out_time: string | null
+          created_at: string
+          id: string
+          location: string | null
+          notes: string | null
+          updated_at: string
+          user_id: string
+          work_date: string
+        }
+        Insert: {
+          check_in_time?: string
+          check_out_time?: string | null
+          created_at?: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+          work_date?: string
+        }
+        Update: {
+          check_in_time?: string
+          check_out_time?: string | null
+          created_at?: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           address: string | null
@@ -417,31 +461,168 @@ export type Database = {
         }
         Relationships: []
       }
-      profiles: {
+      leave_balances: {
         Row: {
           created_at: string
-          email: string
-          full_name: string
           id: string
+          personal_days: number
+          personal_used: number
+          sick_days: number
+          sick_used: number
+          updated_at: string
+          user_id: string
+          vacation_days: number
+          vacation_used: number
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          personal_days?: number
+          personal_used?: number
+          sick_days?: number
+          sick_used?: number
+          updated_at?: string
+          user_id: string
+          vacation_days?: number
+          vacation_used?: number
+          year?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          personal_days?: number
+          personal_used?: number
+          sick_days?: number
+          sick_used?: number
+          updated_at?: string
+          user_id?: string
+          vacation_days?: number
+          vacation_used?: number
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_balances_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leave_requests: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          days_count: number
+          end_date: string
+          id: string
+          leave_type: Database["public"]["Enums"]["leave_type"]
+          notes: string | null
+          reason: string
+          start_date: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          days_count: number
+          end_date: string
+          id?: string
+          leave_type: Database["public"]["Enums"]["leave_type"]
+          notes?: string | null
+          reason: string
+          start_date: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          days_count?: number
+          end_date?: string
+          id?: string
+          leave_type?: Database["public"]["Enums"]["leave_type"]
+          notes?: string | null
+          reason?: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_requests_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          address: string | null
+          created_at: string
+          date_of_birth: string | null
+          department: string | null
+          email: string
+          emergency_contact: string | null
+          emergency_phone: string | null
+          full_name: string
+          hire_date: string | null
+          id: string
+          id_card: string | null
           phone: string | null
+          position: string | null
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string
         }
         Insert: {
+          address?: string | null
           created_at?: string
+          date_of_birth?: string | null
+          department?: string | null
           email: string
+          emergency_contact?: string | null
+          emergency_phone?: string | null
           full_name: string
+          hire_date?: string | null
           id: string
+          id_card?: string | null
           phone?: string | null
+          position?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
         Update: {
+          address?: string | null
           created_at?: string
+          date_of_birth?: string | null
+          department?: string | null
           email?: string
+          emergency_contact?: string | null
+          emergency_phone?: string | null
           full_name?: string
+          hire_date?: string | null
           id?: string
+          id_card?: string | null
           phone?: string | null
+          position?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
@@ -779,6 +960,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      leave_type: "sick" | "personal" | "vacation" | "maternity" | "unpaid"
       user_role: "admin" | "manager" | "accountant" | "purchaser" | "worker"
     }
     CompositeTypes: {
@@ -907,6 +1089,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      leave_type: ["sick", "personal", "vacation", "maternity", "unpaid"],
       user_role: ["admin", "manager", "accountant", "purchaser", "worker"],
     },
   },
