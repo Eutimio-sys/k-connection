@@ -121,7 +121,7 @@ export type Database = {
           payment_date: string
           payment_type: string | null
           payment_type_id: string | null
-          project_id: string
+          project_id: string | null
           status: string
           updated_at: string
           worker_id: string | null
@@ -142,7 +142,7 @@ export type Database = {
           payment_date?: string
           payment_type?: string | null
           payment_type_id?: string | null
-          project_id: string
+          project_id?: string | null
           status?: string
           updated_at?: string
           worker_id?: string | null
@@ -163,7 +163,7 @@ export type Database = {
           payment_date?: string
           payment_type?: string | null
           payment_type_id?: string | null
-          project_id?: string
+          project_id?: string | null
           status?: string
           updated_at?: string
           worker_id?: string | null

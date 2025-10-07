@@ -164,7 +164,7 @@ const Payroll = () => {
     const empData = formData[employeeId];
     
     try {
-      // Save tax and social security record
+      // Save tax and social security record using upsert with proper conflict handling
       const { error: taxError } = await supabase
         .from("employee_tax_social_security")
         .upsert({
@@ -174,6 +174,8 @@ const Payroll = () => {
           tax_amount: parseFloat(empData.tax) || 0,
           social_security_amount: parseFloat(empData.social_security) || 0,
           created_by: user.id,
+        }, {
+          onConflict: 'user_id,year,month'
         });
 
       if (taxError) throw taxError;
