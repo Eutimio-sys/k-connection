@@ -453,7 +453,15 @@ export type Database = {
           id?: string
           labor_expense_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "labor_expense_deductions_labor_expense_id_fkey"
+            columns: ["labor_expense_id"]
+            isOneToOne: false
+            referencedRelation: "labor_expenses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       labor_expense_items: {
         Row: {
@@ -483,7 +491,15 @@ export type Database = {
           labor_expense_id?: string
           notes?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "labor_expense_items_labor_expense_id_fkey"
+            columns: ["labor_expense_id"]
+            isOneToOne: false
+            referencedRelation: "labor_expenses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       labor_expenses: {
         Row: {
