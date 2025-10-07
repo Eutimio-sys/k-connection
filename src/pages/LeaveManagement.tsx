@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -78,6 +78,16 @@ const LeaveManagement = () => {
     setLoading(false);
   };
 
+  // Realtime updates for balances and requests
+  useEffect(() => {
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_balances' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' }, fetchData)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
   const calculateDays = (start: string, end: string) => {
     const startDate = new Date(start);
     const endDate = new Date(end);
@@ -125,24 +135,68 @@ const LeaveManagement = () => {
 
   const handleApprove = async (requestId: string, status: string) => {
     const { data: { user } } = await supabase.auth.getUser();
-    
-    if (user) {
-      const { error } = await supabase
-        .from("leave_requests")
-        .update({
-          status,
-          approved_by: user.id,
-          approved_at: new Date().toISOString(),
-        })
-        .eq("id", requestId);
+    if (!user) return;
 
-      if (error) {
-        toast.error("เกิดข้อผิดพลาด: " + error.message);
-      } else {
-        toast.success(status === 'approved' ? "อนุมัติคำขอลาสำเร็จ" : "ปฏิเสธคำขอลาสำเร็จ");
-        fetchData();
+    // Read the leave request first
+    const { data: leaveRequest } = await supabase
+      .from("leave_requests")
+      .select("*")
+      .eq("id", requestId)
+      .single();
+
+    if (!leaveRequest) {
+      toast.error("ไม่พบข้อมูลคำขอลา");
+      return;
+    }
+
+    const { error: updateError } = await supabase
+      .from("leave_requests")
+      .update({
+        status,
+        approved_by: user.id,
+        approved_at: new Date().toISOString(),
+        updated_by: user.id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", requestId);
+
+    if (updateError) {
+      toast.error("เกิดข้อผิดพลาด: " + updateError.message);
+      return;
+    }
+
+    // If approved, update leave_balances
+    if (status === 'approved') {
+      const year = new Date(leaveRequest.start_date).getFullYear();
+      const { data: balance } = await supabase
+        .from("leave_balances")
+        .select("*")
+        .eq("user_id", leaveRequest.user_id)
+        .eq("year", year)
+        .maybeSingle();
+
+      if (balance) {
+        let field = '';
+        if (leaveRequest.leave_type === 'vacation') field = 'vacation_used';
+        else if (leaveRequest.leave_type === 'sick') field = 'sick_used';
+        else if (leaveRequest.leave_type === 'personal') field = 'personal_used';
+
+        if (field) {
+          const { error: balErr } = await supabase
+            .from("leave_balances")
+            .update({ [field]: Number(balance[field] || 0) + Number(leaveRequest.days_count) })
+            .eq("user_id", leaveRequest.user_id)
+            .eq("year", year);
+
+          if (balErr) {
+            toast.error("อนุมัติแล้ว แต่ไม่สามารถอัพเดทยอดวันลาได้");
+          }
+        }
       }
     }
+
+    toast.success(status === 'approved' ? "อนุมัติคำขอลาสำเร็จ" : "ปฏิเสธคำขอลาสำเร็จ");
+    fetchData();
   };
 
   const getStatusBadge = (status: string) => {
@@ -185,6 +239,7 @@ const LeaveManagement = () => {
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>ยื่นคำขอลา</DialogTitle>
+              <DialogDescription>กรอกข้อมูลการลา</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>

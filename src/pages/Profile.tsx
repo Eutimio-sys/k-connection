@@ -69,6 +69,14 @@ const Profile = () => {
     setLoading(false);
   };
 
+  // Realtime: refresh profile/leave balance when balances change
+  useEffect(() => {
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_balances' }, fetchProfile)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
   const handleRequestDocument = async () => {
     if (!selectedDocumentType) {
       toast.error("กรุณาเลือกประเภทเอกสาร");

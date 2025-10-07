@@ -81,8 +81,10 @@ const Layout = () => {
     { icon: DollarSign, label: "รายการโอนเงิน", path: "/daily-payments" },
     { icon: Users, label: "พนักงาน", path: "/employees" },
     { icon: UserCog, label: "จัดการ HR", path: "/hr-management" },
+    { icon: Wallet, label: "บัญชีเงินเดือน", path: "/payroll" },
     { icon: Clock, label: "เช็คอิน/เอาท์", path: "/attendance" },
     { icon: Calendar, label: "ระบบลา", path: "/leave" },
+    { icon: Users, label: "คนงานต่างด้าว", path: "/foreign-workers" },
     { icon: User, label: "โปรไฟล์", path: "/profile" },
     { icon: Settings, label: "ตั้งค่า", path: "/settings" },
   ];
