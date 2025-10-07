@@ -79,21 +79,44 @@ const Payroll = () => {
   };
 
   const fetchHistory = async () => {
-    const { data, error } = await supabase
+    // Step 1: fetch records only from employee_tax_social_security
+    const { data: ets, error: etsError } = await supabase
       .from("employee_tax_social_security")
-      .select(`
-        *,
-        profiles!inner(full_name, position, department)
-      `)
+      .select("*")
       .gte("created_at", startDate)
       .lte("created_at", endDate)
       .order("created_at", { ascending: false });
 
-    if (error) {
-      toast.error("เกิดข้อผิดพลาด: " + error.message);
-    } else {
-      setHistoryData(data || []);
+    if (etsError) {
+      toast.error("เกิดข้อผิดพลาด: " + etsError.message);
+      return;
     }
+
+    // Step 2: fetch related profiles in a separate query
+    const userIds = Array.from(new Set((ets || []).map((r: any) => r.user_id))).filter(Boolean);
+    let profilesMap: Record<string, any> = {};
+    if (userIds.length) {
+      const { data: profs, error: profErr } = await supabase
+        .from("profiles")
+        .select("id, full_name, position, department")
+        .in("id", userIds as string[]);
+      if (profErr) {
+        toast.error("เกิดข้อผิดพลาด: " + profErr.message);
+      } else {
+        profilesMap = (profs || []).reduce((acc: any, p: any) => {
+          acc[p.id] = p;
+          return acc;
+        }, {} as Record<string, any>);
+      }
+    }
+
+    // Step 3: merge data client-side
+    const merged = (ets || []).map((r: any) => ({
+      ...r,
+      user: profilesMap[r.user_id] || null,
+    }));
+
+    setHistoryData(merged);
   };
 
   const handleInputChange = (employeeId: string, field: string, value: string) => {
@@ -377,9 +400,9 @@ const Payroll = () => {
                               {new Date(record.created_at).toLocaleDateString("th-TH")}
                             </TableCell>
                             <TableCell className="font-medium">
-                              {record.profiles?.full_name || "-"}
+                              {record.user?.full_name || "-"}
                             </TableCell>
-                            <TableCell>{record.profiles?.position || "-"}</TableCell>
+                            <TableCell>{record.user?.position || "-"}</TableCell>
                             <TableCell>
                               {record.month}/{record.year}
                             </TableCell>
