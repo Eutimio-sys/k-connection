@@ -25,6 +25,7 @@ const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
   const [companies, setCompanies] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [items, setItems] = useState<ExpenseItem[]>([{ category_id: "", description: "", quantity: 1, unit_price: 0, notes: "" }]);
+  const [vatRate, setVatRate] = useState(0);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
 
@@ -97,7 +98,6 @@ const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
     const projectId = formData.get("project_id") as string;
     const companyId = formData.get("company_id") as string;
     const invoiceDate = formData.get("invoice_date") as string;
-    const vatRate = parseFloat(formData.get("vat_rate") as string) || 0;
     const notes = formData.get("notes") as string;
 
     if (!invoiceNumber || !projectId || !companyId || items.some(i => !i.category_id || !i.description)) {
@@ -189,12 +189,12 @@ const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
 
   const resetForm = () => {
     setItems([{ category_id: "", description: "", quantity: 1, unit_price: 0, notes: "" }]);
+    setVatRate(0);
     setImageFile(null);
     setImagePreview("");
   };
 
   const subtotal = calculateSubtotal();
-  const vatRate = 0;
   const vatAmount = calculateVAT(subtotal, vatRate);
   const total = calculateTotal(subtotal, vatAmount);
 
@@ -332,6 +332,23 @@ const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
             <div className="flex justify-between">
               <span>ยอดรวม:</span>
               <span className="font-medium">{new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(subtotal)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="vat_rate" className="mb-0">VAT (%):</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="vat_rate"
+                  name="vat_rate"
+                  type="number"
+                  step="0.01"
+                  value={vatRate}
+                  onChange={(e) => setVatRate(parseFloat(e.target.value) || 0)}
+                  className="w-20"
+                />
+                <span className="font-medium w-32 text-right">
+                  {new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(vatAmount)}
+                </span>
+              </div>
             </div>
             <div className="flex justify-between text-lg font-semibold border-t pt-2">
               <span>รวมทั้งสิ้น:</span>
