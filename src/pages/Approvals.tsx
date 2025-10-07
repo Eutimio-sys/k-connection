@@ -42,7 +42,9 @@ const Approvals = () => {
         project:projects(name),
         company:companies(name),
         labor_expense_items(*),
-        labor_expense_deductions(*)
+        labor_expense_deductions(*),
+        created_by_profile:profiles!labor_expenses_created_by_fkey(id, full_name, email),
+        updated_by_profile:profiles!labor_expenses_updated_by_fkey(id, full_name, email)
       `)
       .eq("status", "pending")
       .order("created_at", { ascending: false });
@@ -55,7 +57,9 @@ const Approvals = () => {
         vendor:vendors(name),
         project:projects(name),
         company:companies(name),
-        expense_items(*)
+        expense_items(*),
+        created_by_profile:profiles!expenses_created_by_fkey(id, full_name, email),
+        updated_by_profile:profiles!expenses_updated_by_fkey(id, full_name, email)
       `)
       .eq("status", "pending")
       .order("created_at", { ascending: false });
@@ -66,7 +70,8 @@ const Approvals = () => {
       .select(`
         *,
         user:profiles!leave_requests_user_id_fkey(full_name, position, department),
-        approver:profiles!leave_requests_approved_by_fkey(full_name)
+        approver:profiles!leave_requests_approved_by_fkey(full_name),
+        updated_by_profile:profiles!leave_requests_updated_by_fkey(id, full_name, email)
       `)
       .eq("status", "pending")
       .order("created_at", { ascending: false });
