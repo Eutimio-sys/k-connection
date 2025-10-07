@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -16,6 +17,9 @@ const Employees = () => {
   const [rolePermissions, setRolePermissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  type Role = Database["public"]["Enums"]["user_role"];
+  const sb = supabase as any;
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -24,9 +28,9 @@ const Employees = () => {
     setLoading(true);
 
     const [usersRes, featuresRes, permissionsRes] = await Promise.all([
-      supabase.from("profiles").select("*").order("full_name"),
-      supabase.from("features").select("*").eq("is_active", true).order("category, name"),
-      supabase.from("role_permissions").select("*"),
+      sb.from("profiles").select("*").order("full_name"),
+      sb.from("features").select("*").eq("is_active", true).order("category, name"),
+      sb.from("role_permissions").select("*"),
     ]);
 
     if (usersRes.error) toast.error("เกิดข้อผิดพลาด: " + usersRes.error.message);
@@ -41,7 +45,7 @@ const Employees = () => {
     setLoading(false);
   };
 
-  const handleRoleChange = async (userId: string, newRole: string) => {
+  const handleRoleChange = async (userId: string, newRole: Role) => {
     const { error } = await supabase
       .from("profiles")
       .update({ role: newRole })
@@ -61,7 +65,7 @@ const Employees = () => {
     );
 
     if (existing) {
-      const { error } = await supabase
+      const { error } = await sb
         .from("role_permissions")
         .update({ can_access: !currentValue })
         .eq("id", existing.id);
@@ -73,7 +77,7 @@ const Employees = () => {
         fetchData();
       }
     } else {
-      const { error } = await supabase
+      const { error } = await sb
         .from("role_permissions")
         .insert({ role, feature_code: featureCode, can_access: true });
 
@@ -174,7 +178,7 @@ const Employees = () => {
                     <select
                       className="border rounded-md p-1 text-sm"
                       value={user.role}
-                      onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                      onChange={(e) => handleRoleChange(user.id, e.target.value as Role)}
                     >
                       <option value="worker">พนักงาน</option>
                       <option value="purchaser">จัดซื้อ</option>
@@ -200,7 +204,8 @@ const Employees = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-8">
-            {Object.entries(groupedFeatures).map(([category, categoryFeatures]) => (
+            {(Object.entries(groupedFeatures) as [string, any[]][]) 
+              .map(([category, categoryFeatures]) => (
               <div key={category}>
                 <h3 className="font-semibold text-lg mb-4">
                   {categoryLabels[category] || category}
