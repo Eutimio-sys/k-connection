@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, GripVertical } from "lucide-react";
+import { Plus, GripVertical, UserPlus, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 
 const Kanban = () => {
@@ -47,7 +47,11 @@ const Kanban = () => {
     setLoading(true);
     const { data } = await supabase
       .from("tasks")
-      .select("*, assigned:profiles!assigned_to(full_name)")
+      .select(`
+        *,
+        assigned:profiles!assigned_to(full_name),
+        creator:profiles!created_by(full_name)
+      `)
       .eq("project_id", projectId)
       .order("created_at", { ascending: false });
     setTasks(data || []);
@@ -103,18 +107,18 @@ const Kanban = () => {
   };
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-gradient-page p-6 md:p-8 space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
+          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
             ตารางงาน Kanban
           </h1>
-          <p className="text-muted-foreground text-lg">จัดการและติดตามงานในโครงการ</p>
+          <p className="text-muted-foreground text-base md:text-lg">จัดการและติดตามงานในโครงการ</p>
         </div>
         
-        <div className="flex gap-3 items-center">
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
           <Select value={selectedProject} onValueChange={handleProjectChange}>
-            <SelectTrigger className="w-64">
+            <SelectTrigger className="w-full sm:w-64 h-11 rounded-xl">
               <SelectValue placeholder="เลือกโครงการ" />
             </SelectTrigger>
             <SelectContent>
@@ -127,29 +131,41 @@ const Kanban = () => {
           {selectedProject && (
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="gap-2">
-                  <Plus size={20} />
+                <Button className="gap-2 h-11 w-full sm:w-auto">
+                  <Plus size={18} />
                   เพิ่มงาน
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="sm:max-w-md rounded-2xl">
                 <DialogHeader>
-                  <DialogTitle>เพิ่มงานใหม่</DialogTitle>
+                  <DialogTitle className="text-xl font-semibold">เพิ่มงานใหม่</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleCreateTask} className="space-y-4">
-                  <div>
-                    <Label>ชื่องาน *</Label>
-                    <Input value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} required />
+                <form onSubmit={handleCreateTask} className="space-y-5">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">ชื่องาน *</Label>
+                    <Input 
+                      value={formData.title} 
+                      onChange={e => setFormData({...formData, title: e.target.value})} 
+                      required 
+                      className="h-11 rounded-xl"
+                      placeholder="ระบุชื่องาน"
+                    />
                   </div>
-                  <div>
-                    <Label>รายละเอียด</Label>
-                    <Textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} rows={3} />
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">รายละเอียด</Label>
+                    <Textarea 
+                      value={formData.description} 
+                      onChange={e => setFormData({...formData, description: e.target.value})} 
+                      rows={3}
+                      className="rounded-xl"
+                      placeholder="รายละเอียดงาน (ถ้ามี)"
+                    />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>ความสำคัญ</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">ความสำคัญ</Label>
                       <Select value={formData.priority} onValueChange={v => setFormData({...formData, priority: v})}>
-                        <SelectTrigger>
+                        <SelectTrigger className="h-11 rounded-xl">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -160,14 +176,21 @@ const Kanban = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div>
-                      <Label>กำหนดส่ง</Label>
-                      <Input type="date" value={formData.due_date} onChange={e => setFormData({...formData, due_date: e.target.value})} />
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">กำหนดส่ง</Label>
+                      <Input 
+                        type="date" 
+                        value={formData.due_date} 
+                        onChange={e => setFormData({...formData, due_date: e.target.value})}
+                        className="h-11 rounded-xl"
+                      />
                     </div>
                   </div>
-                  <div className="flex gap-2 justify-end">
-                    <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>ยกเลิก</Button>
-                    <Button type="submit">บันทึก</Button>
+                  <div className="flex gap-3 justify-end pt-2">
+                    <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} className="h-11">
+                      ยกเลิก
+                    </Button>
+                    <Button type="submit" className="h-11">บันทึก</Button>
                   </div>
                 </form>
               </DialogContent>
@@ -177,45 +200,61 @@ const Kanban = () => {
       </div>
 
       {!selectedProject ? (
-        <Card className="p-12 text-center">
-          <p className="text-muted-foreground">กรุณาเลือกโครงการเพื่อดูตารางงาน</p>
+        <Card className="p-12 text-center rounded-2xl shadow-md">
+          <p className="text-muted-foreground text-lg">กรุณาเลือกโครงการเพื่อดูตารางงาน</p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {columns.map(column => (
-            <Card key={column.id} className={column.color}>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">{column.title}</CardTitle>
-                <p className="text-sm text-muted-foreground">
+            <Card key={column.id} className={`${column.color} border-border rounded-2xl overflow-hidden`}>
+              <CardHeader className="pb-3 border-b border-border/50">
+                <CardTitle className="text-base md:text-lg font-semibold">{column.title}</CardTitle>
+                <p className="text-sm text-muted-foreground font-medium">
                   {tasks.filter(t => t.status === column.id).length} งาน
                 </p>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 pt-4">{/* Task cards will be rendered here */}
                 {tasks.filter(t => t.status === column.id).map(task => (
-                  <Card key={task.id} className="bg-white hover:shadow-md transition-shadow cursor-pointer">
-                    <CardContent className="p-4 space-y-2">
+                  <Card key={task.id} className="bg-card hover:shadow-lg transition-all duration-200 cursor-pointer border-border rounded-xl">
+                    <CardContent className="p-4 space-y-3">
                       <div className="flex items-start justify-between gap-2">
-                        <h4 className="font-semibold line-clamp-2">{task.title}</h4>
+                        <h4 className="font-semibold line-clamp-2 text-foreground">{task.title}</h4>
                         <GripVertical size={16} className="text-muted-foreground flex-shrink-0" />
                       </div>
                       {task.description && (
                         <p className="text-sm text-muted-foreground line-clamp-2">{task.description}</p>
                       )}
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant={getPriorityColor(task.priority) as any} className="text-xs">
                           {task.priority === "low" ? "ต่ำ" : task.priority === "medium" ? "ปานกลาง" : task.priority === "high" ? "สูง" : "เร่งด่วน"}
                         </Badge>
                         {task.due_date && (
                           <span className="text-xs text-muted-foreground">
-                            {new Date(task.due_date).toLocaleDateString("th-TH", { month: "short", day: "numeric" })}
+                            📅 {new Date(task.due_date).toLocaleDateString("th-TH", { month: "short", day: "numeric" })}
                           </span>
                         )}
                       </div>
-                      {task.assigned?.full_name && (
-                        <p className="text-xs text-muted-foreground">👤 {task.assigned.full_name}</p>
-                      )}
+                      
+                      {/* แสดงคนที่เพิ่มงานและผู้รับผิดชอบ */}
+                      <div className="space-y-1.5 pt-2 border-t border-border/50">
+                        {task.creator?.full_name && (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <UserPlus size={14} className="text-primary" />
+                            <span className="font-medium">สร้างโดย:</span>
+                            <span>{task.creator.full_name}</span>
+                          </div>
+                        )}
+                        {task.assigned?.full_name && (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <UserCheck size={14} className="text-accent" />
+                            <span className="font-medium">ผู้รับผิดชอบ:</span>
+                            <span>{task.assigned.full_name}</span>
+                          </div>
+                        )}
+                      </div>
+                      
                       <Select value={task.status} onValueChange={v => handleStatusChange(task.id, v)}>
-                        <SelectTrigger className="h-8 text-xs">
+                        <SelectTrigger className="h-9 text-xs rounded-lg">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
