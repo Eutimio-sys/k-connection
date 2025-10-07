@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 
 interface IncomeHistoryDialogProps {
@@ -30,14 +30,21 @@ const IncomeHistoryDialog = ({ open, onOpenChange, projectId, onSuccess }: Incom
   });
 
   useEffect(() => {
-    if (open) {
+    if (open && projectId) {
+      console.log("Fetching incomes for project:", projectId);
       fetchIncomes();
       fetchPaymentAccounts();
     }
   }, [open, projectId]);
 
   const fetchIncomes = async () => {
-    const { data } = await supabase
+    if (!projectId) {
+      console.error("No project ID provided");
+      return;
+    }
+
+    console.log("Fetching project_income for projectId:", projectId);
+    const { data, error } = await supabase
       .from("project_income")
       .select(`
         *,
@@ -46,6 +53,12 @@ const IncomeHistoryDialog = ({ open, onOpenChange, projectId, onSuccess }: Incom
       `)
       .eq("project_id", projectId)
       .order("income_date", { ascending: false });
+    
+    if (error) {
+      console.error("Error fetching incomes:", error);
+    } else {
+      console.log("Fetched incomes:", data);
+    }
     
     setIncomes(data || []);
   };
@@ -120,6 +133,9 @@ const IncomeHistoryDialog = ({ open, onOpenChange, projectId, onSuccess }: Incom
               รวม: {formatCurrency(totalIncome)}
             </div>
           </DialogTitle>
+          <DialogDescription>
+            จัดการรายการเบิกเงินสำหรับโครงการนี้
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -198,9 +214,13 @@ const IncomeHistoryDialog = ({ open, onOpenChange, projectId, onSuccess }: Incom
             </form>
           )}
 
-          {incomes.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">ยังไม่มีรายการเบิกเงิน</p>
-          ) : (
+          {incomes.length === 0 && !showAddForm ? (
+            <div className="text-center py-12 border rounded-lg bg-muted/10">
+              <DollarSign className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-lg font-medium text-muted-foreground mb-2">ยังไม่มีรายการเบิกเงิน</p>
+              <p className="text-sm text-muted-foreground mb-4">เริ่มบันทึกการเบิกเงินของโครงการนี้</p>
+            </div>
+          ) : incomes.length === 0 ? null : (
             <Table>
               <TableHeader>
                 <TableRow>

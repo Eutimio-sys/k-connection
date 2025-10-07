@@ -290,11 +290,11 @@ const ProjectDetail = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>สรุปค่าใช้จ่าย</CardTitle>
+            <CardTitle>สรุปการเงิน</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="p-4 bg-primary/5 rounded-lg">
-              <p className="text-sm text-muted-foreground mb-1">งบประมาณ</p>
+              <p className="text-sm text-muted-foreground mb-1">ประมาณการค่าใช้จ่าย</p>
               <p className="text-2xl font-bold text-primary">{project.budget ? formatCurrency(project.budget) : "-"}</p>
             </div>
             
@@ -355,7 +355,37 @@ const ProjectDetail = () => {
                 <DollarSign size={16} className="text-green-600" />
               </div>
               <p className="text-xl font-bold text-green-600 dark:text-green-400">{formatCurrency(totalIncome)}</p>
-              <p className="text-xs text-muted-foreground mt-1">{projectIncome.length} รายการ</p>
+              <p className="text-xs text-muted-foreground mt-1">คลิกเพื่อดูประวัติ ({projectIncome.length} รายการ)</p>
+            </div>
+
+            <div className="p-4 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+              <p className="text-sm text-muted-foreground mb-3 font-medium">Cash Flow</p>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">เงินที่เบิกมา</span>
+                  <span className="font-semibold text-green-600">+ {formatCurrency(totalIncome)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">ค่าวัสดุ</span>
+                  <span className="font-semibold text-blue-600">- {formatCurrency(totalMaterialExpenses)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">ค่าแรง</span>
+                  <span className="font-semibold text-orange-600">- {formatCurrency(totalLaborExpenses)}</span>
+                </div>
+                <div className="border-t pt-2 mt-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">คงเหลือ</span>
+                    <span className={`text-xl font-bold ${
+                      (totalIncome - totalMaterialExpenses - totalLaborExpenses) >= 0 
+                        ? 'text-green-600' 
+                        : 'text-red-600'
+                    }`}>
+                      {formatCurrency(totalIncome - totalMaterialExpenses - totalLaborExpenses)}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
             
             <div className="p-4 bg-accent/5 rounded-lg">
@@ -365,8 +395,12 @@ const ProjectDetail = () => {
 
             {project.budget && (
               <div className="p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground mb-1">คงเหลือ</p>
-                <p className="text-2xl font-bold">{formatCurrency(project.budget - totalExpenses)}</p>
+                <p className="text-sm text-muted-foreground mb-1">ส่วนต่างจากประมาณการ</p>
+                <p className={`text-2xl font-bold ${
+                  (project.budget - totalExpenses) >= 0 ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {formatCurrency(project.budget - totalExpenses)}
+                </p>
               </div>
             )}
           </CardContent>
@@ -374,12 +408,14 @@ const ProjectDetail = () => {
       </div>
 
       {/* Dialogs */}
-      <IncomeHistoryDialog
-        open={incomeDialogOpen}
-        onOpenChange={setIncomeDialogOpen}
-        projectId={id || ""}
-        onSuccess={fetchData}
-      />
+      {id && (
+        <IncomeHistoryDialog
+          open={incomeDialogOpen}
+          onOpenChange={setIncomeDialogOpen}
+          projectId={id}
+          onSuccess={fetchData}
+        />
+      )}
 
       {/* Material Detail Dialog */}
       <Dialog open={materialDetailOpen} onOpenChange={setMaterialDetailOpen}>
