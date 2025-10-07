@@ -48,6 +48,14 @@ const Payroll = () => {
       return;
     }
 
+    // Get current year and month
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
+    
+    // Calculate previous month
+    const previousMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+    const previousYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+
     // Process employees to get latest salary
     const processedEmployees = (employeesData || []).map((emp: any) => {
       const salaries = emp.salary_records || [];
@@ -60,16 +68,30 @@ const Payroll = () => {
       };
     });
 
-    // Initialize form data with current salary
+    // Fetch previous month's tax data for each employee
+    const userIds = processedEmployees.map(emp => emp.id);
+    const { data: previousTaxData } = await supabase
+      .from("employee_tax_social_security")
+      .select("*")
+      .in("user_id", userIds)
+      .eq("year", previousYear)
+      .eq("month", previousMonth);
+
+    // Create a map of previous tax data by user_id
+    const previousTaxMap = (previousTaxData || []).reduce((acc: any, record: any) => {
+      acc[record.user_id] = record.tax_amount || 0;
+      return acc;
+    }, {});
+
+    // Initialize form data with current salary and previous tax
     const initialFormData: Record<string, any> = {};
     processedEmployees.forEach((emp) => {
       initialFormData[emp.id] = {
-        salary: emp.current_salary || "",
-        tax: "",
-        social_security: "",
-        notes: "",
-        year: new Date().getFullYear(),
-        month: new Date().getMonth() + 1,
+        salary: emp.current_salary || 0,
+        tax: previousTaxMap[emp.id] || 0,
+        social_security: 750,
+        year: currentYear,
+        month: currentMonth,
       };
     });
 
@@ -151,7 +173,6 @@ const Payroll = () => {
           month: parseInt(empData.month),
           tax_amount: parseFloat(empData.tax) || 0,
           social_security_amount: parseFloat(empData.social_security) || 0,
-          notes: empData.notes,
           created_by: user.id,
         });
 
@@ -160,18 +181,8 @@ const Payroll = () => {
       toast.success("บันทึกข้อมูลสำเร็จ");
       fetchHistory();
       
-      // Clear form for this employee
-      setFormData(prev => ({
-        ...prev,
-        [employeeId]: {
-          salary: prev[employeeId].salary,
-          tax: "",
-          social_security: "",
-          notes: "",
-          year: new Date().getFullYear(),
-          month: new Date().getMonth() + 1,
-        },
-      }));
+      // Refresh to get new previous month data
+      fetchEmployees();
     } catch (error: any) {
       toast.error("เกิดข้อผิดพลาด: " + error.message);
     }
@@ -191,15 +202,19 @@ const Payroll = () => {
       salary: 0,
       tax: 0,
       socialSecurity: 0,
+      netPay: 0,
     };
 
     historyData.forEach((record) => {
       const emp = employees.find(e => e.id === record.user_id);
-      if (emp && emp.current_salary) {
-        total.salary += emp.current_salary;
-      }
-      total.tax += Number(record.tax_amount) || 0;
-      total.socialSecurity += Number(record.social_security_amount) || 0;
+      const salary = emp?.current_salary || 0;
+      const tax = Number(record.tax_amount) || 0;
+      const socialSecurity = Number(record.social_security_amount) || 0;
+      
+      total.salary += salary;
+      total.tax += tax;
+      total.socialSecurity += socialSecurity;
+      total.netPay += (salary - tax - socialSecurity);
     });
 
     return total;
@@ -247,11 +262,23 @@ const Payroll = () => {
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-muted-foreground">เงินเดือนปัจจุบัน</p>
-                    <p className="text-xl font-bold text-primary">
-                      {formatCurrency(employee.current_salary)}
-                    </p>
+                  <div className="text-right space-y-1">
+                    <div>
+                      <p className="text-sm text-muted-foreground">เงินเดือน</p>
+                      <p className="text-lg font-bold text-primary">
+                        {formatCurrency(employee.current_salary)}
+                      </p>
+                    </div>
+                    <div className="pt-2 border-t">
+                      <p className="text-sm text-muted-foreground">ยอดจ่ายคงเหลือ</p>
+                      <p className="text-xl font-bold text-green-600">
+                        {formatCurrency(
+                          employee.current_salary - 
+                          (parseFloat(formData[employee.id]?.tax) || 0) - 
+                          (parseFloat(formData[employee.id]?.social_security) || 0)
+                        )}
+                      </p>
+                    </div>
                   </div>
                 </CardTitle>
               </CardHeader>
@@ -290,7 +317,7 @@ const Payroll = () => {
                     <Input
                       type="number"
                       step="0.01"
-                      placeholder="0.00"
+                      placeholder="750"
                       value={formData[employee.id]?.social_security || ""}
                       onChange={(e) => handleInputChange(employee.id, "social_security", e.target.value)}
                     />
@@ -305,15 +332,6 @@ const Payroll = () => {
                       {saving === employee.id ? "กำลังบันทึก..." : "บันทึก"}
                     </Button>
                   </div>
-                </div>
-                <div className="mt-4">
-                  <Label>หมายเหตุ</Label>
-                  <Textarea
-                    placeholder="หมายเหตุเพิ่มเติม..."
-                    value={formData[employee.id]?.notes || ""}
-                    onChange={(e) => handleInputChange(employee.id, "notes", e.target.value)}
-                    rows={2}
-                  />
                 </div>
               </CardContent>
             </Card>
@@ -350,7 +368,7 @@ const Payroll = () => {
               {historyData.length > 0 ? (
                 <>
                   {/* Summary Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                     <Card className="bg-blue-50 dark:bg-blue-950">
                       <CardContent className="p-4">
                         <p className="text-sm text-muted-foreground">ยอดรวมเงินเดือน</p>
@@ -367,11 +385,19 @@ const Payroll = () => {
                         </p>
                       </CardContent>
                     </Card>
-                    <Card className="bg-green-50 dark:bg-green-950">
+                    <Card className="bg-orange-50 dark:bg-orange-950">
                       <CardContent className="p-4">
                         <p className="text-sm text-muted-foreground">ยอดรวมประกันสังคม</p>
-                        <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                        <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                           {formatCurrency(getTotalSummary().socialSecurity)}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card className="bg-green-50 dark:bg-green-950">
+                      <CardContent className="p-4">
+                        <p className="text-sm text-muted-foreground">ยอดจ่ายคงเหลือ</p>
+                        <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                          {formatCurrency(getTotalSummary().netPay)}
                         </p>
                       </CardContent>
                     </Card>
@@ -388,12 +414,17 @@ const Payroll = () => {
                         <TableHead className="text-right">เงินเดือน</TableHead>
                         <TableHead className="text-right">ภาษี</TableHead>
                         <TableHead className="text-right">ประกันสังคม</TableHead>
-                        <TableHead>หมายเหตุ</TableHead>
+                        <TableHead className="text-right">ยอดจ่ายคงเหลือ</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {historyData.map((record) => {
                         const emp = employees.find(e => e.id === record.user_id);
+                        const salary = emp?.current_salary || 0;
+                        const tax = Number(record.tax_amount) || 0;
+                        const socialSecurity = Number(record.social_security_amount) || 0;
+                        const netPay = salary - tax - socialSecurity;
+                        
                         return (
                           <TableRow key={record.id}>
                             <TableCell>
@@ -407,16 +438,16 @@ const Payroll = () => {
                               {record.month}/{record.year}
                             </TableCell>
                             <TableCell className="text-right font-medium text-primary">
-                              {emp ? formatCurrency(emp.current_salary) : "-"}
+                              {formatCurrency(salary)}
                             </TableCell>
                             <TableCell className="text-right text-red-600">
-                              {formatCurrency(Number(record.tax_amount) || 0)}
+                              {formatCurrency(tax)}
                             </TableCell>
-                            <TableCell className="text-right text-green-600">
-                              {formatCurrency(Number(record.social_security_amount) || 0)}
+                            <TableCell className="text-right text-orange-600">
+                              {formatCurrency(socialSecurity)}
                             </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
-                              {record.notes || "-"}
+                            <TableCell className="text-right font-bold text-green-600">
+                              {formatCurrency(netPay)}
                             </TableCell>
                           </TableRow>
                         );
