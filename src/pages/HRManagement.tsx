@@ -37,58 +37,58 @@ const HRManagement = () => {
   const fetchData = async () => {
     setLoading(true);
 
-    // 1) Fetch all employees
-    const { data: employeesData, error: employeesError } = await supabase
-      .from("profiles")
-      .select("*")
-      .order("full_name");
+    try {
+      // 1) Fetch all employees
+      const { data: employeesData, error: employeesError } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("full_name");
 
-    if (employeesError) {
-      toast.error("เกิดข้อผิดพลาด: " + employeesError.message);
-      setLoading(false);
-      return;
-    }
+      if (employeesError) throw employeesError;
 
-    // 2) Fetch all salary records minimal fields and compute latest per user
-    const { data: salariesData, error: salariesError } = await supabase
-      .from("salary_records")
-      .select("user_id, salary_amount, effective_date")
-      .order("effective_date", { ascending: false });
+      // 2) Fetch all salary records
+      const { data: salariesData, error: salariesError } = await supabase
+        .from("salary_records")
+        .select("user_id, salary_amount, effective_date")
+        .order("effective_date", { ascending: false });
 
-    if (salariesError) {
-      toast.error("เกิดข้อผิดพลาด: " + salariesError.message);
-    }
-
-    const latestSalaryByUser: Record<string, number> = {};
-    (salariesData || []).forEach((rec: any) => {
-      if (latestSalaryByUser[rec.user_id] === undefined) {
-        latestSalaryByUser[rec.user_id] = Number(rec.salary_amount) || 0;
+      if (salariesError) {
+        console.error("Salary fetch error:", salariesError);
       }
-    });
 
-    const processedEmployees = (employeesData || []).map((emp: any) => ({
-      ...emp,
-      current_salary: latestSalaryByUser[emp.id] ?? null,
-    }));
+      const latestSalaryByUser: Record<string, number> = {};
+      (salariesData || []).forEach((rec: any) => {
+        if (latestSalaryByUser[rec.user_id] === undefined) {
+          latestSalaryByUser[rec.user_id] = Number(rec.salary_amount) || 0;
+        }
+      });
 
-    setEmployees(processedEmployees);
+      const processedEmployees = (employeesData || []).map((emp: any) => ({
+        ...emp,
+        current_salary: latestSalaryByUser[emp.id] ?? null,
+      }));
+
+      setEmployees(processedEmployees);
 
 
-    // Fetch document requests
-    const { data: requestsData, error: requestsError } = await supabase
-      .from("document_requests")
-      .select(`
-        *,
-        user:profiles!document_requests_user_id_fkey(full_name, position, department),
-        document_type:document_types(name, description),
-        processor:profiles!document_requests_processed_by_fkey(full_name)
-      `)
-      .order("requested_at", { ascending: false });
+      // Fetch document requests
+      const { data: requestsData, error: requestsError } = await supabase
+        .from("document_requests")
+        .select(`
+          *,
+          user:profiles!document_requests_user_id_fkey(full_name, position, department),
+          document_type:document_types(name, description),
+          processor:profiles!document_requests_processed_by_fkey(full_name)
+        `)
+        .order("requested_at", { ascending: false });
 
-    if (requestsError) {
-      toast.error("เกิดข้อผิดพลาด");
-    } else {
-      setDocumentRequests(requestsData || []);
+      if (requestsError) {
+        console.error("Document requests error:", requestsError);
+      } else {
+        setDocumentRequests(requestsData || []);
+      }
+    } catch (error: any) {
+      toast.error("เกิดข้อผิดพลาด: " + error.message);
     }
 
     setLoading(false);

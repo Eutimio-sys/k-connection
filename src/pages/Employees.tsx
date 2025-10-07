@@ -1,24 +1,20 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Plus, Mail, Phone, Eye, ArrowLeft } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft, Users, Shield } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 const Employees = () => {
   const navigate = useNavigate();
-  const [employees, setEmployees] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [features, setFeatures] = useState<any[]>([]);
+  const [rolePermissions, setRolePermissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
-  const [userRole, setUserRole] = useState<string>("");
 
   useEffect(() => {
     fetchData();
@@ -26,49 +22,107 @@ const Employees = () => {
 
   const fetchData = async () => {
     setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-      if (profile) setUserRole(profile.role);
-    }
 
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const [usersRes, featuresRes, permissionsRes] = await Promise.all([
+      supabase.from("profiles").select("*").order("full_name"),
+      supabase.from("features").select("*").eq("is_active", true).order("category, name"),
+      supabase.from("role_permissions").select("*"),
+    ]);
 
-    if (error) toast.error("เกิดข้อผิดพลาด");
-    else setEmployees(data || []);
+    if (usersRes.error) toast.error("เกิดข้อผิดพลาด: " + usersRes.error.message);
+    else setUsers(usersRes.data || []);
+
+    if (featuresRes.error) toast.error("เกิดข้อผิดพลาด: " + featuresRes.error.message);
+    else setFeatures(featuresRes.data || []);
+
+    if (permissionsRes.error) toast.error("เกิดข้อผิดพลาด: " + permissionsRes.error.message);
+    else setRolePermissions(permissionsRes.data || []);
+
     setLoading(false);
   };
 
-  const handleUpdateRole = async (employeeId: string, newRole: string) => {
+  const handleRoleChange = async (userId: string, newRole: string) => {
     const { error } = await supabase
       .from("profiles")
-      .update({ role: newRole as "admin" | "manager" | "accountant" | "purchaser" | "worker" })
-      .eq("id", employeeId);
+      .update({ role: newRole })
+      .eq("id", userId);
 
     if (error) {
       toast.error("เกิดข้อผิดพลาด: " + error.message);
     } else {
-      toast.success("อัปเดตบทบาทสำเร็จ");
+      toast.success("อัพเดท role สำเร็จ");
       fetchData();
     }
   };
 
-  const getRoleBadge = (role: string) => {
-    const roleConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-      admin: { label: "ผู้ดูแลระบบ", variant: "destructive" },
-      manager: { label: "ผู้จัดการ", variant: "default" },
-      accountant: { label: "บัญชี", variant: "secondary" },
-      purchaser: { label: "จัดซื้อ", variant: "outline" },
-      worker: { label: "พนักงาน", variant: "secondary" },
-    };
-    const config = roleConfig[role] || roleConfig.worker;
-    return <Badge variant={config.variant}>{config.label}</Badge>;
+  const handlePermissionToggle = async (role: string, featureCode: string, currentValue: boolean) => {
+    const existing = rolePermissions.find(
+      (p) => p.role === role && p.feature_code === featureCode
+    );
+
+    if (existing) {
+      const { error } = await supabase
+        .from("role_permissions")
+        .update({ can_access: !currentValue })
+        .eq("id", existing.id);
+
+      if (error) {
+        toast.error("เกิดข้อผิดพลาด: " + error.message);
+      } else {
+        toast.success("อัพเดทสิทธิ์สำเร็จ");
+        fetchData();
+      }
+    } else {
+      const { error } = await supabase
+        .from("role_permissions")
+        .insert({ role, feature_code: featureCode, can_access: true });
+
+      if (error) {
+        toast.error("เกิดข้อผิดพลาด: " + error.message);
+      } else {
+        toast.success("เพิ่มสิทธิ์สำเร็จ");
+        fetchData();
+      }
+    }
   };
 
-  const canManageRoles = userRole === "admin";
+  const getRoleBadge = (role: string) => {
+    const roles: Record<string, { label: string; className: string }> = {
+      admin: { label: "ผู้ดูแลระบบ", className: "bg-purple-100 text-purple-800" },
+      manager: { label: "ผู้จัดการ", className: "bg-blue-100 text-blue-800" },
+      accountant: { label: "บัญชี", className: "bg-green-100 text-green-800" },
+      purchaser: { label: "จัดซื้อ", className: "bg-orange-100 text-orange-800" },
+      worker: { label: "พนักงาน", className: "bg-gray-100 text-gray-800" },
+    };
+    const r = roles[role] || roles.worker;
+    return <Badge className={r.className}>{r.label}</Badge>;
+  };
+
+  const hasPermission = (role: string, featureCode: string) => {
+    const perm = rolePermissions.find(
+      (p) => p.role === role && p.feature_code === featureCode
+    );
+    return perm ? perm.can_access : false;
+  };
+
+  const groupedFeatures = features.reduce((acc, feature) => {
+    const category = feature.category || "other";
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(feature);
+    return acc;
+  }, {} as Record<string, any[]>);
+
+  const categoryLabels: Record<string, string> = {
+    general: "ทั่วไป",
+    management: "การจัดการ",
+    accounting: "บัญชี",
+    hr: "ทรัพยากรบุคคล",
+    other: "อื่นๆ",
+  };
+
+  if (loading) {
+    return <div className="p-8 text-center"><p>กำลังโหลด...</p></div>;
+  }
 
   return (
     <div className="p-8 space-y-6">
@@ -79,167 +133,125 @@ const Employees = () => {
               <ArrowLeft size={16} />
             </Button>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              จัดการพนักงาน
+              จัดการ Users & สิทธิ์
             </h1>
           </div>
-          <p className="text-muted-foreground text-lg ml-14">บริหารข้อมูลพนักงานและสิทธิ์การเข้าถึง</p>
+          <p className="text-muted-foreground text-lg ml-14">
+            จัดการผู้ใช้งาน บทบาท และสิทธิ์การเข้าถึงฟีเจอร์ต่างๆ
+          </p>
         </div>
       </div>
 
-      {/* Summary Card */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">พนักงานทั้งหมด</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{employees.length}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">ผู้ดูแลระบบ</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-destructive">
-              {employees.filter(e => e.role === "admin").length}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">ผู้จัดการ</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-primary">
-              {employees.filter(e => e.role === "manager").length}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">พนักงานทั่วไป</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {employees.filter(e => e.role === "worker").length}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Employees Table */}
+      {/* Users Table */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users size={20} />
-            รายชื่อพนักงาน
+            ผู้ใช้งานทั้งหมด ({users.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <p className="text-center py-8 text-muted-foreground">กำลังโหลด...</p>
-          ) : employees.length === 0 ? (
-            <p className="text-center py-8 text-muted-foreground">ยังไม่มีข้อมูลพนักงาน</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ชื่อ-นามสกุล</TableHead>
-                  <TableHead>อีเมล</TableHead>
-                  <TableHead>เบอร์โทร</TableHead>
-                  <TableHead>บทบาท</TableHead>
-                  <TableHead>วันที่สมัคร</TableHead>
-                  {canManageRoles && <TableHead className="text-right">จัดการ</TableHead>}
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ชื่อ-นามสกุล</TableHead>
+                <TableHead>อีเมล</TableHead>
+                <TableHead>ตำแหน่ง</TableHead>
+                <TableHead>แผนก</TableHead>
+                <TableHead>บทบาท</TableHead>
+                <TableHead className="text-right">เปลี่ยน Role</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell className="font-medium">{user.full_name}</TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.position || "-"}</TableCell>
+                  <TableCell>{user.department || "-"}</TableCell>
+                  <TableCell>{getRoleBadge(user.role)}</TableCell>
+                  <TableCell className="text-right">
+                    <select
+                      className="border rounded-md p-1 text-sm"
+                      value={user.role}
+                      onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                    >
+                      <option value="worker">พนักงาน</option>
+                      <option value="purchaser">จัดซื้อ</option>
+                      <option value="accountant">บัญชี</option>
+                      <option value="manager">ผู้จัดการ</option>
+                      <option value="admin">ผู้ดูแลระบบ</option>
+                    </select>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {employees.map(employee => (
-                  <TableRow key={employee.id}>
-                    <TableCell className="font-medium">{employee.full_name}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Mail size={14} className="text-muted-foreground" />
-                        {employee.email}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {employee.phone ? (
-                        <div className="flex items-center gap-2">
-                          <Phone size={14} className="text-muted-foreground" />
-                          {employee.phone}
-                        </div>
-                      ) : "-"}
-                    </TableCell>
-                    <TableCell>{getRoleBadge(employee.role)}</TableCell>
-                    <TableCell>
-                      {new Date(employee.created_at).toLocaleDateString("th-TH")}
-                    </TableCell>
-                    {canManageRoles && (
-                      <TableCell className="text-right">
-                        <div className="flex gap-2 justify-end">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => navigate(`/employees/${employee.id}`)}
-                          >
-                            <Eye size={14} className="mr-1" />
-                            รายละเอียด
-                          </Button>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => setSelectedEmployee(employee)}
-                              >
-                                แก้ไข
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>แก้ไขบทบาท - {employee.full_name}</DialogTitle>
-                              </DialogHeader>
-                              <div className="space-y-4">
-                                <div>
-                                  <Label>บทบาท</Label>
-                                  <Select 
-                                    defaultValue={employee.role}
-                                    onValueChange={(value) => handleUpdateRole(employee.id, value)}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="admin">ผู้ดูแลระบบ</SelectItem>
-                                      <SelectItem value="manager">ผู้จัดการ</SelectItem>
-                                      <SelectItem value="accountant">บัญชี</SelectItem>
-                                      <SelectItem value="purchaser">จัดซื้อ</SelectItem>
-                                      <SelectItem value="worker">พนักงาน</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <div className="text-sm text-muted-foreground space-y-1">
-                                  <p><strong>ผู้ดูแลระบบ:</strong> สิทธิ์เต็มทุกอย่าง</p>
-                                  <p><strong>ผู้จัดการ:</strong> จัดการโครงการ, อนุมัติใบขอซื้อ</p>
-                                  <p><strong>บัญชี:</strong> จัดการการเงิน, บัญชี</p>
-                                  <p><strong>จัดซื้อ:</strong> สร้างใบขอซื้อ</p>
-                                  <p><strong>พนักงาน:</strong> ดูข้อมูลพื้นฐาน</p>
-                                </div>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                        </div>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Role Permissions Matrix */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield size={20} />
+            จัดการสิทธิ์ตาม Role
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-8">
+            {Object.entries(groupedFeatures).map(([category, categoryFeatures]) => (
+              <div key={category}>
+                <h3 className="font-semibold text-lg mb-4">
+                  {categoryLabels[category] || category}
+                </h3>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-1/3">ฟีเจอร์</TableHead>
+                        <TableHead className="text-center">Admin</TableHead>
+                        <TableHead className="text-center">Manager</TableHead>
+                        <TableHead className="text-center">Accountant</TableHead>
+                        <TableHead className="text-center">Purchaser</TableHead>
+                        <TableHead className="text-center">Worker</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {categoryFeatures.map((feature) => (
+                        <TableRow key={feature.code}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{feature.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {feature.description}
+                              </p>
+                            </div>
+                          </TableCell>
+                          {["admin", "manager", "accountant", "purchaser", "worker"].map(
+                            (role) => (
+                              <TableCell key={role} className="text-center">
+                                <Checkbox
+                                  checked={hasPermission(role, feature.code)}
+                                  onCheckedChange={() =>
+                                    handlePermissionToggle(
+                                      role,
+                                      feature.code,
+                                      hasPermission(role, feature.code)
+                                    )
+                                  }
+                                />
+                              </TableCell>
+                            )
+                          )}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
     </div>

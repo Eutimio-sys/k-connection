@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { LeaveBalanceManager } from "./LeaveBalanceManager";
 
 interface EmployeeEditDialogProps {
   open: boolean;
@@ -17,6 +18,8 @@ interface EmployeeEditDialogProps {
 
 export const EmployeeEditDialog = ({ open, onOpenChange, employee, onSuccess }: EmployeeEditDialogProps) => {
   const [saving, setSaving] = useState(false);
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [leaveBalance, setLeaveBalance] = useState<any>(null);
   const [formData, setFormData] = useState({
     full_name: employee?.full_name || "",
     phone: employee?.phone || "",
@@ -29,7 +32,35 @@ export const EmployeeEditDialog = ({ open, onOpenChange, employee, onSuccess }: 
     emergency_phone: employee?.emergency_phone || "",
     hire_date: employee?.hire_date || "",
     role: employee?.role || "worker",
+    company_id: employee?.company_id || "",
   });
+
+  useEffect(() => {
+    fetchCompanies();
+    if (employee?.id) {
+      fetchLeaveBalance();
+    }
+  }, [employee]);
+
+  const fetchCompanies = async () => {
+    const { data } = await supabase
+      .from("companies")
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
+    setCompanies(data || []);
+  };
+
+  const fetchLeaveBalance = async () => {
+    const currentYear = new Date().getFullYear();
+    const { data } = await supabase
+      .from("leave_balances")
+      .select("*")
+      .eq("user_id", employee.id)
+      .eq("year", currentYear)
+      .maybeSingle();
+    setLeaveBalance(data);
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -53,7 +84,17 @@ export const EmployeeEditDialog = ({ open, onOpenChange, employee, onSuccess }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>แก้ไขข้อมูลพนักงาน</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>แก้ไขข้อมูลพนักงาน</DialogTitle>
+            {employee?.id && (
+              <LeaveBalanceManager
+                userId={employee.id}
+                userName={employee.full_name}
+                currentBalance={leaveBalance}
+                onSuccess={fetchLeaveBalance}
+              />
+            )}
+          </div>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -137,6 +178,22 @@ export const EmployeeEditDialog = ({ open, onOpenChange, employee, onSuccess }: 
                   <SelectItem value="accountant">บัญชี</SelectItem>
                   <SelectItem value="manager">ผู้จัดการ</SelectItem>
                   <SelectItem value="admin">ผู้ดูแลระบบ</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="company">บริษัท</Label>
+              <Select value={formData.company_id} onValueChange={(value) => setFormData({ ...formData, company_id: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="เลือกบริษัท" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies.map((company) => (
+                    <SelectItem key={company.id} value={company.id}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
