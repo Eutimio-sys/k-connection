@@ -10,6 +10,7 @@ import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 import Kanban from "./pages/Kanban";
 import PurchaseRequests from "./pages/PurchaseRequests";
+import DailyPayments from "./pages/DailyPayments";
 import Employees from "./pages/Employees";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/projects/:id" element={<ProjectDetail />} />
             <Route path="/kanban" element={<Kanban />} />
             <Route path="/purchase-requests" element={<PurchaseRequests />} />
+            <Route path="/daily-payments" element={<DailyPayments />} />
             <Route path="/employees" element={<Employees />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
