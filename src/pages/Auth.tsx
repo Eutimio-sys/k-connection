@@ -16,7 +16,9 @@ const Auth = () => {
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (session) navigate("/");
     };
     checkUser();
@@ -27,7 +29,10 @@ const Auth = () => {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) toast.error("เข้าสู่ระบบไม่สำเร็จ");
-    else { toast.success("เข้าสู่ระบบสำเร็จ"); navigate("/"); }
+    else {
+      toast.success("เข้าสู่ระบบสำเร็จ");
+      navigate("/");
+    }
     setLoading(false);
   };
 
@@ -38,38 +43,34 @@ const Auth = () => {
           <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary to-accent rounded-2xl flex items-center justify-center shadow-primary">
             <Building2 className="w-8 h-8 text-white" />
           </div>
-          <CardTitle className="text-2xl md:text-3xl font-bold">ระบบบริหารจัดการก่อสร้าง</CardTitle>
+          <CardTitle className="text-2xl md:text-3xl font-bold">K-connection</CardTitle>
           <CardDescription className="text-base">เข้าสู่ระบบเพื่อเริ่มใช้งาน</CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
           <form onSubmit={handleSignIn} className="space-y-5">
             <div className="space-y-2">
               <Label className="text-sm font-medium">อีเมล</Label>
-              <Input 
-                type="email" 
-                value={email} 
-                onChange={e => setEmail(e.target.value)} 
-                required 
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
                 placeholder="example@email.com"
                 className="h-11 rounded-xl border-border focus:border-primary"
               />
             </div>
             <div className="space-y-2">
               <Label className="text-sm font-medium">รหัสผ่าน</Label>
-              <Input 
-                type="password" 
-                value={password} 
-                onChange={e => setPassword(e.target.value)} 
-                required 
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
                 placeholder="••••••••"
                 className="h-11 rounded-xl border-border focus:border-primary"
               />
             </div>
-            <Button 
-              type="submit" 
-              className="w-full h-11 text-base font-medium" 
-              disabled={loading}
-            >
+            <Button type="submit" className="w-full h-11 text-base font-medium" disabled={loading}>
               {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
             </Button>
           </form>
