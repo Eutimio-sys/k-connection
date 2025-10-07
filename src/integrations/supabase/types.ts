@@ -160,31 +160,37 @@ export type Database = {
       }
       expense_items: {
         Row: {
-          amount: number
+          amount: number | null
           category_id: string
           created_at: string
           description: string
           expense_id: string
           id: string
           notes: string | null
+          quantity: number
+          unit_price: number
         }
         Insert: {
-          amount: number
+          amount?: number | null
           category_id: string
           created_at?: string
           description: string
           expense_id: string
           id?: string
           notes?: string | null
+          quantity?: number
+          unit_price?: number
         }
         Update: {
-          amount?: number
+          amount?: number | null
           category_id?: string
           created_at?: string
           description?: string
           expense_id?: string
           id?: string
           notes?: string | null
+          quantity?: number
+          unit_price?: number
         }
         Relationships: [
           {
@@ -213,9 +219,14 @@ export type Database = {
           invoice_number: string
           notes: string | null
           project_id: string
+          receipt_image_url: string | null
           status: string
+          subtotal: number | null
+          tax_invoice_number: string | null
           total_amount: number
           updated_at: string
+          vat_amount: number | null
+          vat_rate: number | null
           vendor_id: string | null
         }
         Insert: {
@@ -227,9 +238,14 @@ export type Database = {
           invoice_number: string
           notes?: string | null
           project_id: string
+          receipt_image_url?: string | null
           status?: string
+          subtotal?: number | null
+          tax_invoice_number?: string | null
           total_amount?: number
           updated_at?: string
+          vat_amount?: number | null
+          vat_rate?: number | null
           vendor_id?: string | null
         }
         Update: {
@@ -241,9 +257,14 @@ export type Database = {
           invoice_number?: string
           notes?: string | null
           project_id?: string
+          receipt_image_url?: string | null
           status?: string
+          subtotal?: number | null
+          tax_invoice_number?: string | null
           total_amount?: number
           updated_at?: string
+          vat_amount?: number | null
+          vat_rate?: number | null
           vendor_id?: string | null
         }
         Relationships: [

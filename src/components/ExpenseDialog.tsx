@@ -7,13 +7,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Upload, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface ExpenseItem {
   category_id: string;
   description: string;
-  amount: string;
+  unit_price: string;
+  quantity: string;
+  amount: number;
   notes: string;
 }
 
@@ -26,13 +28,17 @@ const ExpenseDialog = ({ children, onSuccess }: { children: React.ReactNode; onS
   const [categories, setCategories] = useState<any[]>([]);
   
   const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [taxInvoiceNumber, setTaxInvoiceNumber] = useState("");
   const [vendorId, setVendorId] = useState("");
   const [projectId, setProjectId] = useState("");
   const [companyId, setCompanyId] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
+  const [vatRate, setVatRate] = useState("7");
   const [notes, setNotes] = useState("");
+  const [receiptImage, setReceiptImage] = useState<File | null>(null);
+  const [receiptImagePreview, setReceiptImagePreview] = useState<string>("");
   const [items, setItems] = useState<ExpenseItem[]>([
-    { category_id: "", description: "", amount: "", notes: "" }
+    { category_id: "", description: "", unit_price: "", quantity: "1", amount: 0, notes: "" }
   ]);
 
   useEffect(() => {
@@ -56,7 +62,7 @@ const ExpenseDialog = ({ children, onSuccess }: { children: React.ReactNode; onS
   };
 
   const addItem = () => {
-    setItems([...items, { category_id: "", description: "", amount: "", notes: "" }]);
+    setItems([...items, { category_id: "", description: "", unit_price: "", quantity: "1", amount: 0, notes: "" }]);
   };
 
   const removeItem = (index: number) => {
@@ -65,14 +71,49 @@ const ExpenseDialog = ({ children, onSuccess }: { children: React.ReactNode; onS
     }
   };
 
-  const updateItem = (index: number, field: keyof ExpenseItem, value: string) => {
+  const updateItem = (index: number, field: keyof ExpenseItem, value: string | number) => {
     const newItems = [...items];
-    newItems[index][field] = value;
+    if (field === 'unit_price' || field === 'quantity') {
+      newItems[index][field] = value as string;
+      const unitPrice = parseFloat(field === 'unit_price' ? (value as string) : newItems[index].unit_price) || 0;
+      const quantity = parseFloat(field === 'quantity' ? (value as string) : newItems[index].quantity) || 0;
+      newItems[index].amount = unitPrice * quantity;
+    } else if (field === 'amount') {
+      newItems[index][field] = value as number;
+    } else {
+      newItems[index][field] = value as string;
+    }
     setItems(newItems);
   };
 
+  const calculateSubtotal = () => {
+    return items.reduce((sum, item) => sum + item.amount, 0);
+  };
+
+  const calculateVAT = () => {
+    const subtotal = calculateSubtotal();
+    return (subtotal * parseFloat(vatRate)) / 100;
+  };
+
   const calculateTotal = () => {
-    return items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+    return calculateSubtotal() + calculateVAT();
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setReceiptImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setReceiptImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setReceiptImage(null);
+    setReceiptImagePreview("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,7 +125,7 @@ const ExpenseDialog = ({ children, onSuccess }: { children: React.ReactNode; onS
       return;
     }
 
-    const validItems = items.filter(item => item.category_id && item.description && item.amount);
+    const validItems = items.filter(item => item.category_id && item.description && item.unit_price && item.quantity);
     if (validItems.length === 0) {
       toast.error("กรุณาเพิ่มรายการค่าใช้จ่ายอย่างน้อย 1 รายการ");
       return;
@@ -96,6 +137,28 @@ const ExpenseDialog = ({ children, onSuccess }: { children: React.ReactNode; onS
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
+      let receiptImageUrl = null;
+
+      // Upload image if exists
+      if (receiptImage) {
+        const fileExt = receiptImage.name.split('.').pop();
+        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('receipts')
+          .upload(fileName, receiptImage);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('receipts')
+          .getPublicUrl(fileName);
+
+        receiptImageUrl = publicUrl;
+      }
+
+      const subtotal = calculateSubtotal();
+      const vatAmount = calculateVAT();
       const totalAmount = calculateTotal();
 
       // Insert expense
@@ -103,11 +166,16 @@ const ExpenseDialog = ({ children, onSuccess }: { children: React.ReactNode; onS
         .from("expenses")
         .insert({
           invoice_number: invoiceNumber,
+          tax_invoice_number: taxInvoiceNumber || null,
           vendor_id: vendorId || null,
           project_id: projectId,
           company_id: companyId,
           invoice_date: invoiceDate,
+          subtotal: subtotal,
+          vat_rate: parseFloat(vatRate),
+          vat_amount: vatAmount,
           total_amount: totalAmount,
+          receipt_image_url: receiptImageUrl,
           notes: notes || null,
           created_by: user.id,
         })
@@ -121,7 +189,9 @@ const ExpenseDialog = ({ children, onSuccess }: { children: React.ReactNode; onS
         expense_id: expense.id,
         category_id: item.category_id,
         description: item.description,
-        amount: parseFloat(item.amount),
+        unit_price: parseFloat(item.unit_price),
+        quantity: parseFloat(item.quantity),
+        amount: item.amount,
         notes: item.notes || null,
       }));
 
@@ -144,12 +214,16 @@ const ExpenseDialog = ({ children, onSuccess }: { children: React.ReactNode; onS
 
   const resetForm = () => {
     setInvoiceNumber("");
+    setTaxInvoiceNumber("");
     setVendorId("");
     setProjectId("");
     setCompanyId("");
     setInvoiceDate(new Date().toISOString().split('T')[0]);
+    setVatRate("7");
     setNotes("");
-    setItems([{ category_id: "", description: "", amount: "", notes: "" }]);
+    setReceiptImage(null);
+    setReceiptImagePreview("");
+    setItems([{ category_id: "", description: "", unit_price: "", quantity: "1", amount: 0, notes: "" }]);
   };
 
   return (
@@ -168,6 +242,14 @@ const ExpenseDialog = ({ children, onSuccess }: { children: React.ReactNode; onS
                 onChange={(e) => setInvoiceNumber(e.target.value)}
                 placeholder="INV-001"
                 required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>เลขที่พิม</Label>
+              <Input
+                value={taxInvoiceNumber}
+                onChange={(e) => setTaxInvoiceNumber(e.target.value)}
+                placeholder="เลขที่ใบกำกับภาษี"
               />
             </div>
             <div className="space-y-2">
@@ -272,21 +354,40 @@ const ExpenseDialog = ({ children, onSuccess }: { children: React.ReactNode; onS
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>จำนวนเงิน *</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={item.amount}
-                        onChange={(e) => updateItem(index, "amount", e.target.value)}
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <div className="space-y-2 col-span-2">
                       <Label>รายละเอียด *</Label>
                       <Input
                         value={item.description}
                         onChange={(e) => updateItem(index, "description", e.target.value)}
                         placeholder="ระบุรายละเอียด"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>ราคาต่อหน่วย *</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={item.unit_price}
+                        onChange={(e) => updateItem(index, "unit_price", e.target.value)}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>จำนวน *</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={item.quantity}
+                        onChange={(e) => updateItem(index, "quantity", e.target.value)}
+                        placeholder="1"
+                      />
+                    </div>
+                    <div className="space-y-2 col-span-2">
+                      <Label>ยอดรวม</Label>
+                      <Input
+                        type="text"
+                        value={item.amount.toLocaleString('th-TH', { style: 'currency', currency: 'THB' })}
+                        disabled
+                        className="bg-muted"
                       />
                     </div>
                     <div className="space-y-2 col-span-2">
@@ -304,19 +405,70 @@ const ExpenseDialog = ({ children, onSuccess }: { children: React.ReactNode; onS
             ))}
           </div>
 
-          <div className="space-y-2">
-            <Label>หมายเหตุทั้งบิล</Label>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="หมายเหตุเพิ่มเติมสำหรับทั้งบิล"
-              rows={3}
-            />
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>อัพโหลดรูปบิล</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="flex-1"
+                />
+                {receiptImagePreview && (
+                  <Button type="button" variant="outline" size="icon" onClick={removeImage}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              {receiptImagePreview && (
+                <div className="mt-2 relative w-full max-w-md">
+                  <img 
+                    src={receiptImagePreview} 
+                    alt="Preview" 
+                    className="rounded-lg border w-full h-auto"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>หมายเหตุทั้งบิล</Label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="หมายเหตุเพิ่มเติมสำหรับทั้งบิล"
+                rows={3}
+              />
+            </div>
           </div>
 
-          <div className="flex justify-between items-center pt-4 border-t">
-            <div className="text-lg font-semibold">
-              ยอดรวมทั้งสิ้น: <span className="text-2xl text-primary">
+          <div className="space-y-3 pt-4 border-t">
+            <div className="flex justify-between text-sm">
+              <span>ยอดรวม (ก่อน VAT):</span>
+              <span className="font-medium">
+                {calculateSubtotal().toLocaleString('th-TH', { style: 'currency', currency: 'THB' })}
+              </span>
+            </div>
+            <div className="flex justify-between items-center text-sm">
+              <div className="flex items-center gap-2">
+                <span>VAT:</span>
+                <Input
+                  type="number"
+                  value={vatRate}
+                  onChange={(e) => setVatRate(e.target.value)}
+                  className="w-20 h-8"
+                  step="0.01"
+                />
+                <span>%</span>
+              </div>
+              <span className="font-medium">
+                {calculateVAT().toLocaleString('th-TH', { style: 'currency', currency: 'THB' })}
+              </span>
+            </div>
+            <div className="flex justify-between items-center pt-2 border-t">
+              <span className="text-lg font-semibold">ยอดรวมทั้งสิ้น:</span>
+              <span className="text-2xl font-bold text-primary">
                 {calculateTotal().toLocaleString('th-TH', { style: 'currency', currency: 'THB' })}
               </span>
             </div>

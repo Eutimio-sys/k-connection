@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import ExpenseDialog from "@/components/ExpenseDialog";
-import { Plus, FileText } from "lucide-react";
+import { Plus, FileText, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 
 const Accounting = () => {
@@ -106,16 +106,41 @@ const Accounting = () => {
                   <div>
                     <CardTitle className="text-xl mb-2">
                       เลขที่บิล: {expense.invoice_number}
+                      {expense.tax_invoice_number && (
+                        <span className="text-sm text-muted-foreground ml-2">
+                          (พิม: {expense.tax_invoice_number})
+                        </span>
+                      )}
                     </CardTitle>
                     <div className="space-y-1 text-sm text-muted-foreground">
                       <p>ร้านค้า: <span className="font-medium text-foreground">{expense.vendor?.name || "-"}</span></p>
                       <p>โครงการ: <span className="font-medium text-foreground">{expense.project?.name}</span></p>
                       <p>บริษัท: <span className="font-medium text-foreground">{expense.company?.name}</span></p>
                       <p>วันที่: <span className="font-medium text-foreground">{format(new Date(expense.invoice_date), "dd/MM/yyyy")}</span></p>
+                      {expense.receipt_image_url && (
+                        <p className="flex items-center gap-1">
+                          <a 
+                            href={expense.receipt_image_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline flex items-center gap-1"
+                          >
+                            ดูรูปบิล <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="text-right space-y-2">
                     {getStatusBadge(expense.status)}
+                    <div className="space-y-1 text-sm">
+                      <p className="text-muted-foreground">
+                        ยอดรวม: <span className="font-medium text-foreground">{formatCurrency(expense.subtotal)}</span>
+                      </p>
+                      <p className="text-muted-foreground">
+                        VAT {expense.vat_rate}%: <span className="font-medium text-foreground">{formatCurrency(expense.vat_amount)}</span>
+                      </p>
+                    </div>
                     <p className="text-2xl font-bold text-primary">
                       {formatCurrency(expense.total_amount)}
                     </p>
@@ -130,7 +155,9 @@ const Accounting = () => {
                       <TableRow>
                         <TableHead>หมวดหมู่</TableHead>
                         <TableHead>รายละเอียด</TableHead>
-                        <TableHead className="text-right">จำนวนเงิน</TableHead>
+                        <TableHead className="text-right">ราคา/หน่วย</TableHead>
+                        <TableHead className="text-right">จำนวน</TableHead>
+                        <TableHead className="text-right">ยอดรวม</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -140,6 +167,12 @@ const Accounting = () => {
                             <Badge variant="outline">{item.category?.name}</Badge>
                           </TableCell>
                           <TableCell>{item.description}</TableCell>
+                          <TableCell className="text-right">
+                            {formatCurrency(item.unit_price)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {item.quantity}
+                          </TableCell>
                           <TableCell className="text-right font-medium">
                             {formatCurrency(item.amount)}
                           </TableCell>
