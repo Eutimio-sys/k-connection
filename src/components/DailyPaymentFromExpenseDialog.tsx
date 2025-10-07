@@ -20,7 +20,7 @@ interface ExpenseItem {
     invoice_number: string;
     project_id: string;
     project: { name: string };
-    vendor?: { id: string; full_name: string; bank_name: string; bank_account: string };
+    vendor?: { id: string; name: string; bank_name: string; bank_account: string };
     worker?: { id: string; full_name: string; bank_name: string; bank_account: string };
   };
 }
@@ -45,34 +45,47 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
         .select(`
           *,
           category:expense_categories(name),
-          expense:expenses(
+          expense:expenses!inner(
             id,
             invoice_number,
             project_id,
+            status,
             project:projects(name),
-            vendor:vendors(id, full_name, bank_name, bank_account)
+            vendor:vendors(id, name, bank_name, bank_account)
           )
         `)
         .eq("expense.status", "approved");
 
-      if (!error && data) setMaterialItems(data as any);
+      if (!error && data) {
+        const filtered = data.filter((item: any) => item.expense?.status === "approved");
+        setMaterialItems(filtered as any);
+      }
     } else {
       const { data, error } = await supabase
         .from("labor_expense_items")
         .select(`
           *,
           category:expense_categories(name),
-          expense:labor_expenses!labor_expense_id(
+          labor_expense:labor_expenses!inner(
             id,
             invoice_number,
             project_id,
+            status,
             project:projects(name),
             worker:workers(id, full_name, bank_name, bank_account)
           )
         `)
-        .eq("expense.status", "approved");
+        .eq("labor_expense.status", "approved");
 
-      if (!error && data) setLaborItems(data as any);
+      if (!error && data) {
+        // Transform to match the expected structure
+        const transformed = data.map((item: any) => ({
+          ...item,
+          expense: item.labor_expense
+        }));
+        const filtered = transformed.filter((item: any) => item.expense?.status === "approved");
+        setLaborItems(filtered as any);
+      }
     }
   };
 
@@ -171,7 +184,7 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
               <div className="space-y-2">
                 {items.map((item) => {
                   const payee = expenseType === "material" 
-                    ? item.expense.vendor?.full_name 
+                    ? item.expense.vendor?.name 
                     : item.expense.worker?.full_name;
                   const bank = expenseType === "material"
                     ? item.expense.vendor?.bank_name
