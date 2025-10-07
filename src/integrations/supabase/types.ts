@@ -496,6 +496,107 @@ export type Database = {
           },
         ]
       }
+      foreign_worker_debt_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          payment_date: string
+          worker_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          worker_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "foreign_worker_debt_payments_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "foreign_workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      foreign_workers: {
+        Row: {
+          created_at: string
+          daily_rate: number | null
+          driver_license_url: string | null
+          first_name: string
+          id: string
+          is_active: boolean
+          job_type: string | null
+          last_name: string
+          notes: string | null
+          passport_url: string | null
+          remaining_debt: number | null
+          team_name: string | null
+          total_debt: number | null
+          updated_at: string
+          work_document_url: string | null
+          work_permit_expiry_date: string | null
+          work_permit_issue_date: string | null
+          work_permit_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          daily_rate?: number | null
+          driver_license_url?: string | null
+          first_name: string
+          id?: string
+          is_active?: boolean
+          job_type?: string | null
+          last_name: string
+          notes?: string | null
+          passport_url?: string | null
+          remaining_debt?: number | null
+          team_name?: string | null
+          total_debt?: number | null
+          updated_at?: string
+          work_document_url?: string | null
+          work_permit_expiry_date?: string | null
+          work_permit_issue_date?: string | null
+          work_permit_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          daily_rate?: number | null
+          driver_license_url?: string | null
+          first_name?: string
+          id?: string
+          is_active?: boolean
+          job_type?: string | null
+          last_name?: string
+          notes?: string | null
+          passport_url?: string | null
+          remaining_debt?: number | null
+          team_name?: string | null
+          total_debt?: number | null
+          updated_at?: string
+          work_document_url?: string | null
+          work_permit_expiry_date?: string | null
+          work_permit_issue_date?: string | null
+          work_permit_url?: string | null
+        }
+        Relationships: []
+      }
       labor_expense_deductions: {
         Row: {
           amount: number

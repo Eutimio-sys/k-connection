@@ -46,6 +46,7 @@ const menuItems = [
   { title: "เช็คอิน/เอาท์", url: "/attendance", icon: Clock },
   { title: "ระบบลา", url: "/leave", icon: Calendar },
   { title: "โปรไฟล์", url: "/profile", icon: User },
+  { title: "คนงานต่างด้าว", url: "/foreign-workers", icon: Users },
   { title: "ตั้งค่า", url: "/settings", icon: Settings },
 ];
 

@@ -13,7 +13,8 @@ import {
   Calendar,
   Wallet,
   UserCog,
-  CheckCircle
+  CheckCircle,
+  DollarSign
 } from "lucide-react";
 
 type UserRole = 'admin' | 'manager' | 'accountant' | 'worker';
@@ -131,6 +132,14 @@ const Index = () => {
       url: "/hr-management",
       icon: UserCog,
       gradient: "from-violet-500 to-violet-600",
+      roles: ['admin', 'manager']
+    },
+    {
+      title: "บัญชีเงินเดือน",
+      description: "จัดการเงินเดือน ภาษี และประกันสังคม",
+      url: "/payroll",
+      icon: DollarSign,
+      gradient: "from-emerald-500 to-emerald-600",
       roles: ['admin', 'manager']
     },
     {
