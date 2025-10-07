@@ -45,46 +45,40 @@ const ExpenseDetailDialog = ({ expense, open, onOpenChange, onSuccess }: Expense
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive"> = {
+    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       pending: "secondary",
       approved: "default",
       paid: "default",
       rejected: "destructive",
+      cancelled: "outline",
     };
     const labels: Record<string, string> = {
       pending: "รอดำเนินการ",
       approved: "อนุมัติแล้ว",
       paid: "จ่ายแล้ว",
       rejected: "ปฏิเสธ",
+      cancelled: "ยกเลิก",
     };
     return <Badge variant={variants[status]}>{labels[status] || status}</Badge>;
   };
 
-  const handleDelete = async () => {
+  const handleCancel = async () => {
     setDeleting(true);
+    const { data: { user } } = await supabase.auth.getUser();
     
-    // Delete expense items first
-    const { error: itemsError } = await supabase
-      .from("expense_items")
-      .delete()
-      .eq("expense_id", expense.id);
-
-    if (itemsError) {
-      toast.error("เกิดข้อผิดพลาด: " + itemsError.message);
-      setDeleting(false);
-      return;
-    }
-
-    // Then delete the expense
     const { error } = await supabase
       .from("expenses")
-      .delete()
+      .update({ 
+        status: "cancelled",
+        updated_by: user?.id,
+        updated_at: new Date().toISOString()
+      })
       .eq("id", expense.id);
 
     if (error) {
       toast.error("เกิดข้อผิดพลาด: " + error.message);
     } else {
-      toast.success("ลบบิลสำเร็จ");
+      toast.success("ยกเลิกบิลสำเร็จ");
       onSuccess();
       onOpenChange(false);
     }
@@ -126,15 +120,17 @@ const ExpenseDetailDialog = ({ expense, open, onOpenChange, onSuccess }: Expense
                   <Edit className="h-4 w-4" />
                   แก้ไข
                 </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setShowDeleteAlert(true)}
-                  className="gap-1"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  ลบ
-                </Button>
+                {expense.status === "pending" && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setShowDeleteAlert(true)}
+                    className="gap-1"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    ยกเลิก
+                  </Button>
+                )}
               </div>
             </div>
           </DialogHeader>
@@ -261,23 +257,23 @@ const ExpenseDetailDialog = ({ expense, open, onOpenChange, onSuccess }: Expense
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Cancel Confirmation Dialog */}
       <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>คุณแน่ใจหรือไม่?</AlertDialogTitle>
+            <AlertDialogTitle>ยกเลิกบิลนี้?</AlertDialogTitle>
             <AlertDialogDescription>
-              การลบบิลนี้จะไม่สามารถกู้คืนได้ ข้อมูลทั้งหมดรวมถึงรายการค่าใช้จ่ายจะถูกลบอย่างถาวร
+              รายการนี้จะถูกทำเครื่องหมายว่ายกเลิก และจะไม่นำไปคำนวณในรายงาน แต่ข้อมูลจะยังคงแสดงอยู่ในระบบ
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+            <AlertDialogCancel>ปิด</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDelete}
+              onClick={handleCancel}
               disabled={deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleting ? "กำลังลบ..." : "ลบบิล"}
+              {deleting ? "กำลังยกเลิก..." : "ยกเลิกบิล"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

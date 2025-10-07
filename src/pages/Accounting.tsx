@@ -96,17 +96,19 @@ const Accounting = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive"> = {
+    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       pending: "secondary",
       approved: "default",
       paid: "default",
       rejected: "destructive",
+      cancelled: "outline",
     };
     const labels: Record<string, string> = {
       pending: "รอดำเนินการ",
       approved: "อนุมัติแล้ว",
       paid: "จ่ายแล้ว",
       rejected: "ปฏิเสธ",
+      cancelled: "ยกเลิก",
     };
     return <Badge variant={variants[status]}>{labels[status] || status}</Badge>;
   };
@@ -223,7 +225,10 @@ const Accounting = () => {
       ) : (
         <div className="space-y-4">
           {expenses.map((expense) => (
-            <Card key={expense.id}>
+            <Card 
+              key={expense.id}
+              className={expense.status === 'cancelled' ? 'opacity-50 bg-muted/30' : ''}
+            >
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>

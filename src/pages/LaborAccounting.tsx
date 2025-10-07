@@ -80,6 +80,7 @@ const LaborAccounting = () => {
       pending: { label: "รอดำเนินการ", variant: "secondary" },
       approved: { label: "อนุมัติแล้ว", variant: "default" },
       paid: { label: "จ่ายแล้ว", variant: "outline" },
+      cancelled: { label: "ยกเลิก", variant: "outline" },
     };
     const c = config[status] || config.pending;
     return <Badge variant={c.variant}>{c.label}</Badge>;
@@ -177,7 +178,10 @@ const LaborAccounting = () => {
       ) : (
         <div className="space-y-4">
           {expenses.map((expense) => (
-            <Card key={expense.id} className="hover:shadow-elegant transition-shadow">
+            <Card 
+              key={expense.id} 
+              className={expense.status === 'cancelled' ? 'opacity-50 bg-muted/30 hover:shadow-none' : 'hover:shadow-elegant transition-shadow'}
+            >
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">

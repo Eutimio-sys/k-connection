@@ -161,7 +161,12 @@ const DailyPayments = () => {
           </CardHeader>
           <CardContent className="space-y-3">
             {payments.map((payment) => (
-              <div key={payment.id} className="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/50">
+              <div 
+                key={payment.id} 
+                className={`flex items-start justify-between p-4 border rounded-lg ${
+                  payment.status === 'cancelled' ? 'opacity-50 bg-muted/30' : 'hover:bg-muted/50'
+                }`}
+              >
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center gap-3">
                     <h4 className="font-semibold text-lg">{payment.worker?.full_name || "ไม่ระบุช่าง"}</h4>
