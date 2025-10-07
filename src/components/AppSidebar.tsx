@@ -1,4 +1,4 @@
-import { Building2, Home, LayoutDashboard, FolderKanban, ShoppingCart, FileText, Users, Settings, User, Clock, Calendar } from "lucide-react";
+import { Building2, Home, LayoutDashboard, FolderKanban, Trello, CheckCircle, FileText, Wallet, DollarSign, Users, UserCog, Clock, Calendar, User, Settings } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
   Sidebar,
@@ -16,13 +16,15 @@ const menuItems = [
   { title: "หน้าแรก", url: "/", icon: Home },
   { title: "แดชบอร์ด", url: "/dashboard", icon: LayoutDashboard },
   { title: "โครงการ", url: "/projects", icon: FolderKanban },
-  { title: "ใบขอซื้อ", url: "/purchase-requests", icon: ShoppingCart },
+  { title: "ตารางงาน", url: "/kanban", icon: Trello },
+  { title: "อนุมัติรายการ", url: "/approvals", icon: CheckCircle },
   { title: "บัญชีวัสดุ", url: "/accounting", icon: FileText },
-  { title: "บัญชีค่าแรง", url: "/labor-accounting", icon: FileText },
-  { title: "จ่ายเงินรายวัน", url: "/daily-payments", icon: FileText },
+  { title: "บัญชีค่าแรง", url: "/labor-accounting", icon: Wallet },
+  { title: "จ่ายเงินรายวัน", url: "/daily-payments", icon: DollarSign },
+  { title: "พนักงาน", url: "/employees", icon: Users },
+  { title: "จัดการ HR", url: "/hr-management", icon: UserCog },
   { title: "เช็คอิน/เอาท์", url: "/attendance", icon: Clock },
   { title: "ระบบลา", url: "/leave", icon: Calendar },
-  { title: "พนักงาน", url: "/employees", icon: Users },
   { title: "โปรไฟล์", url: "/profile", icon: User },
   { title: "ตั้งค่า", url: "/settings", icon: Settings },
 ];
