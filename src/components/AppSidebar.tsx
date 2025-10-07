@@ -16,7 +16,9 @@ const menuItems = [
   { title: "แดชบอร์ด", url: "/dashboard", icon: LayoutDashboard },
   { title: "โครงการ", url: "/projects", icon: FolderKanban },
   { title: "ใบขอซื้อ", url: "/purchase-requests", icon: ShoppingCart },
-  { title: "บัญชี", url: "/accounting", icon: FileText },
+  { title: "บัญชีวัสดุ", url: "/accounting", icon: FileText },
+  { title: "บัญชีค่าแรง", url: "/labor-accounting", icon: FileText },
+  { title: "จ่ายเงินรายวัน", url: "/daily-payments", icon: FileText },
   { title: "พนักงาน", url: "/employees", icon: Users },
   { title: "ตั้งค่า", url: "/settings", icon: Settings },
 ];

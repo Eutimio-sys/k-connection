@@ -54,6 +54,8 @@ export type Database = {
           created_at: string
           created_by: string
           description: string | null
+          expense_item_id: string | null
+          expense_type: string | null
           id: string
           notes: string | null
           paid_at: string | null
@@ -70,6 +72,8 @@ export type Database = {
           created_at?: string
           created_by: string
           description?: string | null
+          expense_item_id?: string | null
+          expense_type?: string | null
           id?: string
           notes?: string | null
           paid_at?: string | null
@@ -86,6 +90,8 @@ export type Database = {
           created_at?: string
           created_by?: string
           description?: string | null
+          expense_item_id?: string | null
+          expense_type?: string | null
           id?: string
           notes?: string | null
           paid_at?: string | null
@@ -291,6 +297,99 @@ export type Database = {
           },
         ]
       }
+      labor_expense_items: {
+        Row: {
+          amount: number | null
+          category_id: string
+          created_at: string
+          description: string
+          id: string
+          labor_expense_id: string
+          notes: string | null
+          quantity: number
+          unit_price: number
+        }
+        Insert: {
+          amount?: number | null
+          category_id: string
+          created_at?: string
+          description: string
+          id?: string
+          labor_expense_id: string
+          notes?: string | null
+          quantity?: number
+          unit_price?: number
+        }
+        Update: {
+          amount?: number | null
+          category_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          labor_expense_id?: string
+          notes?: string | null
+          quantity?: number
+          unit_price?: number
+        }
+        Relationships: []
+      }
+      labor_expenses: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string
+          id: string
+          invoice_date: string
+          invoice_number: string
+          notes: string | null
+          project_id: string
+          receipt_image_url: string | null
+          status: string
+          subtotal: number
+          total_amount: number
+          updated_at: string
+          vat_amount: number | null
+          vat_rate: number | null
+          worker_id: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          invoice_date?: string
+          invoice_number: string
+          notes?: string | null
+          project_id: string
+          receipt_image_url?: string | null
+          status?: string
+          subtotal?: number
+          total_amount?: number
+          updated_at?: string
+          vat_amount?: number | null
+          vat_rate?: number | null
+          worker_id?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          notes?: string | null
+          project_id?: string
+          receipt_image_url?: string | null
+          status?: string
+          subtotal?: number
+          total_amount?: number
+          updated_at?: string
+          vat_amount?: number | null
+          vat_rate?: number | null
+          worker_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -380,6 +479,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      purchase_request_approvers: {
+        Row: {
+          approved_at: string | null
+          approver_id: string
+          created_at: string
+          id: string
+          purchase_request_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approver_id: string
+          created_at?: string
+          id?: string
+          purchase_request_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approver_id?: string
+          created_at?: string
+          id?: string
+          purchase_request_id?: string
+        }
+        Relationships: []
       }
       purchase_requests: {
         Row: {

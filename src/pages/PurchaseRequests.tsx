@@ -24,10 +24,16 @@ const PurchaseRequests = () => {
       if (profile) setUserRole(profile.role);
     }
 
-    const { data, error } = await supabase
-      .from("purchase_requests")
-      .select(`*, project:projects(name), category:expense_categories(name), requester:profiles!requested_by(full_name)`)
-      .order("created_at", { ascending: false });
+  const { data, error } = await supabase
+    .from("purchase_requests")
+    .select(`
+      *, 
+      project:projects(name), 
+      category:expense_categories(name), 
+      requester:profiles!requested_by(full_name),
+      approvers:purchase_request_approvers(approver:profiles(full_name), approved_at)
+    `)
+    .order("created_at", { ascending: false });
 
     if (error) toast.error("เกิดข้อผิดพลาด");
     else setRequests(data || []);
@@ -140,6 +146,14 @@ const PurchaseRequests = () => {
                     <p><span className="text-muted-foreground">โครงการ:</span> {request.project?.name}</p>
                     <p><span className="text-muted-foreground">หมวดหมู่:</span> {request.category?.name}</p>
                     <p><span className="text-muted-foreground">ผู้ขอ:</span> {request.requester?.full_name}</p>
+                    {request.approvers && request.approvers.length > 0 && (
+                      <p><span className="text-muted-foreground">ผู้อนุมัติ:</span> {
+                        request.approvers
+                          .filter((a: any) => a.approved_at)
+                          .map((a: any) => a.approver?.full_name)
+                          .join(", ") || "รออนุมัติ"
+                      }</p>
+                    )}
                   </div>
                 </div>
 

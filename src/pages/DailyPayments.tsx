@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, DollarSign, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import DailyPaymentDialog from "@/components/DailyPaymentDialog";
+import DailyPaymentFromExpenseDialog from "@/components/DailyPaymentFromExpenseDialog";
 
 const DailyPayments = () => {
   const [payments, setPayments] = useState<any[]>([]);
@@ -94,6 +95,7 @@ const DailyPayments = () => {
             onChange={(e) => setSelectedDate(e.target.value)}
             className="px-4 py-2 border rounded-md"
           />
+          <DailyPaymentFromExpenseDialog onSuccess={fetchData} />
           <DailyPaymentDialog onSuccess={fetchData} />
         </div>
       </div>

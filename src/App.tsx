@@ -14,6 +14,7 @@ import DailyPayments from "./pages/DailyPayments";
 import Employees from "./pages/Employees";
 import Settings from "./pages/Settings";
 import Accounting from "./pages/Accounting";
+import LaborAccounting from "./pages/LaborAccounting";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/kanban" element={<Kanban />} />
             <Route path="/purchase-requests" element={<PurchaseRequests />} />
             <Route path="/accounting" element={<Accounting />} />
+            <Route path="/labor-accounting" element={<LaborAccounting />} />
             <Route path="/daily-payments" element={<DailyPayments />} />
             <Route path="/employees" element={<Employees />} />
             <Route path="/settings" element={<Settings />} />

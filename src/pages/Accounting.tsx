@@ -70,9 +70,9 @@ const Accounting = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
-            ระบบบัญชี
+            บัญชีวัสดุ
           </h1>
-          <p className="text-muted-foreground text-lg">จัดการค่าใช้จ่ายและบิล</p>
+          <p className="text-muted-foreground text-lg">จัดการค่าใช้จ่ายวัสดุและอุปกรณ์</p>
         </div>
         <ExpenseDialog onSuccess={fetchExpenses}>
           <Button size="lg" className="gap-2">

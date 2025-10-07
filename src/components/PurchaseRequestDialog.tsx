@@ -18,6 +18,8 @@ const PurchaseRequestDialog = ({ onSuccess }: PurchaseRequestDialogProps) => {
   const [loading, setLoading] = useState(false);
   const [projects, setProjects] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [approvers, setApprovers] = useState<any[]>([]);
+  const [selectedApprovers, setSelectedApprovers] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     project_id: "",
     category_id: "",
@@ -33,6 +35,7 @@ const PurchaseRequestDialog = ({ onSuccess }: PurchaseRequestDialogProps) => {
     if (open) {
       supabase.from("projects").select("id, name").eq("status", "in_progress").then(({ data }) => setProjects(data || []));
       supabase.from("expense_categories").select("*").eq("is_active", true).then(({ data }) => setCategories(data || []));
+      supabase.from("profiles").select("id, full_name, role").in("role", ["admin", "manager"]).then(({ data }) => setApprovers(data || []));
     }
   }, [open]);
 
@@ -47,21 +50,42 @@ const PurchaseRequestDialog = ({ onSuccess }: PurchaseRequestDialogProps) => {
       return;
     }
 
-    const { error } = await supabase.from("purchase_requests").insert({
+    const { data: request, error } = await supabase.from("purchase_requests").insert({
       ...formData,
       quantity: parseFloat(formData.quantity),
       estimated_price: parseFloat(formData.estimated_price),
       requested_by: user.id,
-    });
+    }).select().single();
 
     if (error) {
       toast.error("เกิดข้อผิดพลาด: " + error.message);
-    } else {
-      toast.success("สร้างใบขอซื้อสำเร็จ");
-      setOpen(false);
-      setFormData({ project_id: "", category_id: "", item_name: "", description: "", quantity: "", unit: "", estimated_price: "", notes: "" });
-      onSuccess?.();
+      setLoading(false);
+      return;
     }
+
+    // Insert approvers
+    if (selectedApprovers.length > 0 && request) {
+      const approverRecords = selectedApprovers.map(approverId => ({
+        purchase_request_id: request.id,
+        approver_id: approverId,
+      }));
+      
+      const { error: approverError } = await supabase
+        .from("purchase_request_approvers")
+        .insert(approverRecords);
+
+      if (approverError) {
+        toast.error("เกิดข้อผิดพลาดในการเพิ่มผู้อนุมัติ");
+        setLoading(false);
+        return;
+      }
+    }
+
+    toast.success("สร้างใบขอซื้อสำเร็จ");
+    setOpen(false);
+    setFormData({ project_id: "", category_id: "", item_name: "", description: "", quantity: "", unit: "", estimated_price: "", notes: "" });
+    setSelectedApprovers([]);
+    onSuccess?.();
     setLoading(false);
   };
 
@@ -135,6 +159,33 @@ const PurchaseRequestDialog = ({ onSuccess }: PurchaseRequestDialogProps) => {
             <div className="col-span-2">
               <Label>หมายเหตุ</Label>
               <Textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} rows={2} />
+            </div>
+
+            <div className="col-span-2">
+              <Label>ผู้อนุมัติ (เลือกได้หลายคน)</Label>
+              <div className="border rounded-lg p-3 space-y-2 max-h-40 overflow-y-auto">
+                {approvers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">ไม่มีผู้อนุมัติในระบบ</p>
+                ) : (
+                  approvers.map(approver => (
+                    <label key={approver.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-2 rounded">
+                      <input
+                        type="checkbox"
+                        checked={selectedApprovers.includes(approver.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedApprovers([...selectedApprovers, approver.id]);
+                          } else {
+                            setSelectedApprovers(selectedApprovers.filter(id => id !== approver.id));
+                          }
+                        }}
+                        className="rounded"
+                      />
+                      <span className="text-sm">{approver.full_name} ({approver.role})</span>
+                    </label>
+                  ))
+                )}
+              </div>
             </div>
           </div>
 
