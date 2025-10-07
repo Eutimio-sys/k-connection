@@ -11,7 +11,7 @@ import { toast } from "sonner";
 
 const Attendance = () => {
   const [attendance, setAttendance] = useState<any[]>([]);
-  const [todayAttendance, setTodayAttendance] = useState<any>(null);
+  const [todayAttendanceList, setTodayAttendanceList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string>("");
   const [projects, setProjects] = useState<any[]>([]);
@@ -42,16 +42,19 @@ const Attendance = () => {
         .order("name");
       setProjects(projectsData || []);
 
-      // Check today's attendance
+      // Fetch all today's attendance records
       const today = new Date().toISOString().split('T')[0];
       const { data: todayData } = await supabase
         .from("attendance")
-        .select("*")
+        .select(`
+          *,
+          project:projects(name)
+        `)
         .eq("user_id", user.id)
         .eq("work_date", today)
-        .maybeSingle();
+        .order("check_in_time", { ascending: false });
 
-      setTodayAttendance(todayData);
+      setTodayAttendanceList(todayData || []);
 
       // Fetch attendance history
       const query = supabase
@@ -108,19 +111,17 @@ const Attendance = () => {
     }
   };
 
-  const handleCheckOut = async () => {
-    if (todayAttendance) {
-      const { error } = await supabase
-        .from("attendance")
-        .update({ check_out_time: new Date().toISOString() })
-        .eq("id", todayAttendance.id);
+  const handleCheckOut = async (attendanceId: string) => {
+    const { error } = await supabase
+      .from("attendance")
+      .update({ check_out_time: new Date().toISOString() })
+      .eq("id", attendanceId);
 
-      if (error) {
-        toast.error("เกิดข้อผิดพลาด: " + error.message);
-      } else {
-        toast.success("เช็คเอาท์สำเร็จ");
-        fetchData();
-      }
+    if (error) {
+      toast.error("เกิดข้อผิดพลาด: " + error.message);
+    } else {
+      toast.success("เช็คเอาท์สำเร็จ");
+      fetchData();
     }
   };
 
@@ -157,11 +158,12 @@ const Attendance = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {!todayAttendance && (
-              <div className="space-y-2">
-                <Label htmlFor="project">สถานที่ทำงาน *</Label>
+            {/* Form for new check-in */}
+            <div className="space-y-2">
+              <Label htmlFor="project">สถานที่ทำงาน *</Label>
+              <div className="flex gap-2">
                 <Select value={selectedProject} onValueChange={setSelectedProject}>
-                  <SelectTrigger>
+                  <SelectTrigger className="flex-1">
                     <SelectValue placeholder="เลือกโครงการ/สถานที่" />
                   </SelectTrigger>
                   <SelectContent>
@@ -172,53 +174,67 @@ const Attendance = () => {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-            )}
-            
-            <div className="flex items-center justify-between">
-              <div className="space-y-2">
-                {todayAttendance ? (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <LogIn className="text-primary" size={20} />
-                      <span className="text-sm text-muted-foreground">เช็คอิน:</span>
-                      <span className="font-semibold text-lg">{formatTime(todayAttendance.check_in_time)}</span>
-                    </div>
-                    {todayAttendance.check_out_time && (
-                      <div className="flex items-center gap-2">
-                        <LogOut className="text-accent" size={20} />
-                        <span className="text-sm text-muted-foreground">เช็คเอาท์:</span>
-                        <span className="font-semibold text-lg">{formatTime(todayAttendance.check_out_time)}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <Clock className="text-muted-foreground" size={20} />
-                      <span className="text-sm text-muted-foreground">เวลาทำงาน:</span>
-                      <span className="font-semibold">
-                        {calculateWorkHours(todayAttendance.check_in_time, todayAttendance.check_out_time)}
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-muted-foreground">ยังไม่ได้เช็คอินวันนี้</p>
-                )}
-              </div>
-              <div className="space-x-2">
-                {!todayAttendance ? (
-                  <Button onClick={handleCheckIn} size="lg" className="gap-2">
-                    <LogIn size={20} />
-                    เช็คอิน
-                  </Button>
-                ) : !todayAttendance.check_out_time ? (
-                  <Button onClick={handleCheckOut} variant="outline" size="lg" className="gap-2">
-                    <LogOut size={20} />
-                    เช็คเอาท์
-                  </Button>
-                ) : (
-                  <p className="text-sm text-muted-foreground">เช็คเอาท์แล้วสำหรับวันนี้</p>
-                )}
+                <Button onClick={handleCheckIn} size="default" className="gap-2">
+                  <LogIn size={20} />
+                  เช็คอินรอบใหม่
+                </Button>
               </div>
             </div>
+
+            {/* Today's attendance list */}
+            {todayAttendanceList.length > 0 ? (
+              <div className="space-y-3 mt-4">
+                <h3 className="text-sm font-medium text-muted-foreground">การเช็คอินวันนี้ ({todayAttendanceList.length} รอบ)</h3>
+                {todayAttendanceList.map((record, index) => (
+                  <div key={record.id} className="border rounded-lg p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-2 flex-1">
+                        <div className="flex items-center gap-2">
+                          <MapPin size={16} className="text-muted-foreground" />
+                          <span className="font-medium">{record.project?.name}</span>
+                          <span className="text-xs text-muted-foreground">รอบที่ {todayAttendanceList.length - index}</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-2">
+                            <LogIn className="text-primary" size={16} />
+                            <span className="text-sm text-muted-foreground">เช็คอิน:</span>
+                            <span className="font-semibold">{formatTime(record.check_in_time)}</span>
+                          </div>
+                          {record.check_out_time && (
+                            <>
+                              <div className="flex items-center gap-2">
+                                <LogOut className="text-accent" size={16} />
+                                <span className="text-sm text-muted-foreground">เช็คเอาท์:</span>
+                                <span className="font-semibold">{formatTime(record.check_out_time)}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Clock className="text-muted-foreground" size={16} />
+                                <span className="font-semibold">
+                                  {calculateWorkHours(record.check_in_time, record.check_out_time)}
+                                </span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      {!record.check_out_time && (
+                        <Button 
+                          onClick={() => handleCheckOut(record.id)} 
+                          variant="outline" 
+                          size="sm" 
+                          className="gap-2"
+                        >
+                          <LogOut size={16} />
+                          เช็คเอาท์
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-center py-4">ยังไม่ได้เช็คอินวันนี้</p>
+            )}
           </div>
         </CardContent>
       </Card>
