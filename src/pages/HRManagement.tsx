@@ -5,15 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, FileText, ArrowLeft, Eye } from "lucide-react";
+import { Users, FileText, ArrowLeft, Eye, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { EmployeeEditDialog } from "@/components/EmployeeEditDialog";
 
 const HRManagement = () => {
   const navigate = useNavigate();
   const [employees, setEmployees] = useState<any[]>([]);
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
 
   useEffect(() => {
     fetchData();
@@ -158,15 +161,29 @@ const HRManagement = () => {
                         {emp.hire_date ? new Date(emp.hire_date).toLocaleDateString("th-TH") : "-"}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => navigate(`/employees/${emp.id}`)}
-                          className="gap-1"
-                        >
-                          <Eye size={14} />
-                          รายละเอียด
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedEmployee(emp);
+                              setEditDialogOpen(true);
+                            }}
+                            className="gap-1"
+                          >
+                            <Pencil size={14} />
+                            แก้ไข
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => navigate(`/employees/${emp.id}`)}
+                            className="gap-1"
+                          >
+                            <Eye size={14} />
+                            รายละเอียด
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -271,6 +288,15 @@ const HRManagement = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {selectedEmployee && (
+        <EmployeeEditDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          employee={selectedEmployee}
+          onSuccess={fetchData}
+        />
+      )}
     </div>
   );
 };

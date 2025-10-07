@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { User, Mail, Phone, MapPin, Calendar, Briefcase, AlertCircle, FileText, ArrowLeft } from "lucide-react";
+import { Mail, Calendar, Briefcase, FileText, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
@@ -17,21 +17,9 @@ const Profile = () => {
   const [leaveBalance, setLeaveBalance] = useState<any>(null);
   const [documentTypes, setDocumentTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
   const [selectedDocumentType, setSelectedDocumentType] = useState("");
   const [documentNotes, setDocumentNotes] = useState("");
-  const [formData, setFormData] = useState({
-    full_name: "",
-    phone: "",
-    address: "",
-    date_of_birth: "",
-    position: "",
-    department: "",
-    id_card: "",
-    emergency_contact: "",
-    emergency_phone: "",
-  });
 
   useEffect(() => {
     fetchProfile();
@@ -63,17 +51,6 @@ const Profile = () => {
         toast.error("เกิดข้อผิดพลาด");
       } else {
         setProfile(data);
-        setFormData({
-          full_name: data.full_name || "",
-          phone: data.phone || "",
-          address: data.address || "",
-          date_of_birth: data.date_of_birth || "",
-          position: data.position || "",
-          department: data.department || "",
-          id_card: data.id_card || "",
-          emergency_contact: data.emergency_contact || "",
-          emergency_phone: data.emergency_phone || "",
-        });
       }
 
       // Fetch leave balance
@@ -88,26 +65,6 @@ const Profile = () => {
       setLeaveBalance(balanceData);
     }
     setLoading(false);
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (user) {
-      const { error } = await supabase
-        .from("profiles")
-        .update(formData)
-        .eq("id", user.id);
-
-      if (error) {
-        toast.error("เกิดข้อผิดพลาด: " + error.message);
-      } else {
-        toast.success("บันทึกข้อมูลสำเร็จ");
-        fetchProfile();
-      }
-    }
-    setSaving(false);
   };
 
   const handleRequestDocument = async () => {
@@ -210,71 +167,42 @@ const Profile = () => {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="full_name">ชื่อ-นามสกุล *</Label>
-                <Input
-                  id="full_name"
-                  value={formData.full_name}
-                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                <Label>ชื่อ-นามสกุล</Label>
+                <Input value={profile?.full_name || "-"} disabled />
+              </div>
+
+              <div>
+                <Label>เลขบัตรประชาชน</Label>
+                <Input value={profile?.id_card || "-"} disabled />
+              </div>
+
+              <div>
+                <Label>เบอร์โทรศัพท์</Label>
+                <Input value={profile?.phone || "-"} disabled />
+              </div>
+
+              <div>
+                <Label>วันเกิด</Label>
+                <Input 
+                  value={profile?.date_of_birth ? new Date(profile.date_of_birth).toLocaleDateString("th-TH") : "-"} 
+                  disabled 
                 />
               </div>
 
               <div>
-                <Label htmlFor="id_card">เลขบัตรประชาชน</Label>
-                <Input
-                  id="id_card"
-                  value={formData.id_card}
-                  onChange={(e) => setFormData({ ...formData, id_card: e.target.value })}
-                  placeholder="X-XXXX-XXXXX-XX-X"
-                />
+                <Label>ตำแหน่ง</Label>
+                <Input value={profile?.position || "-"} disabled />
               </div>
 
               <div>
-                <Label htmlFor="phone">เบอร์โทรศัพท์</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="0XX-XXX-XXXX"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="date_of_birth">วันเกิด</Label>
-                <Input
-                  id="date_of_birth"
-                  type="date"
-                  value={formData.date_of_birth}
-                  onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="position">ตำแหน่ง</Label>
-                <Input
-                  id="position"
-                  value={formData.position}
-                  onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="department">แผนก</Label>
-                <Input
-                  id="department"
-                  value={formData.department}
-                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                />
+                <Label>แผนก</Label>
+                <Input value={profile?.department || "-"} disabled />
               </div>
             </div>
 
             <div>
-              <Label htmlFor="address">ที่อยู่</Label>
-              <Textarea
-                id="address"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                rows={3}
-              />
+              <Label>ที่อยู่</Label>
+              <Textarea value={profile?.address || "-"} disabled rows={3} />
             </div>
           </CardContent>
         </Card>
@@ -311,22 +239,12 @@ const Profile = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="emergency_contact">ชื่อผู้ติดต่อ</Label>
-                <Input
-                  id="emergency_contact"
-                  value={formData.emergency_contact}
-                  onChange={(e) => setFormData({ ...formData, emergency_contact: e.target.value })}
-                  placeholder="ชื่อ-นามสกุล"
-                />
+                <Label>ชื่อผู้ติดต่อ</Label>
+                <Input value={profile?.emergency_contact || "-"} disabled />
               </div>
               <div>
-                <Label htmlFor="emergency_phone">เบอร์โทรศัพท์</Label>
-                <Input
-                  id="emergency_phone"
-                  value={formData.emergency_phone}
-                  onChange={(e) => setFormData({ ...formData, emergency_phone: e.target.value })}
-                  placeholder="0XX-XXX-XXXX"
-                />
+                <Label>เบอร์โทรศัพท์</Label>
+                <Input value={profile?.emergency_phone || "-"} disabled />
               </div>
             </CardContent>
           </Card>
@@ -374,12 +292,6 @@ const Profile = () => {
             </Card>
           )}
         </div>
-      </div>
-
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={saving} size="lg">
-          {saving ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
-        </Button>
       </div>
     </div>
   );
