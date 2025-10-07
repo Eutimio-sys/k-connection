@@ -1547,6 +1547,10 @@ export type Database = {
         }
         Returns: string
       }
+      is_admin_or_manager: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       category_type: "material" | "labor"
