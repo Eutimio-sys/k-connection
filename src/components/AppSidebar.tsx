@@ -1,4 +1,20 @@
-import { Building2, Home, LayoutDashboard, FolderKanban, Trello, CheckCircle, FileText, Wallet, DollarSign, Users, UserCog, Clock, Calendar, User, Settings } from "lucide-react";
+import {
+  Building2,
+  Home,
+  LayoutDashboard,
+  FolderKanban,
+  Trello,
+  CheckCircle,
+  FileText,
+  Wallet,
+  DollarSign,
+  Users,
+  UserCog,
+  Clock,
+  Calendar,
+  User,
+  Settings,
+} from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,7 +39,7 @@ const menuItems = [
   { title: "อนุมัติรายการ", url: "/approvals", icon: CheckCircle },
   { title: "บัญชีวัสดุ", url: "/accounting", icon: FileText },
   { title: "บัญชีค่าแรง", url: "/labor-accounting", icon: Wallet },
-  { title: "จ่ายเงินรายวัน", url: "/daily-payments", icon: DollarSign },
+  { title: "รายการโอนเงิน", url: "/daily-payments", icon: DollarSign },
   { title: "พนักงาน", url: "/employees", icon: Users },
   { title: "จัดการ HR", url: "/hr-management", icon: UserCog },
   { title: "เช็คอิน/เอาท์", url: "/attendance", icon: Clock },
@@ -37,13 +53,13 @@ export function AppSidebar() {
 
   useEffect(() => {
     fetchPendingCount();
-    
+
     // Subscribe to real-time updates
     const channel = supabase
-      .channel('approval-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, fetchPendingCount)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'labor_expenses' }, fetchPendingCount)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' }, fetchPendingCount)
+      .channel("approval-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "expenses" }, fetchPendingCount)
+      .on("postgres_changes", { event: "*", schema: "public", table: "labor_expenses" }, fetchPendingCount)
+      .on("postgres_changes", { event: "*", schema: "public", table: "leave_requests" }, fetchPendingCount)
       .subscribe();
 
     return () => {
@@ -53,9 +69,9 @@ export function AppSidebar() {
 
   const fetchPendingCount = async () => {
     const [expenses, laborExpenses, leaveRequests] = await Promise.all([
-      supabase.from("expenses").select("id", { count: 'exact', head: true }).eq("status", "pending"),
-      supabase.from("labor_expenses").select("id", { count: 'exact', head: true }).eq("status", "pending"),
-      supabase.from("leave_requests").select("id", { count: 'exact', head: true }).eq("status", "pending"),
+      supabase.from("expenses").select("id", { count: "exact", head: true }).eq("status", "pending"),
+      supabase.from("labor_expenses").select("id", { count: "exact", head: true }).eq("status", "pending"),
+      supabase.from("leave_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
     ]);
 
     const total = (expenses.count || 0) + (laborExpenses.count || 0) + (leaveRequests.count || 0);
@@ -89,8 +105,8 @@ export function AppSidebar() {
                       to={item.url}
                       className={({ isActive }) =>
                         `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
-                          isActive 
-                            ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md font-medium" 
+                          isActive
+                            ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md font-medium"
                             : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                         }`
                       }

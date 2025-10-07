@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { 
+import {
   Building2,
   Home,
   LayoutDashboard,
@@ -33,19 +33,17 @@ const Layout = () => {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) {
         navigate("/auth");
         return;
       }
       setUser(session.user);
 
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", session.user.id)
-        .single();
-      
+      const { data: profileData } = await supabase.from("profiles").select("*").eq("id", session.user.id).single();
+
       if (profileData) {
         setProfile(profileData);
       }
@@ -53,7 +51,9 @@ const Layout = () => {
 
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
         navigate("/auth");
       } else {
@@ -78,7 +78,7 @@ const Layout = () => {
     { icon: CheckCircle, label: "อนุมัติรายการ", path: "/approvals" },
     { icon: FileText, label: "บัญชีวัสดุ", path: "/accounting" },
     { icon: Wallet, label: "บัญชีค่าแรง", path: "/labor-accounting" },
-    { icon: DollarSign, label: "จ่ายเงินรายวัน", path: "/daily-payments" },
+    { icon: DollarSign, label: "รายการโอนเงิน", path: "/daily-payments" },
     { icon: Users, label: "พนักงาน", path: "/employees" },
     { icon: UserCog, label: "จัดการ HR", path: "/hr-management" },
     { icon: Clock, label: "เช็คอิน/เอาท์", path: "/attendance" },
@@ -131,9 +131,7 @@ const Layout = () => {
             <Button
               key={item.path}
               variant={isActive(item.path) ? "default" : "ghost"}
-              className={`w-full justify-start gap-3 ${
-                !sidebarOpen && "justify-center"
-              } ${
+              className={`w-full justify-start gap-3 ${!sidebarOpen && "justify-center"} ${
                 isActive(item.path)
                   ? "bg-sidebar-primary text-sidebar-primary-foreground"
                   : "text-sidebar-foreground hover:bg-sidebar-accent"
