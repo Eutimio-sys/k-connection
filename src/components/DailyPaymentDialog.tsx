@@ -19,10 +19,13 @@ const DailyPaymentDialog = ({ onSuccess }: DailyPaymentDialogProps) => {
   const [projects, setProjects] = useState<any[]>([]);
   const [workers, setWorkers] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [paymentAccounts, setPaymentAccounts] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     project_id: "",
     worker_id: "",
     category_id: "",
+    payment_account_id: "",
+    payment_type: "",
     payment_date: new Date().toISOString().split('T')[0],
     amount: "",
     description: "",
@@ -34,6 +37,7 @@ const DailyPaymentDialog = ({ onSuccess }: DailyPaymentDialogProps) => {
       supabase.from("projects").select("id, name").eq("status", "in_progress").then(({ data }) => setProjects(data || []));
       supabase.from("workers").select("*").eq("is_active", true).then(({ data }) => setWorkers(data || []));
       supabase.from("expense_categories").select("*").eq("is_active", true).then(({ data }) => setCategories(data || []));
+      supabase.from("payment_accounts").select("*").eq("is_active", true).order("name").then(({ data }) => setPaymentAccounts(data || []));
     }
   }, [open]);
 
@@ -63,6 +67,8 @@ const DailyPaymentDialog = ({ onSuccess }: DailyPaymentDialogProps) => {
         project_id: "",
         worker_id: "",
         category_id: "",
+        payment_account_id: "",
+        payment_type: "",
         payment_date: new Date().toISOString().split('T')[0],
         amount: "",
         description: "",
@@ -139,6 +145,37 @@ const DailyPaymentDialog = ({ onSuccess }: DailyPaymentDialogProps) => {
                 onChange={e => setFormData({...formData, payment_date: e.target.value})} 
                 required 
               />
+            </div>
+
+            <div>
+              <Label>บัญชีที่ใช้โอน *</Label>
+              <Select value={formData.payment_account_id} onValueChange={v => setFormData({...formData, payment_account_id: v})} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="เลือกบัญชี" />
+                </SelectTrigger>
+                <SelectContent>
+                  {paymentAccounts.map(acc => (
+                    <SelectItem key={acc.id} value={acc.id}>
+                      {acc.name} - {acc.bank_name} {acc.account_number}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>ประเภทการโอน *</Label>
+              <Select value={formData.payment_type} onValueChange={v => setFormData({...formData, payment_type: v})} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="เลือกประเภท" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="transfer">โอนเงิน</SelectItem>
+                  <SelectItem value="cash">เงินสด</SelectItem>
+                  <SelectItem value="cheque">เช็ค</SelectItem>
+                  <SelectItem value="other">อื่นๆ</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="col-span-2">

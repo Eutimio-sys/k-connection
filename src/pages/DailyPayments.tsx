@@ -32,6 +32,7 @@ const DailyPayments = () => {
         project:projects(name),
         worker:workers(full_name, bank_name, bank_account),
         category:expense_categories(name),
+        payment_account:payment_accounts(name, bank_name, account_number),
         creator:profiles!created_by(full_name)
       `)
       .eq("payment_date", selectedDate)
@@ -173,14 +174,31 @@ const DailyPayments = () => {
                     </div>
                     <div>
                       <p className="font-medium">หมวดหมู่</p>
-                      <p>{payment.category?.name}</p>
+                      <p>{payment.category?.name || "-"}</p>
                     </div>
                     <div>
-                      <p className="font-medium">ธนาคาร</p>
+                      <p className="font-medium">บัญชีที่ใช้โอน</p>
+                      <p>{payment.payment_account ? `${payment.payment_account.name} - ${payment.payment_account.bank_name}` : "-"}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium">ประเภทการโอน</p>
+                      <p>
+                        {payment.payment_type === "transfer" && "โอนเงิน"}
+                        {payment.payment_type === "cash" && "เงินสด"}
+                        {payment.payment_type === "cheque" && "เช็ค"}
+                        {payment.payment_type === "other" && "อื่นๆ"}
+                        {!payment.payment_type && "-"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-sm text-muted-foreground">
+                    <div>
+                      <p className="font-medium">ธนาคารผู้รับ</p>
                       <p>{payment.worker?.bank_name || "-"}</p>
                     </div>
                     <div>
-                      <p className="font-medium">เลขบัญชี</p>
+                      <p className="font-medium">เลขบัญชีผู้รับ</p>
                       <p className="font-mono">{payment.worker?.bank_account || "-"}</p>
                     </div>
                   </div>

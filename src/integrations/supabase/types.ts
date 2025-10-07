@@ -117,7 +117,9 @@ export type Database = {
           notes: string | null
           paid_at: string | null
           paid_by: string | null
+          payment_account_id: string | null
           payment_date: string
+          payment_type: string | null
           project_id: string
           status: string
           updated_at: string
@@ -135,7 +137,9 @@ export type Database = {
           notes?: string | null
           paid_at?: string | null
           paid_by?: string | null
+          payment_account_id?: string | null
           payment_date?: string
+          payment_type?: string | null
           project_id: string
           status?: string
           updated_at?: string
@@ -153,7 +157,9 @@ export type Database = {
           notes?: string | null
           paid_at?: string | null
           paid_by?: string | null
+          payment_account_id?: string | null
           payment_date?: string
+          payment_type?: string | null
           project_id?: string
           status?: string
           updated_at?: string
@@ -179,6 +185,13 @@ export type Database = {
             columns: ["paid_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_payments_payment_account_id_fkey"
+            columns: ["payment_account_id"]
+            isOneToOne: false
+            referencedRelation: "payment_accounts"
             referencedColumns: ["id"]
           },
           {
