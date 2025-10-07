@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Clock, LogIn, LogOut, Calendar } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Clock, LogIn, LogOut, Calendar, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
 const Attendance = () => {
@@ -13,6 +14,8 @@ const Attendance = () => {
   const [todayAttendance, setTodayAttendance] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string>("");
+  const [projects, setProjects] = useState<any[]>([]);
+  const [selectedProject, setSelectedProject] = useState<string>("");
 
   useEffect(() => {
     fetchData();
@@ -31,6 +34,14 @@ const Attendance = () => {
       
       if (profile) setUserRole(profile.role);
 
+      // Fetch projects for location selection
+      const { data: projectsData } = await supabase
+        .from("projects")
+        .select("id, name")
+        .eq("status", "active")
+        .order("name");
+      setProjects(projectsData || []);
+
       // Check today's attendance
       const today = new Date().toISOString().split('T')[0];
       const { data: todayData } = await supabase
@@ -47,7 +58,8 @@ const Attendance = () => {
         .from("attendance")
         .select(`
           *,
-          user:profiles(full_name, position, department)
+          user:profiles(full_name, position, department),
+          project:projects(name)
         `)
         .order("work_date", { ascending: false })
         .order("check_in_time", { ascending: false })
@@ -70,6 +82,11 @@ const Attendance = () => {
   };
 
   const handleCheckIn = async () => {
+    if (!selectedProject) {
+      toast.error("กรุณาเลือกสถานที่ทำงาน");
+      return;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     
     if (user) {
@@ -78,12 +95,14 @@ const Attendance = () => {
         .insert({
           user_id: user.id,
           work_date: new Date().toISOString().split('T')[0],
+          project_id: selectedProject,
         });
 
       if (error) {
         toast.error("เกิดข้อผิดพลาด: " + error.message);
       } else {
         toast.success("เช็คอินสำเร็จ");
+        setSelectedProject("");
         fetchData();
       }
     }
@@ -137,48 +156,68 @@ const Attendance = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="space-y-2">
-              {todayAttendance ? (
-                <>
-                  <div className="flex items-center gap-2">
-                    <LogIn className="text-primary" size={20} />
-                    <span className="text-sm text-muted-foreground">เช็คอิน:</span>
-                    <span className="font-semibold text-lg">{formatTime(todayAttendance.check_in_time)}</span>
-                  </div>
-                  {todayAttendance.check_out_time && (
+          <div className="space-y-4">
+            {!todayAttendance && (
+              <div className="space-y-2">
+                <Label htmlFor="project">สถานที่ทำงาน *</Label>
+                <Select value={selectedProject} onValueChange={setSelectedProject}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="เลือกโครงการ/สถานที่" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects.map(project => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                {todayAttendance ? (
+                  <>
                     <div className="flex items-center gap-2">
-                      <LogOut className="text-accent" size={20} />
-                      <span className="text-sm text-muted-foreground">เช็คเอาท์:</span>
-                      <span className="font-semibold text-lg">{formatTime(todayAttendance.check_out_time)}</span>
+                      <LogIn className="text-primary" size={20} />
+                      <span className="text-sm text-muted-foreground">เช็คอิน:</span>
+                      <span className="font-semibold text-lg">{formatTime(todayAttendance.check_in_time)}</span>
                     </div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <Clock className="text-muted-foreground" size={20} />
-                    <span className="text-sm text-muted-foreground">เวลาทำงาน:</span>
-                    <span className="font-semibold">
-                      {calculateWorkHours(todayAttendance.check_in_time, todayAttendance.check_out_time)}
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <p className="text-muted-foreground">ยังไม่ได้เช็คอินวันนี้</p>
-              )}
-            </div>
-            <div className="space-x-2">
-              {!todayAttendance ? (
-                <Button onClick={handleCheckIn} size="lg" className="gap-2">
-                  <LogIn size={20} />
-                  เช็คอิน
-                </Button>
-              ) : !todayAttendance.check_out_time ? (
-                <Button onClick={handleCheckOut} variant="outline" size="lg" className="gap-2">
-                  <LogOut size={20} />
-                  เช็คเอาท์
-                </Button>
-              ) : (
-                <p className="text-sm text-muted-foreground">เช็คเอาท์แล้วสำหรับวันนี้</p>
-              )}
+                    {todayAttendance.check_out_time && (
+                      <div className="flex items-center gap-2">
+                        <LogOut className="text-accent" size={20} />
+                        <span className="text-sm text-muted-foreground">เช็คเอาท์:</span>
+                        <span className="font-semibold text-lg">{formatTime(todayAttendance.check_out_time)}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Clock className="text-muted-foreground" size={20} />
+                      <span className="text-sm text-muted-foreground">เวลาทำงาน:</span>
+                      <span className="font-semibold">
+                        {calculateWorkHours(todayAttendance.check_in_time, todayAttendance.check_out_time)}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground">ยังไม่ได้เช็คอินวันนี้</p>
+                )}
+              </div>
+              <div className="space-x-2">
+                {!todayAttendance ? (
+                  <Button onClick={handleCheckIn} size="lg" className="gap-2">
+                    <LogIn size={20} />
+                    เช็คอิน
+                  </Button>
+                ) : !todayAttendance.check_out_time ? (
+                  <Button onClick={handleCheckOut} variant="outline" size="lg" className="gap-2">
+                    <LogOut size={20} />
+                    เช็คเอาท์
+                  </Button>
+                ) : (
+                  <p className="text-sm text-muted-foreground">เช็คเอาท์แล้วสำหรับวันนี้</p>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>
@@ -202,6 +241,7 @@ const Attendance = () => {
                 <TableRow>
                   <TableHead>วันที่</TableHead>
                   {userRole !== 'worker' && <TableHead>พนักงาน</TableHead>}
+                  <TableHead>สถานที่ทำงาน</TableHead>
                   <TableHead>เช็คอิน</TableHead>
                   <TableHead>เช็คเอาท์</TableHead>
                   <TableHead>เวลาทำงาน</TableHead>
@@ -224,6 +264,12 @@ const Attendance = () => {
                         </div>
                       </TableCell>
                     )}
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <MapPin size={14} className="text-muted-foreground" />
+                        {record.project?.name || "-"}
+                      </div>
+                    </TableCell>
                     <TableCell>{formatTime(record.check_in_time)}</TableCell>
                     <TableCell>
                       {record.check_out_time ? formatTime(record.check_out_time) : "-"}

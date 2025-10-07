@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,10 +9,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Plus, Mail, Phone } from "lucide-react";
+import { Users, Plus, Mail, Phone, Eye } from "lucide-react";
 import { toast } from "sonner";
 
 const Employees = () => {
+  const navigate = useNavigate();
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -173,49 +175,59 @@ const Employees = () => {
                     </TableCell>
                     {canManageRoles && (
                       <TableCell className="text-right">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => setSelectedEmployee(employee)}
-                            >
-                              แก้ไข
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>แก้ไขบทบาท - {employee.full_name}</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-4">
-                              <div>
-                                <Label>บทบาท</Label>
-                                <Select 
-                                  defaultValue={employee.role}
-                                  onValueChange={(value) => handleUpdateRole(employee.id, value)}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="admin">ผู้ดูแลระบบ</SelectItem>
-                                    <SelectItem value="manager">ผู้จัดการ</SelectItem>
-                                    <SelectItem value="accountant">บัญชี</SelectItem>
-                                    <SelectItem value="purchaser">จัดซื้อ</SelectItem>
-                                    <SelectItem value="worker">พนักงาน</SelectItem>
-                                  </SelectContent>
-                                </Select>
+                        <div className="flex gap-2 justify-end">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => navigate(`/employees/${employee.id}`)}
+                          >
+                            <Eye size={14} className="mr-1" />
+                            รายละเอียด
+                          </Button>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => setSelectedEmployee(employee)}
+                              >
+                                แก้ไข
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>แก้ไขบทบาท - {employee.full_name}</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4">
+                                <div>
+                                  <Label>บทบาท</Label>
+                                  <Select 
+                                    defaultValue={employee.role}
+                                    onValueChange={(value) => handleUpdateRole(employee.id, value)}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="admin">ผู้ดูแลระบบ</SelectItem>
+                                      <SelectItem value="manager">ผู้จัดการ</SelectItem>
+                                      <SelectItem value="accountant">บัญชี</SelectItem>
+                                      <SelectItem value="purchaser">จัดซื้อ</SelectItem>
+                                      <SelectItem value="worker">พนักงาน</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="text-sm text-muted-foreground space-y-1">
+                                  <p><strong>ผู้ดูแลระบบ:</strong> สิทธิ์เต็มทุกอย่าง</p>
+                                  <p><strong>ผู้จัดการ:</strong> จัดการโครงการ, อนุมัติใบขอซื้อ</p>
+                                  <p><strong>บัญชี:</strong> จัดการการเงิน, บัญชี</p>
+                                  <p><strong>จัดซื้อ:</strong> สร้างใบขอซื้อ</p>
+                                  <p><strong>พนักงาน:</strong> ดูข้อมูลพื้นฐาน</p>
+                                </div>
                               </div>
-                              <div className="text-sm text-muted-foreground space-y-1">
-                                <p><strong>ผู้ดูแลระบบ:</strong> สิทธิ์เต็มทุกอย่าง</p>
-                                <p><strong>ผู้จัดการ:</strong> จัดการโครงการ, อนุมัติใบขอซื้อ</p>
-                                <p><strong>บัญชี:</strong> จัดการการเงิน, บัญชี</p>
-                                <p><strong>จัดซื้อ:</strong> สร้างใบขอซื้อ</p>
-                                <p><strong>พนักงาน:</strong> ดูข้อมูลพื้นฐาน</p>
-                              </div>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
                       </TableCell>
                     )}
                   </TableRow>

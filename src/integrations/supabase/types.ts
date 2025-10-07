@@ -22,6 +22,7 @@ export type Database = {
           id: string
           location: string | null
           notes: string | null
+          project_id: string | null
           updated_at: string
           user_id: string
           work_date: string
@@ -33,6 +34,7 @@ export type Database = {
           id?: string
           location?: string | null
           notes?: string | null
+          project_id?: string | null
           updated_at?: string
           user_id: string
           work_date?: string
@@ -44,11 +46,19 @@ export type Database = {
           id?: string
           location?: string | null
           notes?: string | null
+          project_id?: string | null
           updated_at?: string
           user_id?: string
           work_date?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "attendance_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "attendance_user_id_fkey"
             columns: ["user_id"]
@@ -574,6 +584,42 @@ export type Database = {
           },
         ]
       }
+      payment_accounts: {
+        Row: {
+          account_name: string
+          account_number: string
+          bank_name: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_name: string
+          account_number: string
+          bank_name: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_name?: string
+          account_number?: string
+          bank_name?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           address: string | null
@@ -792,6 +838,47 @@ export type Database = {
           {
             foreignKeyName: "purchase_requests_requested_by_fkey"
             columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      salary_records: {
+        Row: {
+          created_at: string
+          created_by: string
+          effective_date: string
+          id: string
+          notes: string | null
+          salary_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          effective_date: string
+          id?: string
+          notes?: string | null
+          salary_amount: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          effective_date?: string
+          id?: string
+          notes?: string | null
+          salary_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_records_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]

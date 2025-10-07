@@ -10,6 +10,7 @@ import { toast } from "sonner";
 
 const Profile = () => {
   const [profile, setProfile] = useState<any>(null);
+  const [leaveBalance, setLeaveBalance] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -55,6 +56,17 @@ const Profile = () => {
           emergency_phone: data.emergency_phone || "",
         });
       }
+
+      // Fetch leave balance
+      const currentYear = new Date().getFullYear();
+      const { data: balanceData } = await supabase
+        .from("leave_balances")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("year", currentYear)
+        .maybeSingle();
+
+      setLeaveBalance(balanceData);
     }
     setLoading(false);
   };
@@ -220,6 +232,49 @@ const Profile = () => {
               </div>
             </CardContent>
           </Card>
+
+          {leaveBalance && (
+            <Card>
+              <CardHeader>
+                <CardTitle>วันลา</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex justify-between items-center py-2 border-b">
+                  <span className="text-sm text-muted-foreground">ลาพักร้อน:</span>
+                  <div className="text-right">
+                    <p className="font-semibold">
+                      ใช้ไป {leaveBalance.vacation_used} / {leaveBalance.vacation_days} วัน
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      เหลือ {leaveBalance.vacation_days - leaveBalance.vacation_used} วัน
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b">
+                  <span className="text-sm text-muted-foreground">ลาป่วย:</span>
+                  <div className="text-right">
+                    <p className="font-semibold">
+                      ใช้ไป {leaveBalance.sick_used} / {leaveBalance.sick_days} วัน
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      เหลือ {leaveBalance.sick_days - leaveBalance.sick_used} วัน
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-sm text-muted-foreground">ลากิจ:</span>
+                  <div className="text-right">
+                    <p className="font-semibold">
+                      ใช้ไป {leaveBalance.personal_used} / {leaveBalance.personal_days} วัน
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      เหลือ {leaveBalance.personal_days - leaveBalance.personal_used} วัน
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 

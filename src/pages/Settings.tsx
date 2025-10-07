@@ -4,6 +4,7 @@ import CompaniesSettings from "@/components/settings/CompaniesSettings";
 import CategoriesSettings from "@/components/settings/CategoriesSettings";
 import VendorsSettings from "@/components/settings/VendorsSettings";
 import WorkersSettings from "@/components/settings/WorkersSettings";
+import PaymentAccountsSettings from "@/components/settings/PaymentAccountsSettings";
 
 const Settings = () => {
   return (
@@ -16,11 +17,12 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="companies" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="companies">บริษัท</TabsTrigger>
           <TabsTrigger value="categories">หมวดหมู่</TabsTrigger>
           <TabsTrigger value="vendors">ร้านค้า</TabsTrigger>
           <TabsTrigger value="workers">ช่าง</TabsTrigger>
+          <TabsTrigger value="payments">บัญชีจ่ายเงิน</TabsTrigger>
         </TabsList>
 
         <TabsContent value="companies">
@@ -37,6 +39,10 @@ const Settings = () => {
 
         <TabsContent value="workers">
           <WorkersSettings />
+        </TabsContent>
+
+        <TabsContent value="payments">
+          <PaymentAccountsSettings />
         </TabsContent>
       </Tabs>
     </div>

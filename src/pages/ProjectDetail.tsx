@@ -22,10 +22,17 @@ const ProjectDetail = () => {
   const [loading, setLoading] = useState(true);
   
   // Filter states
-  const [materialDateFilter, setMaterialDateFilter] = useState("");
+  const [materialStartDate, setMaterialStartDate] = useState("");
+  const [materialEndDate, setMaterialEndDate] = useState("");
   const [materialCategoryFilter, setMaterialCategoryFilter] = useState("all");
-  const [laborDateFilter, setLaborDateFilter] = useState("");
+  const [materialWorkerFilter, setMaterialWorkerFilter] = useState("all");
+  
+  const [laborStartDate, setLaborStartDate] = useState("");
+  const [laborEndDate, setLaborEndDate] = useState("");
   const [laborCategoryFilter, setLaborCategoryFilter] = useState("all");
+  const [laborWorkerFilter, setLaborWorkerFilter] = useState("all");
+  
+  const [workers, setWorkers] = useState<any[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -89,6 +96,15 @@ const ProjectDetail = () => {
       .order("name");
 
     setCategories(categoriesData || []);
+
+    // Fetch workers
+    const { data: workersData } = await supabase
+      .from("workers")
+      .select("*")
+      .eq("is_active", true)
+      .order("full_name");
+
+    setWorkers(workersData || []);
     setLoading(false);
   };
 
@@ -113,17 +129,21 @@ const ProjectDetail = () => {
 
   // Filter functions
   const filteredMaterialExpenses = materialExpenses.filter(expense => {
-    const dateMatch = !materialDateFilter || expense.invoice_date === materialDateFilter;
+    const dateMatch = (!materialStartDate || expense.invoice_date >= materialStartDate) &&
+                      (!materialEndDate || expense.invoice_date <= materialEndDate);
     const categoryMatch = !materialCategoryFilter || materialCategoryFilter === "all" ||
       expense.items?.some((item: any) => item.category_id === materialCategoryFilter);
     return dateMatch && categoryMatch;
   });
 
   const filteredLaborExpenses = laborExpenses.filter(expense => {
-    const dateMatch = !laborDateFilter || expense.invoice_date === laborDateFilter;
+    const dateMatch = (!laborStartDate || expense.invoice_date >= laborStartDate) &&
+                      (!laborEndDate || expense.invoice_date <= laborEndDate);
     const categoryMatch = !laborCategoryFilter || laborCategoryFilter === "all" ||
       expense.items?.some((item: any) => item.category_id === laborCategoryFilter);
-    return dateMatch && categoryMatch;
+    const workerMatch = !laborWorkerFilter || laborWorkerFilter === "all" ||
+      expense.worker_id === laborWorkerFilter;
+    return dateMatch && categoryMatch && workerMatch;
   });
 
   if (loading) return <div className="p-8 text-center"><p>กำลังโหลด...</p></div>;
@@ -279,20 +299,35 @@ const ProjectDetail = () => {
         <TabsContent value="material" className="mt-6">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Package size={20} />
-                  บัญชีวัสดุ ({filteredMaterialExpenses.length})
-                </CardTitle>
-                <div className="flex gap-2">
-                  <Input
-                    type="date"
-                    value={materialDateFilter}
-                    onChange={(e) => setMaterialDateFilter(e.target.value)}
-                    className="w-40"
+              <CardTitle className="flex items-center gap-2">
+                <Package size={20} />
+                บัญชีวัสดุ ({filteredMaterialExpenses.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-4 mb-4">
+                <div>
+                  <span className="text-sm text-muted-foreground">ตั้งแต่วันที่</span>
+                  <Input 
+                    type="date" 
+                    value={materialStartDate}
+                    onChange={(e) => setMaterialStartDate(e.target.value)}
+                    className="w-48"
                   />
+                </div>
+                <div>
+                  <span className="text-sm text-muted-foreground">ถึงวันที่</span>
+                  <Input 
+                    type="date" 
+                    value={materialEndDate}
+                    onChange={(e) => setMaterialEndDate(e.target.value)}
+                    className="w-48"
+                  />
+                </div>
+                <div>
+                  <span className="text-sm text-muted-foreground">หมวดหมู่</span>
                   <Select value={materialCategoryFilter} onValueChange={setMaterialCategoryFilter}>
-                    <SelectTrigger className="w-40">
+                    <SelectTrigger className="w-48">
                       <SelectValue placeholder="หมวดหมู่" />
                     </SelectTrigger>
                     <SelectContent>
@@ -304,8 +339,7 @@ const ProjectDetail = () => {
                   </Select>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent>
+
               {filteredMaterialExpenses.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">ไม่พบรายการ</p>
               ) : (
@@ -356,20 +390,35 @@ const ProjectDetail = () => {
         <TabsContent value="labor" className="mt-6">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Wrench size={20} />
-                  บัญชีค่าแรง ({filteredLaborExpenses.length})
-                </CardTitle>
-                <div className="flex gap-2">
-                  <Input
-                    type="date"
-                    value={laborDateFilter}
-                    onChange={(e) => setLaborDateFilter(e.target.value)}
-                    className="w-40"
+              <CardTitle className="flex items-center gap-2">
+                <Wrench size={20} />
+                บัญชีค่าแรง ({filteredLaborExpenses.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-4 mb-4">
+                <div>
+                  <span className="text-sm text-muted-foreground">ตั้งแต่วันที่</span>
+                  <Input 
+                    type="date" 
+                    value={laborStartDate}
+                    onChange={(e) => setLaborStartDate(e.target.value)}
+                    className="w-48"
                   />
+                </div>
+                <div>
+                  <span className="text-sm text-muted-foreground">ถึงวันที่</span>
+                  <Input 
+                    type="date" 
+                    value={laborEndDate}
+                    onChange={(e) => setLaborEndDate(e.target.value)}
+                    className="w-48"
+                  />
+                </div>
+                <div>
+                  <span className="text-sm text-muted-foreground">หมวดหมู่</span>
                   <Select value={laborCategoryFilter} onValueChange={setLaborCategoryFilter}>
-                    <SelectTrigger className="w-40">
+                    <SelectTrigger className="w-48">
                       <SelectValue placeholder="หมวดหมู่" />
                     </SelectTrigger>
                     <SelectContent>
@@ -380,9 +429,22 @@ const ProjectDetail = () => {
                     </SelectContent>
                   </Select>
                 </div>
+                <div>
+                  <span className="text-sm text-muted-foreground">ช่าง</span>
+                  <Select value={laborWorkerFilter} onValueChange={setLaborWorkerFilter}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="เลือกช่าง" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">ทั้งหมด</SelectItem>
+                      {workers.map(worker => (
+                        <SelectItem key={worker.id} value={worker.id}>{worker.full_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            </CardHeader>
-            <CardContent>
+
               {filteredLaborExpenses.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">ไม่พบรายการ</p>
               ) : (
