@@ -335,6 +335,7 @@ export type Database = {
       }
       expense_categories: {
         Row: {
+          category_type: Database["public"]["Enums"]["category_type"] | null
           code: string | null
           created_at: string
           description: string | null
@@ -343,6 +344,7 @@ export type Database = {
           name: string
         }
         Insert: {
+          category_type?: Database["public"]["Enums"]["category_type"] | null
           code?: string | null
           created_at?: string
           description?: string | null
@@ -351,6 +353,7 @@ export type Database = {
           name: string
         }
         Update: {
+          category_type?: Database["public"]["Enums"]["category_type"] | null
           code?: string | null
           created_at?: string
           description?: string | null
@@ -1492,6 +1495,7 @@ export type Database = {
       }
     }
     Enums: {
+      category_type: "material" | "labor"
       leave_type: "sick" | "personal" | "vacation" | "maternity" | "unpaid"
       user_role: "admin" | "manager" | "accountant" | "purchaser" | "worker"
     }
@@ -1621,6 +1625,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      category_type: ["material", "labor"],
       leave_type: ["sick", "personal", "vacation", "maternity", "unpaid"],
       user_role: ["admin", "manager", "accountant", "purchaser", "worker"],
     },

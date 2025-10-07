@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
@@ -15,7 +16,12 @@ const CategoriesSettings = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
-  const [formData, setFormData] = useState({ code: "", name: "", description: "" });
+  const [formData, setFormData] = useState<{
+    code: string;
+    name: string;
+    description: string;
+    category_type: "material" | "labor";
+  }>({ code: "", name: "", description: "", category_type: "material" });
 
   useEffect(() => {
     fetchCategories();
@@ -42,14 +48,14 @@ const CategoriesSettings = () => {
       toast.success(editingCategory ? "แก้ไขหมวดหมู่สำเร็จ" : "เพิ่มหมวดหมู่สำเร็จ");
       setDialogOpen(false);
       setEditingCategory(null);
-      setFormData({ code: "", name: "", description: "" });
+      setFormData({ code: "", name: "", description: "", category_type: "material" });
       fetchCategories();
     }
   };
 
   const handleEdit = (category: any) => {
     setEditingCategory(category);
-    setFormData({ code: category.code || "", name: category.name, description: category.description || "" });
+    setFormData({ code: category.code || "", name: category.name, description: category.description || "", category_type: category.category_type || "material" });
     setDialogOpen(true);
   };
 
@@ -57,7 +63,7 @@ const CategoriesSettings = () => {
     setDialogOpen(open);
     if (!open) {
       setEditingCategory(null);
-      setFormData({ code: "", name: "", description: "" });
+      setFormData({ code: "", name: "", description: "", category_type: "material" });
     }
   };
 
@@ -92,6 +98,18 @@ const CategoriesSettings = () => {
                 <Input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
               </div>
               <div>
+                <Label>ประเภทหมวดหมู่ *</Label>
+                <Select value={formData.category_type} onValueChange={(value) => setFormData({...formData, category_type: value as "material" | "labor"})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="material">หมวดหมู่วัสดุ</SelectItem>
+                    <SelectItem value="labor">หมวดหมู่ค่าแรง</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
                 <Label>คำอธิบาย</Label>
                 <Textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} rows={2} />
               </div>
@@ -109,6 +127,7 @@ const CategoriesSettings = () => {
             <TableRow>
               <TableHead>รหัส</TableHead>
               <TableHead>ชื่อหมวดหมู่</TableHead>
+              <TableHead>ประเภท</TableHead>
               <TableHead>คำอธิบาย</TableHead>
               <TableHead>สถานะ</TableHead>
               <TableHead className="text-right">จัดการ</TableHead>
@@ -119,6 +138,11 @@ const CategoriesSettings = () => {
               <TableRow key={cat.id}>
                 <TableCell>{cat.code || "-"}</TableCell>
                 <TableCell className="font-medium">{cat.name}</TableCell>
+                <TableCell>
+                  <Badge variant="outline">
+                    {cat.category_type === "material" ? "วัสดุ" : "ค่าแรง"}
+                  </Badge>
+                </TableCell>
                 <TableCell>{cat.description || "-"}</TableCell>
                 <TableCell>
                   <Badge variant={cat.is_active ? "default" : "secondary"}>

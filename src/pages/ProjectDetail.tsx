@@ -127,6 +127,27 @@ const ProjectDetail = () => {
   const totalLaborExpenses = laborExpenses.reduce((sum, e) => sum + (e.status === "paid" ? e.total_amount : 0), 0);
   const totalExpenses = totalPurchases + totalMaterialExpenses + totalLaborExpenses;
 
+  // Calculate totals by category type
+  const totalMaterialByCategory = materialExpenses.reduce((acc, expense) => {
+    if (expense.status === "paid" && expense.items) {
+      expense.items.forEach((item: any) => {
+        const categoryName = item.category?.name || "อื่นๆ";
+        acc[categoryName] = (acc[categoryName] || 0) + (item.amount || 0);
+      });
+    }
+    return acc;
+  }, {} as Record<string, number>);
+
+  const totalLaborByCategory = laborExpenses.reduce((acc, expense) => {
+    if (expense.status === "paid" && expense.items) {
+      expense.items.forEach((item: any) => {
+        const categoryName = item.category?.name || "อื่นๆ";
+        acc[categoryName] = (acc[categoryName] || 0) + (item.amount || 0);
+      });
+    }
+    return acc;
+  }, {} as Record<string, number>);
+
   // Filter functions
   const filteredMaterialExpenses = materialExpenses.filter(expense => {
     const dateMatch = (!materialStartDate || expense.invoice_date >= materialStartDate) &&
@@ -232,8 +253,38 @@ const ProjectDetail = () => {
               <p className="text-2xl font-bold text-primary">{project.budget ? formatCurrency(project.budget) : "-"}</p>
             </div>
             
+            <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <p className="text-sm text-muted-foreground mb-2 font-medium">ค่าวัสดุ</p>
+              <p className="text-xl font-bold text-blue-600 dark:text-blue-400 mb-2">{formatCurrency(totalMaterialExpenses)}</p>
+              {Object.keys(totalMaterialByCategory).length > 0 && (
+                <div className="space-y-1 text-sm">
+                  {Object.entries(totalMaterialByCategory).map(([category, amount]) => (
+                    <div key={category} className="flex justify-between text-muted-foreground">
+                      <span>• {category}</span>
+                      <span>{formatCurrency(Number(amount))}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
+              <p className="text-sm text-muted-foreground mb-2 font-medium">ค่าแรง</p>
+              <p className="text-xl font-bold text-orange-600 dark:text-orange-400 mb-2">{formatCurrency(totalLaborExpenses)}</p>
+              {Object.keys(totalLaborByCategory).length > 0 && (
+                <div className="space-y-1 text-sm">
+                  {Object.entries(totalLaborByCategory).map(([category, amount]) => (
+                    <div key={category} className="flex justify-between text-muted-foreground">
+                      <span>• {category}</span>
+                      <span>{formatCurrency(Number(amount))}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
             <div className="p-4 bg-accent/5 rounded-lg">
-              <p className="text-sm text-muted-foreground mb-1">ค่าใช้จ่ายที่อนุมัติแล้ว</p>
+              <p className="text-sm text-muted-foreground mb-1">รวมค่าใช้จ่ายทั้งหมด</p>
               <p className="text-2xl font-bold text-accent">{formatCurrency(totalExpenses)}</p>
             </div>
 
