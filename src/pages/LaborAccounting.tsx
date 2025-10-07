@@ -24,7 +24,8 @@ const LaborAccounting = () => {
         worker:workers(full_name, bank_name, bank_account),
         project:projects(name),
         company:companies(name),
-        items:labor_expense_items(*, category:expense_categories(name))
+        items:labor_expense_items(*, category:expense_categories(name)),
+        deductions:labor_expense_deductions(*)
       `)
       .order("created_at", { ascending: false });
 
@@ -137,9 +138,7 @@ const LaborAccounting = () => {
                       <TableRow>
                         <TableHead>หมวดหมู่</TableHead>
                         <TableHead>รายละเอียด</TableHead>
-                        <TableHead className="text-right">จำนวน</TableHead>
-                        <TableHead className="text-right">ราคา/หน่วย</TableHead>
-                        <TableHead className="text-right">รวม</TableHead>
+                        <TableHead className="text-right">จำนวนเงิน</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -147,10 +146,8 @@ const LaborAccounting = () => {
                         <TableRow key={item.id}>
                           <TableCell>{item.category?.name}</TableCell>
                           <TableCell>{item.description}</TableCell>
-                          <TableCell className="text-right">{item.quantity}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(item.unit_price)}</TableCell>
                           <TableCell className="text-right font-medium">
-                            {formatCurrency(item.amount || item.quantity * item.unit_price)}
+                            {formatCurrency(item.amount)}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -164,15 +161,26 @@ const LaborAccounting = () => {
                       <span className="text-muted-foreground">ยอดรวม:</span>
                       <span className="font-medium">{formatCurrency(expense.subtotal)}</span>
                     </div>
-                    {expense.vat_rate > 0 && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">VAT {expense.vat_rate}%:</span>
-                        <span className="font-medium">{formatCurrency(expense.vat_amount)}</span>
+                    {expense.withholding_tax_rate > 0 && (
+                      <div className="flex justify-between text-sm text-destructive">
+                        <span className="text-muted-foreground">หัก ณ ที่จ่าย {expense.withholding_tax_rate}%:</span>
+                        <span className="font-medium">-{formatCurrency(expense.withholding_tax_amount)}</span>
                       </div>
                     )}
+                    {expense.deductions && expense.deductions.length > 0 && (
+                      <>
+                        <div className="text-sm font-medium border-t pt-2">รายการหัก:</div>
+                        {expense.deductions.map((deduction: any) => (
+                          <div key={deduction.id} className="flex justify-between text-sm text-destructive">
+                            <span className="text-muted-foreground">{deduction.description}:</span>
+                            <span className="font-medium">-{formatCurrency(deduction.amount)}</span>
+                          </div>
+                        ))}
+                      </>
+                    )}
                     <div className="flex justify-between text-lg font-semibold border-t pt-2">
-                      <span>รวมทั้งสิ้น:</span>
-                      <span className="text-accent">{formatCurrency(expense.total_amount)}</span>
+                      <span>ยอดสุทธิ:</span>
+                      <span className="text-accent">{formatCurrency(expense.net_amount || expense.total_amount)}</span>
                     </div>
                   </div>
                 </div>

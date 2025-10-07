@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -18,11 +18,26 @@ const CompanyDialog = ({ onSuccess, editData, trigger }: CompanyDialogProps) => 
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: editData?.name || "",
-    tax_id: editData?.tax_id || "",
-    address: editData?.address || "",
-    phone: editData?.phone || "",
+    code: "",
+    name: "",
+    tax_id: "",
+    phone: "",
+    address: "",
   });
+
+  useEffect(() => {
+    if (open && editData) {
+      setFormData({
+        code: editData.code || "",
+        name: editData.name || "",
+        tax_id: editData.tax_id || "",
+        phone: editData.phone || "",
+        address: editData.address || "",
+      });
+    } else if (!open) {
+      setFormData({ code: "", name: "", tax_id: "", phone: "", address: "" });
+    }
+  }, [open, editData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +57,7 @@ const CompanyDialog = ({ onSuccess, editData, trigger }: CompanyDialogProps) => 
     } else {
       toast.success(editData ? "แก้ไขบริษัทสำเร็จ" : "เพิ่มบริษัทสำเร็จ");
       setOpen(false);
-      if (!editData) setFormData({ name: "", tax_id: "", address: "", phone: "" });
+      if (!editData) setFormData({ code: "", name: "", tax_id: "", phone: "", address: "" });
       onSuccess?.();
     }
     setLoading(false);
@@ -64,24 +79,56 @@ const CompanyDialog = ({ onSuccess, editData, trigger }: CompanyDialogProps) => 
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label>ชื่อบริษัท *</Label>
-            <Input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
+            <Label htmlFor="code">รหัสบริษัท *</Label>
+            <Input
+              id="code"
+              value={formData.code}
+              onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+              placeholder="เช่น KCON"
+              required
+            />
           </div>
           <div>
-            <Label>เลขประจำตัวผู้เสียภาษี</Label>
-            <Input value={formData.tax_id} onChange={e => setFormData({...formData, tax_id: e.target.value})} />
+            <Label htmlFor="name">ชื่อบริษัท *</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+            />
           </div>
           <div>
-            <Label>เบอร์โทร</Label>
-            <Input value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
+            <Label htmlFor="tax_id">เลขประจำตัวผู้เสียภาษี</Label>
+            <Input
+              id="tax_id"
+              value={formData.tax_id}
+              onChange={(e) => setFormData({ ...formData, tax_id: e.target.value })}
+            />
           </div>
           <div>
-            <Label>ที่อยู่</Label>
-            <Textarea value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} rows={3} />
+            <Label htmlFor="phone">เบอร์โทร</Label>
+            <Input
+              id="phone"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label htmlFor="address">ที่อยู่</Label>
+            <Textarea
+              id="address"
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              rows={3}
+            />
           </div>
           <div className="flex gap-2 justify-end">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>ยกเลิก</Button>
-            <Button type="submit" disabled={loading}>{loading ? "กำลังบันทึก..." : "บันทึก"}</Button>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              ยกเลิก
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? "กำลังบันทึก..." : "บันทึก"}
+            </Button>
           </div>
         </form>
       </DialogContent>

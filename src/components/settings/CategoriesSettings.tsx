@@ -15,7 +15,7 @@ const CategoriesSettings = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
-  const [formData, setFormData] = useState({ name: "", description: "" });
+  const [formData, setFormData] = useState({ code: "", name: "", description: "" });
 
   useEffect(() => {
     fetchCategories();
@@ -42,14 +42,14 @@ const CategoriesSettings = () => {
       toast.success(editingCategory ? "แก้ไขหมวดหมู่สำเร็จ" : "เพิ่มหมวดหมู่สำเร็จ");
       setDialogOpen(false);
       setEditingCategory(null);
-      setFormData({ name: "", description: "" });
+      setFormData({ code: "", name: "", description: "" });
       fetchCategories();
     }
   };
 
   const handleEdit = (category: any) => {
     setEditingCategory(category);
-    setFormData({ name: category.name, description: category.description || "" });
+    setFormData({ code: category.code || "", name: category.name, description: category.description || "" });
     setDialogOpen(true);
   };
 
@@ -57,7 +57,7 @@ const CategoriesSettings = () => {
     setDialogOpen(open);
     if (!open) {
       setEditingCategory(null);
-      setFormData({ name: "", description: "" });
+      setFormData({ code: "", name: "", description: "" });
     }
   };
 
@@ -84,6 +84,10 @@ const CategoriesSettings = () => {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
+                <Label>รหัสหมวดหมู่ *</Label>
+                <Input value={formData.code} onChange={e => setFormData({...formData, code: e.target.value})} placeholder="เช่น CAT01" required />
+              </div>
+              <div>
                 <Label>ชื่อหมวดหมู่ *</Label>
                 <Input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
               </div>
@@ -103,6 +107,7 @@ const CategoriesSettings = () => {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>รหัส</TableHead>
               <TableHead>ชื่อหมวดหมู่</TableHead>
               <TableHead>คำอธิบาย</TableHead>
               <TableHead>สถานะ</TableHead>
@@ -112,6 +117,7 @@ const CategoriesSettings = () => {
           <TableBody>
             {categories.map(cat => (
               <TableRow key={cat.id}>
+                <TableCell>{cat.code || "-"}</TableCell>
                 <TableCell className="font-medium">{cat.name}</TableCell>
                 <TableCell>{cat.description || "-"}</TableCell>
                 <TableCell>

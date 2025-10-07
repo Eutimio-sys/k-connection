@@ -12,9 +12,13 @@ import { toast } from "sonner";
 interface ExpenseItem {
   category_id: string;
   description: string;
-  quantity: number;
-  unit_price: number;
+  amount: number;
   notes: string;
+}
+
+interface Deduction {
+  description: string;
+  amount: number;
 }
 
 const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
@@ -24,10 +28,13 @@ const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
   const [projects, setProjects] = useState<any[]>([]);
   const [companies, setCompanies] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
-  const [items, setItems] = useState<ExpenseItem[]>([{ category_id: "", description: "", quantity: 1, unit_price: 0, notes: "" }]);
-  const [vatRate, setVatRate] = useState(0);
+  const [items, setItems] = useState<ExpenseItem[]>([{ category_id: "", description: "", amount: 0, notes: "" }]);
+  const [deductions, setDeductions] = useState<Deduction[]>([]);
+  const [withholdingTaxRate, setWithholdingTaxRate] = useState(3);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
+  const [selectedCompany, setSelectedCompany] = useState("");
+  const [selectedProject, setSelectedProject] = useState("");
 
   useEffect(() => {
     if (open) fetchData();
@@ -36,7 +43,7 @@ const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
   const fetchData = async () => {
     const [workersRes, projectsRes, companiesRes, categoriesRes] = await Promise.all([
       supabase.from("workers").select("*").eq("is_active", true),
-      supabase.from("projects").select("*").eq("status", "active"),
+      supabase.from("projects").select("*"),
       supabase.from("companies").select("*").eq("is_active", true),
       supabase.from("expense_categories").select("*").eq("is_active", true),
     ]);
@@ -47,8 +54,18 @@ const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
     if (categoriesRes.data) setCategories(categoriesRes.data);
   };
 
+  const generateInvoiceNumber = () => {
+    const company = companies.find(c => c.id === selectedCompany);
+    const companyCode = company?.code || "COMP";
+    const date = new Date();
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${companyCode.toLowerCase()}${day}${month}${year}`;
+  };
+
   const addItem = () => {
-    setItems([...items, { category_id: "", description: "", quantity: 1, unit_price: 0, notes: "" }]);
+    setItems([...items, { category_id: "", description: "", amount: 0, notes: "" }]);
   };
 
   const removeItem = (index: number) => {
@@ -61,16 +78,34 @@ const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
     setItems(newItems);
   };
 
+  const addDeduction = () => {
+    setDeductions([...deductions, { description: "", amount: 0 }]);
+  };
+
+  const removeDeduction = (index: number) => {
+    setDeductions(deductions.filter((_, i) => i !== index));
+  };
+
+  const updateDeduction = (index: number, field: keyof Deduction, value: any) => {
+    const newDeductions = [...deductions];
+    newDeductions[index] = { ...newDeductions[index], [field]: value };
+    setDeductions(newDeductions);
+  };
+
   const calculateSubtotal = () => {
-    return items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+    return items.reduce((sum, item) => sum + item.amount, 0);
   };
 
-  const calculateVAT = (subtotal: number, vatRate: number) => {
-    return (subtotal * vatRate) / 100;
+  const calculateWithholdingTax = (subtotal: number) => {
+    return (subtotal * withholdingTaxRate) / 100;
   };
 
-  const calculateTotal = (subtotal: number, vat: number) => {
-    return subtotal + vat;
+  const calculateTotalDeductions = () => {
+    return deductions.reduce((sum, d) => sum + d.amount, 0);
+  };
+
+  const calculateNetAmount = (subtotal: number, withholdingTax: number, totalDeductions: number) => {
+    return subtotal - withholdingTax - totalDeductions;
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -93,14 +128,14 @@ const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const invoiceNumber = formData.get("invoice_number") as string;
+    const invoiceNumber = generateInvoiceNumber();
     const workerId = formData.get("worker_id") as string;
-    const projectId = formData.get("project_id") as string;
-    const companyId = formData.get("company_id") as string;
+    const projectId = selectedProject;
+    const companyId = selectedCompany;
     const invoiceDate = formData.get("invoice_date") as string;
     const notes = formData.get("notes") as string;
 
-    if (!invoiceNumber || !projectId || !companyId || items.some(i => !i.category_id || !i.description)) {
+    if (!projectId || !companyId || items.some(i => !i.category_id || !i.description)) {
       toast.error("กรุณากรอกข้อมูลให้ครบถ้วน");
       setLoading(false);
       return;
@@ -117,7 +152,7 @@ const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
     if (imageFile) {
       const fileExt = imageFile.name.split(".").pop();
       const fileName = `${Math.random()}.${fileExt}`;
-      const { error: uploadError, data } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from("receipts")
         .upload(fileName, imageFile);
 
@@ -132,8 +167,10 @@ const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
     }
 
     const subtotal = calculateSubtotal();
-    const vatAmount = calculateVAT(subtotal, vatRate);
-    const totalAmount = calculateTotal(subtotal, vatAmount);
+    const withholdingTaxAmount = calculateWithholdingTax(subtotal);
+    const totalDeductions = calculateTotalDeductions();
+    const netAmount = calculateNetAmount(subtotal, withholdingTaxAmount, totalDeductions);
+    const totalAmount = subtotal;
 
     const { data: expense, error: expenseError } = await supabase
       .from("labor_expenses")
@@ -144,9 +181,10 @@ const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
         company_id: companyId,
         invoice_date: invoiceDate,
         subtotal,
-        vat_rate: vatRate,
-        vat_amount: vatAmount,
+        withholding_tax_rate: withholdingTaxRate,
+        withholding_tax_amount: withholdingTaxAmount,
         total_amount: totalAmount,
+        net_amount: netAmount,
         notes,
         receipt_image_url: receiptUrl,
         created_by: user.id,
@@ -156,6 +194,7 @@ const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
 
     if (expenseError) {
       toast.error("เกิดข้อผิดพลาด");
+      console.error(expenseError);
       setLoading(false);
       return;
     }
@@ -164,9 +203,7 @@ const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
       labor_expense_id: expense.id,
       category_id: item.category_id,
       description: item.description,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      amount: item.quantity * item.unit_price,
+      amount: item.amount,
       notes: item.notes,
     }));
 
@@ -180,6 +217,24 @@ const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
       return;
     }
 
+    if (deductions.length > 0) {
+      const deductionsToInsert = deductions.map(d => ({
+        labor_expense_id: expense.id,
+        description: d.description,
+        amount: d.amount,
+      }));
+
+      const { error: deductionsError } = await supabase
+        .from("labor_expense_deductions")
+        .insert(deductionsToInsert);
+
+      if (deductionsError) {
+        toast.error("เกิดข้อผิดพลาดในการบันทึกรายการหัก");
+        setLoading(false);
+        return;
+      }
+    }
+
     toast.success("บันทึกสำเร็จ");
     setOpen(false);
     resetForm();
@@ -188,15 +243,19 @@ const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
   };
 
   const resetForm = () => {
-    setItems([{ category_id: "", description: "", quantity: 1, unit_price: 0, notes: "" }]);
-    setVatRate(0);
+    setItems([{ category_id: "", description: "", amount: 0, notes: "" }]);
+    setDeductions([]);
+    setWithholdingTaxRate(3);
     setImageFile(null);
     setImagePreview("");
+    setSelectedCompany("");
+    setSelectedProject("");
   };
 
   const subtotal = calculateSubtotal();
-  const vatAmount = calculateVAT(subtotal, vatRate);
-  const total = calculateTotal(subtotal, vatAmount);
+  const withholdingTax = calculateWithholdingTax(subtotal);
+  const totalDeductions = calculateTotalDeductions();
+  const netAmount = calculateNetAmount(subtotal, withholdingTax, totalDeductions);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -213,8 +272,8 @@ const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="invoice_number">เลขที่ใบเสร็จ *</Label>
-              <Input id="invoice_number" name="invoice_number" required />
+              <Label>เลขที่ใบเสร็จ (สร้างอัตโนมัติ)</Label>
+              <Input value={generateInvoiceNumber()} disabled className="bg-muted" />
             </div>
             <div>
               <Label htmlFor="invoice_date">วันที่</Label>
@@ -224,27 +283,31 @@ const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="worker_id">ช่าง</Label>
-              <Select name="worker_id">
+              <Label htmlFor="company_id">บริษัท *</Label>
+              <Select value={selectedCompany} onValueChange={setSelectedCompany} required>
                 <SelectTrigger>
-                  <SelectValue placeholder="เลือกช่าง" />
+                  <SelectValue placeholder="เลือกบริษัท" />
                 </SelectTrigger>
                 <SelectContent>
-                  {workers.map(w => (
-                    <SelectItem key={w.id} value={w.id}>{w.full_name}</SelectItem>
+                  {companies.map(c => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.code ? `[${c.code}] ${c.name}` : c.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
               <Label htmlFor="project_id">โครงการ *</Label>
-              <Select name="project_id" required>
+              <Select value={selectedProject} onValueChange={setSelectedProject} required>
                 <SelectTrigger>
                   <SelectValue placeholder="เลือกโครงการ" />
                 </SelectTrigger>
                 <SelectContent>
                   {projects.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.code ? `[${p.code}] ${p.name}` : p.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -252,14 +315,14 @@ const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
           </div>
 
           <div>
-            <Label htmlFor="company_id">บริษัท *</Label>
-            <Select name="company_id" required>
+            <Label htmlFor="worker_id">ช่าง</Label>
+            <Select name="worker_id">
               <SelectTrigger>
-                <SelectValue placeholder="เลือกบริษัท" />
+                <SelectValue placeholder="เลือกช่าง" />
               </SelectTrigger>
               <SelectContent>
-                {companies.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                {workers.map(w => (
+                  <SelectItem key={w.id} value={w.id}>{w.full_name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -294,35 +357,70 @@ const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
                       </SelectTrigger>
                       <SelectContent>
                         {categories.map(c => (
-                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.code ? `[${c.code}] ${c.name}` : c.name}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label>รายละเอียด *</Label>
-                    <Input value={item.description} onChange={(e) => updateItem(index, "description", e.target.value)} required />
+                    <Label>จำนวนเงิน *</Label>
+                    <Input 
+                      type="number" 
+                      step="0.01" 
+                      value={item.amount} 
+                      onChange={(e) => updateItem(index, "amount", parseFloat(e.target.value) || 0)} 
+                      required 
+                    />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>จำนวน</Label>
-                    <Input type="number" step="0.01" value={item.quantity} onChange={(e) => updateItem(index, "quantity", parseFloat(e.target.value) || 0)} />
-                  </div>
-                  <div>
-                    <Label>ราคา/หน่วย</Label>
-                    <Input type="number" step="0.01" value={item.unit_price} onChange={(e) => updateItem(index, "unit_price", parseFloat(e.target.value) || 0)} />
-                  </div>
+                <div>
+                  <Label>รายละเอียด *</Label>
+                  <Input value={item.description} onChange={(e) => updateItem(index, "description", e.target.value)} required />
                 </div>
 
                 <div>
                   <Label>หมายเหตุ</Label>
                   <Input value={item.notes} onChange={(e) => updateItem(index, "notes", e.target.value)} />
                 </div>
+              </div>
+            ))}
+          </div>
 
-                <div className="text-right font-medium">
-                  รวม: {new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(item.quantity * item.unit_price)}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>รายการหัก</Label>
+              <Button type="button" size="sm" variant="outline" onClick={addDeduction}>
+                <Plus className="h-4 w-4 mr-1" />
+                เพิ่มรายการหัก
+              </Button>
+            </div>
+            
+            {deductions.map((deduction, index) => (
+              <div key={index} className="border p-3 rounded-lg">
+                <div className="flex gap-3 items-end">
+                  <div className="flex-1">
+                    <Label>รายการ (เช่น หักค่าบัตร, หักเบิกล่วงหน้า)</Label>
+                    <Input 
+                      value={deduction.description} 
+                      onChange={(e) => updateDeduction(index, "description", e.target.value)}
+                      placeholder="ระบุรายการหัก"
+                    />
+                  </div>
+                  <div className="w-40">
+                    <Label>จำนวน</Label>
+                    <Input 
+                      type="number" 
+                      step="0.01" 
+                      value={deduction.amount} 
+                      onChange={(e) => updateDeduction(index, "amount", parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => removeDeduction(index)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             ))}
@@ -334,25 +432,31 @@ const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
               <span className="font-medium">{new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(subtotal)}</span>
             </div>
             <div className="flex items-center justify-between">
-              <Label htmlFor="vat_rate" className="mb-0">VAT (%):</Label>
+              <Label htmlFor="withholding_tax_rate" className="mb-0">หัก ณ ที่จ่าย (%):</Label>
               <div className="flex items-center gap-2">
                 <Input
-                  id="vat_rate"
-                  name="vat_rate"
+                  id="withholding_tax_rate"
+                  name="withholding_tax_rate"
                   type="number"
                   step="0.01"
-                  value={vatRate}
-                  onChange={(e) => setVatRate(parseFloat(e.target.value) || 0)}
+                  value={withholdingTaxRate}
+                  onChange={(e) => setWithholdingTaxRate(parseFloat(e.target.value) || 0)}
                   className="w-20"
                 />
-                <span className="font-medium w-32 text-right">
-                  {new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(vatAmount)}
+                <span className="font-medium w-32 text-right text-destructive">
+                  -{new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(withholdingTax)}
                 </span>
               </div>
             </div>
+            {totalDeductions > 0 && (
+              <div className="flex justify-between text-destructive">
+                <span>รายการหักทั้งหมด:</span>
+                <span className="font-medium">-{new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(totalDeductions)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-lg font-semibold border-t pt-2">
-              <span>รวมทั้งสิ้น:</span>
-              <span className="text-accent">{new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(total)}</span>
+              <span>ยอดสุทธิ:</span>
+              <span className="text-accent">{new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(netAmount)}</span>
             </div>
           </div>
 

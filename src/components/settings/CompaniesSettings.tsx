@@ -43,18 +43,20 @@ const CompaniesSettings = () => {
         ) : (
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>ชื่อบริษัท</TableHead>
-                <TableHead>เลขประจำตัวผู้เสียภาษี</TableHead>
-                <TableHead>เบอร์โทร</TableHead>
-                <TableHead>สถานะ</TableHead>
-                <TableHead className="text-right">จัดการ</TableHead>
-              </TableRow>
+          <TableRow>
+            <TableHead>รหัส</TableHead>
+            <TableHead>ชื่อบริษัท</TableHead>
+            <TableHead>เลขประจำตัวผู้เสียภาษี</TableHead>
+            <TableHead>เบอร์โทร</TableHead>
+            <TableHead>สถานะ</TableHead>
+            <TableHead className="text-right">จัดการ</TableHead>
+          </TableRow>
             </TableHeader>
             <TableBody>
               {companies.map(company => (
                 <TableRow key={company.id}>
-                  <TableCell className="font-medium">{company.name}</TableCell>
+              <TableCell className="font-medium">{company.code || "-"}</TableCell>
+              <TableCell className="font-medium">{company.name}</TableCell>
                   <TableCell>{company.tax_id || "-"}</TableCell>
                   <TableCell>{company.phone || "-"}</TableCell>
                   <TableCell>

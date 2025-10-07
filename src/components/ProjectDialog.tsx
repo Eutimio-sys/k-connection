@@ -18,6 +18,7 @@ const ProjectDialog = ({ onSuccess, companies }: ProjectDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
+    code: "",
     name: "",
     company_id: "",
     location: "",
@@ -50,7 +51,7 @@ const ProjectDialog = ({ onSuccess, companies }: ProjectDialogProps) => {
     } else {
       toast.success("สร้างโครงการสำเร็จ");
       setOpen(false);
-      setFormData({ name: "", company_id: "", location: "", description: "", start_date: "", end_date: "", budget: "", status: "planning" });
+      setFormData({ code: "", name: "", company_id: "", location: "", description: "", start_date: "", end_date: "", budget: "", status: "planning" });
       onSuccess?.();
     }
     setLoading(false);
@@ -70,7 +71,11 @@ const ProjectDialog = ({ onSuccess, companies }: ProjectDialogProps) => {
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
+            <div>
+              <Label>รหัสโครงการ *</Label>
+              <Input value={formData.code} onChange={e => setFormData({...formData, code: e.target.value})} placeholder="เช่น PRJ001" required />
+            </div>
+            <div>
               <Label>ชื่อโครงการ *</Label>
               <Input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
             </div>

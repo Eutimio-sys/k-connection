@@ -17,6 +17,7 @@ export type Database = {
       companies: {
         Row: {
           address: string | null
+          code: string | null
           created_at: string
           id: string
           is_active: boolean
@@ -27,6 +28,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          code?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
@@ -37,6 +39,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          code?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
@@ -142,6 +145,7 @@ export type Database = {
       }
       expense_categories: {
         Row: {
+          code: string | null
           created_at: string
           description: string | null
           id: string
@@ -149,6 +153,7 @@ export type Database = {
           name: string
         }
         Insert: {
+          code?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -156,6 +161,7 @@ export type Database = {
           name: string
         }
         Update: {
+          code?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -297,6 +303,30 @@ export type Database = {
           },
         ]
       }
+      labor_expense_deductions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          id: string
+          labor_expense_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          description: string
+          id?: string
+          labor_expense_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          id?: string
+          labor_expense_id?: string
+        }
+        Relationships: []
+      }
       labor_expense_items: {
         Row: {
           amount: number | null
@@ -306,8 +336,6 @@ export type Database = {
           id: string
           labor_expense_id: string
           notes: string | null
-          quantity: number
-          unit_price: number
         }
         Insert: {
           amount?: number | null
@@ -317,8 +345,6 @@ export type Database = {
           id?: string
           labor_expense_id: string
           notes?: string | null
-          quantity?: number
-          unit_price?: number
         }
         Update: {
           amount?: number | null
@@ -328,8 +354,6 @@ export type Database = {
           id?: string
           labor_expense_id?: string
           notes?: string | null
-          quantity?: number
-          unit_price?: number
         }
         Relationships: []
       }
@@ -341,6 +365,7 @@ export type Database = {
           id: string
           invoice_date: string
           invoice_number: string
+          net_amount: number | null
           notes: string | null
           project_id: string
           receipt_image_url: string | null
@@ -348,8 +373,8 @@ export type Database = {
           subtotal: number
           total_amount: number
           updated_at: string
-          vat_amount: number | null
-          vat_rate: number | null
+          withholding_tax_amount: number | null
+          withholding_tax_rate: number | null
           worker_id: string | null
         }
         Insert: {
@@ -359,6 +384,7 @@ export type Database = {
           id?: string
           invoice_date?: string
           invoice_number: string
+          net_amount?: number | null
           notes?: string | null
           project_id: string
           receipt_image_url?: string | null
@@ -366,8 +392,8 @@ export type Database = {
           subtotal?: number
           total_amount?: number
           updated_at?: string
-          vat_amount?: number | null
-          vat_rate?: number | null
+          withholding_tax_amount?: number | null
+          withholding_tax_rate?: number | null
           worker_id?: string | null
         }
         Update: {
@@ -377,6 +403,7 @@ export type Database = {
           id?: string
           invoice_date?: string
           invoice_number?: string
+          net_amount?: number | null
           notes?: string | null
           project_id?: string
           receipt_image_url?: string | null
@@ -384,8 +411,8 @@ export type Database = {
           subtotal?: number
           total_amount?: number
           updated_at?: string
-          vat_amount?: number | null
-          vat_rate?: number | null
+          withholding_tax_amount?: number | null
+          withholding_tax_rate?: number | null
           worker_id?: string | null
         }
         Relationships: []
@@ -423,6 +450,7 @@ export type Database = {
       projects: {
         Row: {
           budget: number | null
+          code: string | null
           company_id: string
           created_at: string
           created_by: string
@@ -437,6 +465,7 @@ export type Database = {
         }
         Insert: {
           budget?: number | null
+          code?: string | null
           company_id: string
           created_at?: string
           created_by: string
@@ -451,6 +480,7 @@ export type Database = {
         }
         Update: {
           budget?: number | null
+          code?: string | null
           company_id?: string
           created_at?: string
           created_by?: string
