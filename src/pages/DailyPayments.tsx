@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, DollarSign, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
-import DailyPaymentDialog from "@/components/DailyPaymentDialog";
 import DailyPaymentFromExpenseDialog from "@/components/DailyPaymentFromExpenseDialog";
 
 const DailyPayments = () => {
@@ -84,7 +83,7 @@ const DailyPayments = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
-            จ่ายเงินรายวัน
+            รายการโอน
           </h1>
           <p className="text-muted-foreground text-lg">สรุปยอดที่ต้องโอนเงินในแต่ละวัน</p>
         </div>
@@ -96,7 +95,6 @@ const DailyPayments = () => {
             className="px-4 py-2 border rounded-md"
           />
           <DailyPaymentFromExpenseDialog onSuccess={fetchData} />
-          <DailyPaymentDialog onSuccess={fetchData} />
         </div>
       </div>
 
@@ -151,13 +149,13 @@ const DailyPayments = () => {
         <div className="text-center py-12"><p className="text-muted-foreground">กำลังโหลด...</p></div>
       ) : payments.length === 0 ? (
         <Card className="p-12 text-center">
-          <p className="text-muted-foreground mb-4">ยังไม่มีรายการจ่ายเงินในวันนี้</p>
-          <DailyPaymentDialog onSuccess={fetchData} />
+          <p className="text-muted-foreground mb-4">ยังไม่มีรายการโอนเงินในวันนี้</p>
+          <DailyPaymentFromExpenseDialog onSuccess={fetchData} />
         </Card>
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>รายการจ่ายเงิน</CardTitle>
+            <CardTitle>รายการโอนเงิน</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {payments.map((payment) => (

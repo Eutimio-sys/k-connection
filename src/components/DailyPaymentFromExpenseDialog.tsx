@@ -119,7 +119,7 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
       toast.error("เกิดข้อผิดพลาด");
       console.error(error);
     } else {
-      toast.success("สร้างรายการจ่ายเงินสำเร็จ");
+      toast.success("สร้างรายการโอนเงินสำเร็จ");
       setOpen(false);
       setSelectedItems([]);
       onSuccess?.();
@@ -134,14 +134,14 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
+        <Button>
           <Plus className="mr-2 h-4 w-4" />
-          จากบัญชี
+          เลือกรายการโอนเงิน
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>สร้างรายการจ่ายเงินจากบัญชี</DialogTitle>
+          <DialogTitle>เลือกรายการโอนเงิน</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -229,7 +229,7 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
               ยกเลิก
             </Button>
             <Button type="submit" disabled={loading || selectedItems.length === 0}>
-              {loading ? "กำลังบันทึก..." : "สร้างรายการจ่ายเงิน"}
+              {loading ? "กำลังบันทึก..." : "สร้างรายการโอนเงิน"}
             </Button>
           </div>
         </form>
