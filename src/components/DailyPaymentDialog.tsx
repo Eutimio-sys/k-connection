@@ -6,42 +6,77 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus } from "lucide-react";
+import { Plus, Edit } from "lucide-react";
 import { toast } from "sonner";
 
 interface DailyPaymentDialogProps {
+  payment?: any;
   onSuccess?: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-const DailyPaymentDialog = ({ onSuccess }: DailyPaymentDialogProps) => {
-  const [open, setOpen] = useState(false);
+const DailyPaymentDialog = ({ payment, onSuccess, open: controlledOpen, onOpenChange }: DailyPaymentDialogProps) => {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
+
   const [loading, setLoading] = useState(false);
   const [projects, setProjects] = useState<any[]>([]);
   const [workers, setWorkers] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [paymentAccounts, setPaymentAccounts] = useState<any[]>([]);
   const [paymentTypes, setPaymentTypes] = useState<any[]>([]);
+
   const [formData, setFormData] = useState({
-    project_id: "",
-    worker_id: "",
-    category_id: "",
-    payment_account_id: "",
-    payment_type_id: "",
-    payment_date: new Date().toISOString().split('T')[0],
-    amount: "",
-    description: "",
-    notes: "",
+    project_id: payment?.project_id || "",
+    worker_id: payment?.worker_id || "",
+    payment_date: payment?.payment_date || new Date().toISOString().split('T')[0],
+    amount: payment?.amount || "",
+    category_id: payment?.category_id || "",
+    payment_account_id: payment?.payment_account_id || "",
+    payment_type_id: payment?.payment_type_id || "",
+    description: payment?.description || "",
+    notes: payment?.notes || "",
   });
 
   useEffect(() => {
     if (open) {
-      supabase.from("projects").select("id, name").eq("status", "in_progress").then(({ data }) => setProjects(data || []));
-      supabase.from("workers").select("*").eq("is_active", true).then(({ data }) => setWorkers(data || []));
-      supabase.from("expense_categories").select("*").eq("is_active", true).then(({ data }) => setCategories(data || []));
-      supabase.from("payment_accounts").select("*").eq("is_active", true).order("name").then(({ data }) => setPaymentAccounts(data || []));
-      supabase.from("payment_types").select("*").eq("is_active", true).order("name").then(({ data }) => setPaymentTypes(data || []));
+      fetchData();
     }
   }, [open]);
+
+  useEffect(() => {
+    if (payment) {
+      setFormData({
+        project_id: payment.project_id || "",
+        worker_id: payment.worker_id || "",
+        payment_date: payment.payment_date || new Date().toISOString().split('T')[0],
+        amount: payment.amount || "",
+        category_id: payment.category_id || "",
+        payment_account_id: payment.payment_account_id || "",
+        payment_type_id: payment.payment_type_id || "",
+        description: payment.description || "",
+        notes: payment.notes || "",
+      });
+    }
+  }, [payment]);
+
+  const fetchData = async () => {
+    const [projectsRes, workersRes, categoriesRes, accountsRes, typesRes] = await Promise.all([
+      supabase.from("projects").select("id, name").order("name"),
+      supabase.from("workers").select("id, full_name").eq("is_active", true).order("full_name"),
+      supabase.from("expense_categories").select("id, name").eq("is_active", true).order("name"),
+      supabase.from("payment_accounts").select("id, name, bank_name").eq("is_active", true).order("name"),
+      supabase.from("payment_types").select("id, name").eq("is_active", true).order("name"),
+    ]);
+
+    if (projectsRes.data) setProjects(projectsRes.data);
+    if (workersRes.data) setWorkers(workersRes.data);
+    if (categoriesRes.data) setCategories(categoriesRes.data);
+    if (accountsRes.data) setPaymentAccounts(accountsRes.data);
+    if (typesRes.data) setPaymentTypes(typesRes.data);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,172 +89,237 @@ const DailyPaymentDialog = ({ onSuccess }: DailyPaymentDialogProps) => {
       return;
     }
 
-    const { error } = await supabase.from("daily_payments").insert({
+    const dataToSave = {
       ...formData,
-      amount: parseFloat(formData.amount),
-      created_by: user.id,
-    });
+      amount: parseFloat(formData.amount as string),
+      worker_id: formData.worker_id || null,
+      category_id: formData.category_id || null,
+      payment_account_id: formData.payment_account_id || null,
+      payment_type_id: formData.payment_type_id || null,
+    };
+
+    let error;
+    if (payment) {
+      // Update existing payment
+      const result = await supabase
+        .from("daily_payments")
+        .update({
+          ...dataToSave,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", payment.id);
+      error = result.error;
+    } else {
+      // Create new payment
+      const result = await supabase
+        .from("daily_payments")
+        .insert({
+          ...dataToSave,
+          created_by: user.id,
+          status: "pending",
+        });
+      error = result.error;
+    }
 
     if (error) {
       toast.error("เกิดข้อผิดพลาด: " + error.message);
+      console.error(error);
     } else {
-      toast.success("สร้างรายการจ่ายเงินสำเร็จ");
+      toast.success(payment ? "แก้ไขรายการสำเร็จ" : "เพิ่มรายการสำเร็จ");
       setOpen(false);
       setFormData({
         project_id: "",
         worker_id: "",
+        payment_date: new Date().toISOString().split('T')[0],
+        amount: "",
         category_id: "",
         payment_account_id: "",
         payment_type_id: "",
-        payment_date: new Date().toISOString().split('T')[0],
-        amount: "",
         description: "",
         notes: "",
       });
       onSuccess?.();
     }
+
     setLoading(false);
   };
+
+  const dialogContent = (
+    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle>{payment ? "แก้ไขรายการโอนเงิน" : "เพิ่มรายการโอนเงิน"}</DialogTitle>
+      </DialogHeader>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="project_id">โครงการ *</Label>
+            <Select
+              value={formData.project_id}
+              onValueChange={(value) => setFormData({ ...formData, project_id: value })}
+              required
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="เลือกโครงการ" />
+              </SelectTrigger>
+              <SelectContent>
+                {projects.map((project) => (
+                  <SelectItem key={project.id} value={project.id}>
+                    {project.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="worker_id">ช่าง/ผู้รับเงิน</Label>
+            <Select
+              value={formData.worker_id}
+              onValueChange={(value) => setFormData({ ...formData, worker_id: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="เลือกช่าง (ถ้ามี)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">ไม่ระบุ</SelectItem>
+                {workers.map((worker) => (
+                  <SelectItem key={worker.id} value={worker.id}>
+                    {worker.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="payment_date">วันที่จ่าย *</Label>
+            <Input
+              id="payment_date"
+              type="date"
+              value={formData.payment_date}
+              onChange={(e) => setFormData({ ...formData, payment_date: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="amount">จำนวนเงิน *</Label>
+            <Input
+              id="amount"
+              type="number"
+              step="0.01"
+              value={formData.amount}
+              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="category_id">หมวดหมู่</Label>
+            <Select
+              value={formData.category_id}
+              onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="เลือกหมวดหมู่ (ถ้ามี)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">ไม่ระบุ</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="payment_account_id">บัญชีที่ใช้โอน</Label>
+            <Select
+              value={formData.payment_account_id}
+              onValueChange={(value) => setFormData({ ...formData, payment_account_id: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="เลือกบัญชี (ถ้ามี)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">ไม่ระบุ</SelectItem>
+                {paymentAccounts.map((account) => (
+                  <SelectItem key={account.id} value={account.id}>
+                    {account.name} - {account.bank_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="payment_type_id">ประเภทการโอน</Label>
+            <Select
+              value={formData.payment_type_id}
+              onValueChange={(value) => setFormData({ ...formData, payment_type_id: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="เลือกประเภท (ถ้ามี)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">ไม่ระบุ</SelectItem>
+                {paymentTypes.map((type) => (
+                  <SelectItem key={type.id} value={type.id}>
+                    {type.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="description">รายละเอียด</Label>
+          <Textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            placeholder="ระบุรายละเอียดเพิ่มเติม"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="notes">หมายเหตุ</Label>
+          <Textarea
+            id="notes"
+            value={formData.notes}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            placeholder="หมายเหตุเพิ่มเติม"
+          />
+        </div>
+
+        <div className="flex gap-2 justify-end">
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            ยกเลิก
+          </Button>
+          <Button type="submit" disabled={loading}>
+            {loading ? "กำลังบันทึก..." : payment ? "บันทึกการแก้ไข" : "เพิ่มรายการ"}
+          </Button>
+        </div>
+      </form>
+    </DialogContent>
+  );
+
+  if (controlledOpen !== undefined) {
+    return <Dialog open={open} onOpenChange={setOpen}>{dialogContent}</Dialog>;
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="gap-2">
-          <Plus size={20} />
-          เพิ่มรายการจ่ายเงิน
+        <Button>
+          {payment ? <Edit className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+          {payment ? "แก้ไข" : "เพิ่มรายการโอนเงิน"}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>เพิ่มรายการจ่ายเงินใหม่</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <Label>โครงการ *</Label>
-              <Select value={formData.project_id} onValueChange={v => setFormData({...formData, project_id: v})} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="เลือกโครงการ" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="col-span-2">
-              <Label>ช่าง</Label>
-              <Select value={formData.worker_id} onValueChange={v => setFormData({...formData, worker_id: v})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="เลือกช่าง (ถ้ามี)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {workers.map(w => (
-                    <SelectItem key={w.id} value={w.id}>
-                      {w.full_name} {w.daily_rate ? `(฿${w.daily_rate}/วัน)` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label>หมวดหมู่</Label>
-              <Select value={formData.category_id} onValueChange={v => setFormData({...formData, category_id: v})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="เลือกหมวดหมู่" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label>วันที่จ่าย *</Label>
-              <Input 
-                type="date" 
-                value={formData.payment_date} 
-                onChange={e => setFormData({...formData, payment_date: e.target.value})} 
-                required 
-              />
-            </div>
-
-            <div>
-              <Label>บัญชีที่ใช้โอน *</Label>
-              <Select value={formData.payment_account_id} onValueChange={v => setFormData({...formData, payment_account_id: v})} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="เลือกบัญชี" />
-                </SelectTrigger>
-                <SelectContent>
-                  {paymentAccounts.map(acc => (
-                    <SelectItem key={acc.id} value={acc.id}>
-                      {acc.name} - {acc.bank_name} {acc.account_number}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label>ประเภทการโอน *</Label>
-              <Select value={formData.payment_type_id} onValueChange={v => setFormData({...formData, payment_type_id: v})} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="เลือกประเภท" />
-                </SelectTrigger>
-                <SelectContent>
-                  {paymentTypes.map(type => (
-                    <SelectItem key={type.id} value={type.id}>
-                      {type.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="col-span-2">
-              <Label>จำนวนเงิน (บาท) *</Label>
-              <Input 
-                type="number" 
-                step="0.01" 
-                value={formData.amount} 
-                onChange={e => setFormData({...formData, amount: e.target.value})} 
-                required 
-              />
-            </div>
-
-            <div className="col-span-2">
-              <Label>รายละเอียด</Label>
-              <Textarea 
-                value={formData.description} 
-                onChange={e => setFormData({...formData, description: e.target.value})} 
-                rows={2} 
-                placeholder="ระบุรายละเอียดการจ่ายเงิน"
-              />
-            </div>
-
-            <div className="col-span-2">
-              <Label>หมายเหตุ</Label>
-              <Textarea 
-                value={formData.notes} 
-                onChange={e => setFormData({...formData, notes: e.target.value})} 
-                rows={2} 
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-2 justify-end">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>ยกเลิก</Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "กำลังบันทึก..." : "บันทึก"}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
+      {dialogContent}
     </Dialog>
   );
 };

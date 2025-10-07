@@ -6,12 +6,16 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, DollarSign, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import DailyPaymentFromExpenseDialog from "@/components/DailyPaymentFromExpenseDialog";
+import DailyPaymentDetailDialog from "@/components/DailyPaymentDetailDialog";
+import DailyPaymentDialog from "@/components/DailyPaymentDialog";
 
 const DailyPayments = () => {
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [userRole, setUserRole] = useState<string>("");
+  const [selectedPayment, setSelectedPayment] = useState<any>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -163,9 +167,15 @@ const DailyPayments = () => {
             {payments.map((payment) => (
               <div 
                 key={payment.id} 
-                className={`flex items-start justify-between p-4 border rounded-lg ${
-                  payment.status === 'cancelled' ? 'opacity-50 bg-muted/30' : 'hover:bg-muted/50'
+                className={`flex items-start justify-between p-4 border rounded-lg cursor-pointer ${
+                  payment.status === 'cancelled' ? 'opacity-50 bg-muted/30' : 
+                  payment.status === 'paid' ? 'opacity-50 bg-muted/30' : 
+                  'hover:bg-muted/50'
                 }`}
+                onClick={() => {
+                  setSelectedPayment(payment);
+                  setDetailDialogOpen(true);
+                }}
               >
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center gap-3">
@@ -218,7 +228,7 @@ const DailyPayments = () => {
                   <p className="text-2xl font-bold text-accent">{formatCurrency(payment.amount)}</p>
                   
                   {canManage && payment.status === "pending" && (
-                    <div className="flex gap-2">
+                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                       <Button size="sm" onClick={() => handleMarkAsPaid(payment.id)} className="gap-1">
                         <CheckCircle size={16} />
                         จ่ายแล้ว
@@ -234,6 +244,17 @@ const DailyPayments = () => {
             ))}
           </CardContent>
         </Card>
+      )}
+
+      {/* Detail Dialog */}
+      {selectedPayment && (
+        <DailyPaymentDetailDialog
+          payment={selectedPayment}
+          open={detailDialogOpen}
+          onOpenChange={setDetailDialogOpen}
+          onSuccess={fetchData}
+          canManage={canManage}
+        />
       )}
     </div>
   );

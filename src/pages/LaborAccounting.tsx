@@ -80,6 +80,7 @@ const LaborAccounting = () => {
       pending: { label: "รอดำเนินการ", variant: "secondary" },
       approved: { label: "อนุมัติแล้ว", variant: "default" },
       paid: { label: "จ่ายแล้ว", variant: "outline" },
+      rejected: { label: "ปฏิเสธ", variant: "destructive" },
       cancelled: { label: "ยกเลิก", variant: "outline" },
     };
     const c = config[status] || config.pending;

@@ -35,14 +35,28 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
   const [paymentTypes, setPaymentTypes] = useState<any[]>([]);
   const [paymentAccountId, setPaymentAccountId] = useState("");
   const [paymentTypeId, setPaymentTypeId] = useState("");
+  const [paidExpenseIds, setPaidExpenseIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (open) {
       fetchExpenseItems();
+      fetchPaidExpenses();
       supabase.from("payment_accounts").select("*").eq("is_active", true).order("name").then(({ data }) => setPaymentAccounts(data || []));
       supabase.from("payment_types").select("*").eq("is_active", true).order("name").then(({ data }) => setPaymentTypes(data || []));
     }
   }, [open, expenseType, filterDate]);
+
+  const fetchPaidExpenses = async () => {
+    const { data } = await supabase
+      .from("daily_payments")
+      .select("expense_item_id")
+      .eq("expense_type", expenseType)
+      .neq("status", "cancelled");
+    
+    if (data) {
+      setPaidExpenseIds(data.map(p => p.expense_item_id).filter(Boolean));
+    }
+  };
 
   const fetchExpenseItems = async () => {
     if (expenseType === "material") {
@@ -247,11 +261,18 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
                       ? item.vendor?.bank_account
                       : item.worker?.bank_account;
                     const amount = expenseType === "material" ? item.total_amount : (item.net_amount || 0);
+                    const isAlreadyPaid = paidExpenseIds.includes(item.id);
 
                     return (
-                      <div key={item.id} className="flex items-start gap-3 p-3 border rounded hover:bg-muted/50">
+                      <div 
+                        key={item.id} 
+                        className={`flex items-start gap-3 p-3 border rounded ${
+                          isAlreadyPaid ? 'opacity-50 bg-muted/30' : 'hover:bg-muted/50'
+                        }`}
+                      >
                         <Checkbox
                           checked={selectedItems.includes(item.id)}
+                          disabled={isAlreadyPaid}
                           onCheckedChange={(checked) => {
                             if (checked) {
                               setSelectedItems([...selectedItems, item.id]);
@@ -261,7 +282,12 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
                           }}
                         />
                         <div className="flex-1 text-sm">
-                          <p className="font-medium">{item.invoice_number}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{item.invoice_number}</p>
+                            {isAlreadyPaid && (
+                              <span className="text-xs text-muted-foreground">(เลือกไปแล้ว)</span>
+                            )}
+                          </div>
                           <p className="text-muted-foreground">
                             โครงการ: {item.project.name}
                           </p>
