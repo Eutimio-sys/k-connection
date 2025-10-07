@@ -83,7 +83,7 @@ const Payroll = () => {
       .from("employee_tax_social_security")
       .select(`
         *,
-        user:profiles!employee_tax_social_security_user_id_fkey(full_name, position, department)
+        profiles!inner(full_name, position, department)
       `)
       .gte("created_at", startDate)
       .lte("created_at", endDate)
@@ -377,9 +377,9 @@ const Payroll = () => {
                               {new Date(record.created_at).toLocaleDateString("th-TH")}
                             </TableCell>
                             <TableCell className="font-medium">
-                              {record.user?.full_name || "-"}
+                              {record.profiles?.full_name || "-"}
                             </TableCell>
-                            <TableCell>{record.user?.position || "-"}</TableCell>
+                            <TableCell>{record.profiles?.position || "-"}</TableCell>
                             <TableCell>
                               {record.month}/{record.year}
                             </TableCell>
