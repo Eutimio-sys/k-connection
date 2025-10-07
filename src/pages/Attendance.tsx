@@ -93,13 +93,22 @@ const Attendance = () => {
     const { data: { user } } = await supabase.auth.getUser();
     
     if (user) {
+      const insertData: any = {
+        user_id: user.id,
+        work_date: new Date().toISOString().split('T')[0],
+      };
+
+      // If work from home, set location text. Otherwise, set project_id
+      if (selectedProject === "work_from_home") {
+        insertData.location = "Work from Home";
+        insertData.project_id = null;
+      } else {
+        insertData.project_id = selectedProject;
+      }
+
       const { error } = await supabase
         .from("attendance")
-        .insert({
-          user_id: user.id,
-          work_date: new Date().toISOString().split('T')[0],
-          project_id: selectedProject,
-        });
+        .insert(insertData);
 
       if (error) {
         toast.error("เกิดข้อผิดพลาด: " + error.message);
@@ -167,6 +176,9 @@ const Attendance = () => {
                     <SelectValue placeholder="เลือกโครงการ/สถานที่" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="work_from_home">
+                      🏠 Work from Home
+                    </SelectItem>
                     {projects.map(project => (
                       <SelectItem key={project.id} value={project.id}>
                         {project.name}
@@ -191,7 +203,9 @@ const Attendance = () => {
                       <div className="space-y-2 flex-1">
                         <div className="flex items-center gap-2">
                           <MapPin size={16} className="text-muted-foreground" />
-                          <span className="font-medium">{record.project?.name}</span>
+                          <span className="font-medium">
+                            {record.location || record.project?.name || "-"}
+                          </span>
                           <span className="text-xs text-muted-foreground">รอบที่ {todayAttendanceList.length - index}</span>
                         </div>
                         <div className="flex items-center gap-4">
@@ -283,7 +297,7 @@ const Attendance = () => {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <MapPin size={14} className="text-muted-foreground" />
-                        {record.project?.name || "-"}
+                        {record.location || record.project?.name || "-"}
                       </div>
                     </TableCell>
                     <TableCell>{formatTime(record.check_in_time)}</TableCell>
