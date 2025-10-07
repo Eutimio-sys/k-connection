@@ -294,6 +294,45 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_tax_social_security: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          month: number
+          notes: string | null
+          social_security_amount: number
+          tax_amount: number
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          month?: number
+          notes?: string | null
+          social_security_amount?: number
+          tax_amount?: number
+          updated_at?: string
+          user_id: string
+          year?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          month?: number
+          notes?: string | null
+          social_security_amount?: number
+          tax_amount?: number
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
       expense_categories: {
         Row: {
           code: string | null

@@ -5,7 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, FileText, ArrowLeft, Eye, Pencil } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Users, FileText, ArrowLeft, Eye, Pencil, DollarSign, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { EmployeeEditDialog } from "@/components/EmployeeEditDialog";
@@ -17,6 +20,15 @@ const HRManagement = () => {
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
+  const [taxDialogOpen, setTaxDialogOpen] = useState(false);
+  const [selectedEmployeeForTax, setSelectedEmployeeForTax] = useState<any>(null);
+  const [taxFormData, setTaxFormData] = useState({
+    year: new Date().getFullYear(),
+    month: new Date().getMonth() + 1,
+    tax_amount: "",
+    social_security_amount: "",
+    notes: "",
+  });
 
   useEffect(() => {
     fetchData();
@@ -25,16 +37,30 @@ const HRManagement = () => {
   const fetchData = async () => {
     setLoading(true);
     
-    // Fetch all employees
+    // Fetch all employees with their latest salary
     const { data: employeesData, error: employeesError } = await supabase
       .from("profiles")
-      .select("*")
+      .select(`
+        *,
+        salary_records(salary_amount, effective_date)
+      `)
       .order("full_name");
 
     if (employeesError) {
       toast.error("เกิดข้อผิดพลาด");
     } else {
-      setEmployees(employeesData || []);
+      // Process employees to get latest salary
+      const processedEmployees = (employeesData || []).map((emp: any) => {
+        const salaries = emp.salary_records || [];
+        const latestSalary = salaries.sort(
+          (a: any, b: any) => new Date(b.effective_date).getTime() - new Date(a.effective_date).getTime()
+        )[0];
+        return {
+          ...emp,
+          current_salary: latestSalary?.salary_amount || null,
+        };
+      });
+      setEmployees(processedEmployees);
     }
 
     // Fetch document requests
@@ -102,6 +128,48 @@ const HRManagement = () => {
     return <span className={`px-2 py-1 rounded-full text-xs ${r.className}`}>{r.label}</span>;
   };
 
+  const formatCurrency = (amount: number | null) => {
+    if (!amount) return "-";
+    return new Intl.NumberFormat("th-TH", {
+      style: "currency",
+      currency: "THB",
+    }).format(amount);
+  };
+
+  const handleAddTaxRecord = async () => {
+    if (!selectedEmployeeForTax) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("employee_tax_social_security")
+      .insert({
+        user_id: selectedEmployeeForTax.id,
+        year: taxFormData.year,
+        month: taxFormData.month,
+        tax_amount: parseFloat(taxFormData.tax_amount) || 0,
+        social_security_amount: parseFloat(taxFormData.social_security_amount) || 0,
+        notes: taxFormData.notes,
+        created_by: user.id,
+      });
+
+    if (error) {
+      toast.error("เกิดข้อผิดพลาด: " + error.message);
+    } else {
+      toast.success("บันทึกข้อมูลสำเร็จ");
+      setTaxDialogOpen(false);
+      setTaxFormData({
+        year: new Date().getFullYear(),
+        month: new Date().getMonth() + 1,
+        tax_amount: "",
+        social_security_amount: "",
+        notes: "",
+      });
+      fetchData();
+    }
+  };
+
   if (loading) {
     return <div className="p-8 text-center"><p>กำลังโหลด...</p></div>;
   }
@@ -123,8 +191,9 @@ const HRManagement = () => {
       </div>
 
       <Tabs defaultValue="employees" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
+        <TabsList className="grid w-full grid-cols-3 max-w-2xl">
           <TabsTrigger value="employees">พนักงาน</TabsTrigger>
+          <TabsTrigger value="salary-tax">เงินเดือน/ภาษี/ประกันสังคม</TabsTrigger>
           <TabsTrigger value="documents">คำขอเอกสาร</TabsTrigger>
         </TabsList>
 
@@ -145,6 +214,7 @@ const HRManagement = () => {
                     <TableHead>แผนก</TableHead>
                     <TableHead>เบอร์โทร</TableHead>
                     <TableHead>บทบาท</TableHead>
+                    <TableHead>เงินเดือนปัจจุบัน</TableHead>
                     <TableHead>วันที่เริ่มงาน</TableHead>
                     <TableHead className="text-right">จัดการ</TableHead>
                   </TableRow>
@@ -157,6 +227,9 @@ const HRManagement = () => {
                       <TableCell>{emp.department || "-"}</TableCell>
                       <TableCell>{emp.phone || "-"}</TableCell>
                       <TableCell>{getRoleBadge(emp.role)}</TableCell>
+                      <TableCell className="font-medium text-primary">
+                        {formatCurrency(emp.current_salary)}
+                      </TableCell>
                       <TableCell>
                         {emp.hire_date ? new Date(emp.hire_date).toLocaleDateString("th-TH") : "-"}
                       </TableCell>
@@ -186,6 +259,133 @@ const HRManagement = () => {
                         </div>
                       </TableCell>
                     </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="salary-tax">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign size={20} />
+                จัดการเงินเดือน ภาษี และประกันสังคม
+              </CardTitle>
+              <Dialog open={taxDialogOpen} onOpenChange={setTaxDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button 
+                    size="sm"
+                    onClick={() => {
+                      setSelectedEmployeeForTax(null);
+                      setTaxFormData({
+                        year: new Date().getFullYear(),
+                        month: new Date().getMonth() + 1,
+                        tax_amount: "",
+                        social_security_amount: "",
+                        notes: "",
+                      });
+                    }}
+                  >
+                    <Plus size={16} className="mr-2" />
+                    เพิ่มข้อมูล
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>บันทึกภาษีและประกันสังคม</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>พนักงาน *</Label>
+                      <select
+                        className="w-full border rounded-md p-2"
+                        value={selectedEmployeeForTax?.id || ""}
+                        onChange={(e) => {
+                          const emp = employees.find(emp => emp.id === e.target.value);
+                          setSelectedEmployeeForTax(emp);
+                        }}
+                      >
+                        <option value="">เลือกพนักงาน</option>
+                        {employees.map((emp) => (
+                          <option key={emp.id} value={emp.id}>
+                            {emp.full_name} - {emp.position || "ไม่ระบุตำแหน่ง"}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>ปี *</Label>
+                        <Input
+                          type="number"
+                          value={taxFormData.year}
+                          onChange={(e) => setTaxFormData({ ...taxFormData, year: parseInt(e.target.value) })}
+                        />
+                      </div>
+                      <div>
+                        <Label>เดือน *</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="12"
+                          value={taxFormData.month}
+                          onChange={(e) => setTaxFormData({ ...taxFormData, month: parseInt(e.target.value) })}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>ภาษีหัก ณ ที่จ่าย (บาท)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={taxFormData.tax_amount}
+                        onChange={(e) => setTaxFormData({ ...taxFormData, tax_amount: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label>ประกันสังคม (บาท)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={taxFormData.social_security_amount}
+                        onChange={(e) => setTaxFormData({ ...taxFormData, social_security_amount: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label>หมายเหตุ</Label>
+                      <Input
+                        value={taxFormData.notes}
+                        onChange={(e) => setTaxFormData({ ...taxFormData, notes: e.target.value })}
+                      />
+                    </div>
+                    <Button 
+                      onClick={handleAddTaxRecord} 
+                      className="w-full"
+                      disabled={!selectedEmployeeForTax}
+                    >
+                      บันทึก
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ชื่อ-นามสกุล</TableHead>
+                    <TableHead>ตำแหน่ง</TableHead>
+                    <TableHead className="text-right">เงินเดือนปัจจุบัน</TableHead>
+                    <TableHead className="text-right">ภาษีสะสม (ปีนี้)</TableHead>
+                    <TableHead className="text-right">ประกันสังคมสะสม (ปีนี้)</TableHead>
+                    <TableHead className="text-right">จัดการ</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {employees.map((emp) => (
+                    <EmployeeTaxRow key={emp.id} employee={emp} />
                   ))}
                 </TableBody>
               </Table>
@@ -298,6 +498,68 @@ const HRManagement = () => {
         />
       )}
     </div>
+  );
+};
+
+const EmployeeTaxRow = ({ employee }: { employee: any }) => {
+  const [taxData, setTaxData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchTaxData();
+  }, [employee.id]);
+
+  const fetchTaxData = async () => {
+    const currentYear = new Date().getFullYear();
+    const { data, error } = await supabase
+      .from("employee_tax_social_security")
+      .select("*")
+      .eq("user_id", employee.id)
+      .eq("year", currentYear);
+
+    if (!error && data) {
+      const totalTax = data.reduce((sum, record) => sum + parseFloat(String(record.tax_amount || 0)), 0);
+      const totalSS = data.reduce((sum, record) => sum + parseFloat(String(record.social_security_amount || 0)), 0);
+      setTaxData({ totalTax, totalSS });
+    }
+    setLoading(false);
+  };
+
+  const formatCurrency = (amount: number | null) => {
+    if (!amount) return "฿0.00";
+    return new Intl.NumberFormat("th-TH", {
+      style: "currency",
+      currency: "THB",
+    }).format(amount);
+  };
+
+  return (
+    <TableRow>
+      <TableCell className="font-medium">{employee.full_name}</TableCell>
+      <TableCell>{employee.position || "-"}</TableCell>
+      <TableCell className="text-right font-medium text-primary">
+        {formatCurrency(employee.current_salary)}
+      </TableCell>
+      <TableCell className="text-right">
+        {loading ? "..." : formatCurrency(taxData?.totalTax || 0)}
+      </TableCell>
+      <TableCell className="text-right">
+        {loading ? "..." : formatCurrency(taxData?.totalSS || 0)}
+      </TableCell>
+      <TableCell className="text-right">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            // Navigate to employee detail page
+            window.location.href = `/employees/${employee.id}`;
+          }}
+        >
+          <Eye size={14} className="mr-1" />
+          ดูรายละเอียด
+        </Button>
+      </TableCell>
+    </TableRow>
   );
 };
 
