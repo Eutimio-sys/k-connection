@@ -8,8 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, MapPin, Calendar, TrendingUp, Building2, User, ShoppingCart, Package, Wrench } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ArrowLeft, MapPin, Calendar, TrendingUp, Building2, User, ShoppingCart, Package, Wrench, DollarSign, Info } from "lucide-react";
 import { toast } from "sonner";
+import IncomeHistoryDialog from "@/components/IncomeHistoryDialog";
 
 const ProjectDetail = () => {
   const { id } = useParams();
@@ -19,7 +21,13 @@ const ProjectDetail = () => {
   const [materialExpenses, setMaterialExpenses] = useState<any[]>([]);
   const [laborExpenses, setLaborExpenses] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [projectIncome, setProjectIncome] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Dialog states
+  const [incomeDialogOpen, setIncomeDialogOpen] = useState(false);
+  const [materialDetailOpen, setMaterialDetailOpen] = useState(false);
+  const [laborDetailOpen, setLaborDetailOpen] = useState(false);
   
   // Filter states
   const [materialStartDate, setMaterialStartDate] = useState("");
@@ -105,6 +113,16 @@ const ProjectDetail = () => {
       .order("full_name");
 
     setWorkers(workersData || []);
+
+    // Fetch project income
+    const { data: incomeData } = await supabase
+      .from("project_income")
+      .select("*")
+      .eq("project_id", id)
+      .order("income_date", { ascending: false });
+
+    setProjectIncome(incomeData || []);
+    
     setLoading(false);
   };
 
@@ -126,6 +144,7 @@ const ProjectDetail = () => {
   const totalMaterialExpenses = materialExpenses.reduce((sum, e) => sum + (e.status === "paid" ? e.total_amount : 0), 0);
   const totalLaborExpenses = laborExpenses.reduce((sum, e) => sum + (e.status === "paid" ? e.total_amount : 0), 0);
   const totalExpenses = totalPurchases + totalMaterialExpenses + totalLaborExpenses;
+  const totalIncome = projectIncome.reduce((sum, i) => sum + parseFloat(i.amount || 0), 0);
 
   // Calculate totals by category type
   const totalMaterialByCategory = materialExpenses.reduce((acc, expense) => {
@@ -253,34 +272,64 @@ const ProjectDetail = () => {
               <p className="text-2xl font-bold text-primary">{project.budget ? formatCurrency(project.budget) : "-"}</p>
             </div>
             
-            <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-              <p className="text-sm text-muted-foreground mb-2 font-medium">ค่าวัสดุ</p>
+            <div 
+              className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => setMaterialDetailOpen(true)}
+            >
+              <div className="flex justify-between items-start mb-2">
+                <p className="text-sm text-muted-foreground font-medium">ค่าวัสดุ</p>
+                <Info size={16} className="text-blue-600" />
+              </div>
               <p className="text-xl font-bold text-blue-600 dark:text-blue-400 mb-2">{formatCurrency(totalMaterialExpenses)}</p>
               {Object.keys(totalMaterialByCategory).length > 0 && (
                 <div className="space-y-1 text-sm">
-                  {Object.entries(totalMaterialByCategory).map(([category, amount]) => (
+                  {Object.entries(totalMaterialByCategory).slice(0, 3).map(([category, amount]) => (
                     <div key={category} className="flex justify-between text-muted-foreground">
                       <span>• {category}</span>
                       <span>{formatCurrency(Number(amount))}</span>
                     </div>
                   ))}
+                  {Object.keys(totalMaterialByCategory).length > 3 && (
+                    <p className="text-xs text-muted-foreground italic">คลิกเพื่อดูทั้งหมด...</p>
+                  )}
                 </div>
               )}
             </div>
 
-            <div className="p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
-              <p className="text-sm text-muted-foreground mb-2 font-medium">ค่าแรง</p>
+            <div 
+              className="p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800 cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => setLaborDetailOpen(true)}
+            >
+              <div className="flex justify-between items-start mb-2">
+                <p className="text-sm text-muted-foreground font-medium">ค่าแรง</p>
+                <Info size={16} className="text-orange-600" />
+              </div>
               <p className="text-xl font-bold text-orange-600 dark:text-orange-400 mb-2">{formatCurrency(totalLaborExpenses)}</p>
               {Object.keys(totalLaborByCategory).length > 0 && (
                 <div className="space-y-1 text-sm">
-                  {Object.entries(totalLaborByCategory).map(([category, amount]) => (
+                  {Object.entries(totalLaborByCategory).slice(0, 3).map(([category, amount]) => (
                     <div key={category} className="flex justify-between text-muted-foreground">
                       <span>• {category}</span>
                       <span>{formatCurrency(Number(amount))}</span>
                     </div>
                   ))}
+                  {Object.keys(totalLaborByCategory).length > 3 && (
+                    <p className="text-xs text-muted-foreground italic">คลิกเพื่อดูทั้งหมด...</p>
+                  )}
                 </div>
               )}
+            </div>
+            
+            <div 
+              className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800 cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => setIncomeDialogOpen(true)}
+            >
+              <div className="flex justify-between items-start mb-2">
+                <p className="text-sm text-muted-foreground font-medium">เงินที่เบิกมาแล้ว</p>
+                <DollarSign size={16} className="text-green-600" />
+              </div>
+              <p className="text-xl font-bold text-green-600 dark:text-green-400">{formatCurrency(totalIncome)}</p>
+              <p className="text-xs text-muted-foreground mt-1">{projectIncome.length} รายการ</p>
             </div>
             
             <div className="p-4 bg-accent/5 rounded-lg">
@@ -297,6 +346,56 @@ const ProjectDetail = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Dialogs */}
+      <IncomeHistoryDialog
+        open={incomeDialogOpen}
+        onOpenChange={setIncomeDialogOpen}
+        projectId={id || ""}
+        onSuccess={fetchData}
+      />
+
+      {/* Material Detail Dialog */}
+      <Dialog open={materialDetailOpen} onOpenChange={setMaterialDetailOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>รายละเอียดค่าวัสดุ</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+              <p className="text-sm text-muted-foreground mb-1">รวมค่าวัสดุทั้งหมด</p>
+              <p className="text-2xl font-bold text-blue-600">{formatCurrency(totalMaterialExpenses)}</p>
+            </div>
+            {Object.entries(totalMaterialByCategory).map(([category, amount]) => (
+              <div key={category} className="flex justify-between items-center p-3 border rounded-lg">
+                <span className="font-medium">{category}</span>
+                <span className="text-lg font-semibold text-blue-600">{formatCurrency(Number(amount))}</span>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Labor Detail Dialog */}
+      <Dialog open={laborDetailOpen} onOpenChange={setLaborDetailOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>รายละเอียดค่าแรง</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
+              <p className="text-sm text-muted-foreground mb-1">รวมค่าแรงทั้งหมด</p>
+              <p className="text-2xl font-bold text-orange-600">{formatCurrency(totalLaborExpenses)}</p>
+            </div>
+            {Object.entries(totalLaborByCategory).map(([category, amount]) => (
+              <div key={category} className="flex justify-between items-center p-3 border rounded-lg">
+                <span className="font-medium">{category}</span>
+                <span className="text-lg font-semibold text-orange-600">{formatCurrency(Number(amount))}</span>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Tabs defaultValue="purchases" className="w-full">
         <TabsList className="grid w-full grid-cols-3">

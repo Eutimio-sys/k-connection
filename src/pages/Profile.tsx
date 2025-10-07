@@ -7,10 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Mail, Calendar, Briefcase, FileText, ArrowLeft, DollarSign } from "lucide-react";
+import { Mail, Calendar, Briefcase, FileText, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import IncomeHistoryDialog from "@/components/IncomeHistoryDialog";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -19,7 +18,6 @@ const Profile = () => {
   const [documentTypes, setDocumentTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
-  const [incomeDialogOpen, setIncomeDialogOpen] = useState(false);
   const [selectedDocumentType, setSelectedDocumentType] = useState("");
   const [documentNotes, setDocumentNotes] = useState("");
 
@@ -124,14 +122,6 @@ const Profile = () => {
           <p className="text-muted-foreground text-lg ml-14">จัดการข้อมูลส่วนตัวของคุณ</p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            className="gap-2"
-            onClick={() => setIncomeDialogOpen(true)}
-          >
-            <DollarSign size={16} />
-            ดูรายได้
-          </Button>
           <Dialog open={documentDialogOpen} onOpenChange={setDocumentDialogOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2">
@@ -313,14 +303,6 @@ const Profile = () => {
           )}
         </div>
       </div>
-
-      {profile && (
-        <IncomeHistoryDialog
-          open={incomeDialogOpen}
-          onOpenChange={setIncomeDialogOpen}
-          userId={profile.id}
-        />
-      )}
     </div>
   );
 };

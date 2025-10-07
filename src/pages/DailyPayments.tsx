@@ -21,6 +21,7 @@ const DailyPayments = () => {
   const [endDate, setEndDate] = useState("");
   const [selectedCompany, setSelectedCompany] = useState("all");
   const [selectedProject, setSelectedProject] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("pending");
   const [companies, setCompanies] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [showFilters, setShowFilters] = useState(false);
@@ -31,7 +32,7 @@ const DailyPayments = () => {
   useEffect(() => {
     fetchData();
     fetchFilterData();
-  }, [selectedDate, startDate, endDate, selectedCompany, selectedProject]);
+  }, [selectedDate, startDate, endDate, selectedCompany, selectedProject, selectedStatus]);
 
   const fetchFilterData = async () => {
     const [companiesRes, projectsRes] = await Promise.all([
@@ -50,19 +51,38 @@ const DailyPayments = () => {
       if (profile) setUserRole(profile.role);
     }
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("daily_payments")
       .select(`
         *,
-        project:projects(name),
+        project:projects(name, company_id, company:companies(name)),
         worker:workers(full_name, bank_name, bank_account),
         category:expense_categories(name),
         payment_account:payment_accounts(name, bank_name, account_number),
         payment_type:payment_types(name),
         creator:profiles!created_by(full_name)
-      `)
-      .eq("payment_date", selectedDate)
-      .order("created_at", { ascending: false });
+      `);
+
+    // Apply filters
+    if (startDate && endDate) {
+      query = query.gte("payment_date", startDate).lte("payment_date", endDate);
+    } else if (!startDate && !endDate) {
+      query = query.eq("payment_date", selectedDate);
+    }
+
+    if (selectedCompany !== "all") {
+      query = query.eq("project.company_id", selectedCompany);
+    }
+
+    if (selectedProject !== "all") {
+      query = query.eq("project_id", selectedProject);
+    }
+
+    if (selectedStatus !== "all") {
+      query = query.eq("status", selectedStatus);
+    }
+
+    const { data, error } = await query.order("created_at", { ascending: false });
 
     if (error) toast.error("เกิดข้อผิดพลาด");
     else setPayments(data || []);
@@ -115,15 +135,94 @@ const DailyPayments = () => {
           <p className="text-muted-foreground text-lg">สรุปยอดที่ต้องโอนเงินในแต่ละวัน</p>
         </div>
         <div className="flex gap-3 items-center">
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="px-4 py-2 border rounded-md"
-          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className="gap-2"
+          >
+            <Filter size={16} />
+            {showFilters ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+          </Button>
           <DailyPaymentFromExpenseDialog onSuccess={fetchData} />
+          <Button onClick={() => exportDailyPaymentsToExcel(payments)} className="gap-2">
+            <Download size={16} />
+            Export Excel
+          </Button>
         </div>
       </div>
+
+      {/* Filters */}
+      {showFilters && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div>
+                <Label>ตั้งแต่วันที่</Label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>ถึงวันที่</Label>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>บริษัท</Label>
+                <Select value={selectedCompany} onValueChange={setSelectedCompany}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="เลือกบริษัท" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">ทั้งหมด</SelectItem>
+                    {companies.map((company) => (
+                      <SelectItem key={company.id} value={company.id}>
+                        {company.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>โครงการ</Label>
+                <Select value={selectedProject} onValueChange={setSelectedProject}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="เลือกโครงการ" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">ทั้งหมด</SelectItem>
+                    {projects.map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>สถานะ</Label>
+                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="เลือกสถานะ" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">ทั้งหมด</SelectItem>
+                    <SelectItem value="pending">รอจ่าย</SelectItem>
+                    <SelectItem value="paid">จ่ายแล้ว</SelectItem>
+                    <SelectItem value="cancelled">ยกเลิก</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

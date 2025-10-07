@@ -1,208 +1,267 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
 
 interface IncomeHistoryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  userId: string;
+  projectId: string;
+  onSuccess?: () => void;
 }
 
-const IncomeHistoryDialog = ({ open, onOpenChange, userId }: IncomeHistoryDialogProps) => {
-  const [records, setRecords] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [startDate, setStartDate] = useState(
-    new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString().split('T')[0]
-  );
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+const IncomeHistoryDialog = ({ open, onOpenChange, projectId, onSuccess }: IncomeHistoryDialogProps) => {
+  const [incomes, setIncomes] = useState<any[]>([]);
+  const [paymentAccounts, setPaymentAccounts] = useState<any[]>([]);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [formData, setFormData] = useState({
+    amount: "",
+    income_date: new Date().toISOString().split('T')[0],
+    payment_account_id: "",
+    description: "",
+    notes: "",
+  });
 
   useEffect(() => {
     if (open) {
-      fetchIncome();
+      fetchIncomes();
+      fetchPaymentAccounts();
     }
-  }, [open, userId, startDate, endDate]);
+  }, [open, projectId]);
 
-  const fetchIncome = async () => {
-    setLoading(true);
+  const fetchIncomes = async () => {
+    const { data } = await supabase
+      .from("project_income")
+      .select(`
+        *,
+        payment_account:payment_accounts(name, bank_name, account_number),
+        creator:profiles!created_by(full_name)
+      `)
+      .eq("project_id", projectId)
+      .order("income_date", { ascending: false });
+    
+    setIncomes(data || []);
+  };
 
-    // Fetch salary records
-    const { data: salaryData, error: salaryError } = await supabase
-      .from("salary_records")
+  const fetchPaymentAccounts = async () => {
+    const { data } = await supabase
+      .from("payment_accounts")
       .select("*")
-      .eq("user_id", userId)
-      .gte("effective_date", startDate)
-      .lte("effective_date", endDate)
-      .order("effective_date", { ascending: false });
+      .eq("is_active", true)
+      .order("name");
+    
+    setPaymentAccounts(data || []);
+  };
 
-    if (salaryError) {
-      toast.error("เกิดข้อผิดพลาด: " + salaryError.message);
-    }
-
-    // Fetch tax and social security records
-    const { data: taxData, error: taxError } = await supabase
-      .from("employee_tax_social_security")
-      .select("*")
-      .eq("user_id", userId);
-
-    if (taxError) {
-      toast.error("เกิดข้อผิดพลาด: " + taxError.message);
-    }
-
-    // Combine and organize data
-    const combined = (salaryData || []).map((salary: any) => {
-      const taxRecord = (taxData || []).find(
-        (t: any) => t.year === new Date(salary.effective_date).getFullYear() &&
-                    t.month === new Date(salary.effective_date).getMonth() + 1
-      );
-      return {
-        date: salary.effective_date,
-        salary: salary.salary_amount,
-        tax: taxRecord?.tax_amount || 0,
-        socialSecurity: taxRecord?.social_security_amount || 0,
-        net: salary.salary_amount - (taxRecord?.tax_amount || 0) - (taxRecord?.social_security_amount || 0),
-      };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    const { error } = await supabase.from("project_income").insert({
+      project_id: projectId,
+      amount: parseFloat(formData.amount),
+      income_date: formData.income_date,
+      payment_account_id: formData.payment_account_id || null,
+      description: formData.description,
+      notes: formData.notes,
+      created_by: user?.id,
     });
 
-    setRecords(combined);
-    setLoading(false);
+    if (error) {
+      toast.error("เกิดข้อผิดพลาด");
+      console.error(error);
+    } else {
+      toast.success("เพิ่มรายการเบิกเงินสำเร็จ");
+      setFormData({
+        amount: "",
+        income_date: new Date().toISOString().split('T')[0],
+        payment_account_id: "",
+        description: "",
+        notes: "",
+      });
+      setShowAddForm(false);
+      fetchIncomes();
+      if (onSuccess) onSuccess();
+    }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("th-TH", {
-      style: "currency",
-      currency: "THB",
-    }).format(amount);
+  const handleDelete = async (id: string) => {
+    if (!confirm("ยืนยันการลบรายการนี้?")) return;
+
+    const { error } = await supabase.from("project_income").delete().eq("id", id);
+    
+    if (error) toast.error("เกิดข้อผิดพลาด");
+    else {
+      toast.success("ลบรายการสำเร็จ");
+      fetchIncomes();
+      if (onSuccess) onSuccess();
+    }
   };
 
-  const getTotals = () => {
-    return records.reduce(
-      (acc, record) => ({
-        salary: acc.salary + record.salary,
-        tax: acc.tax + record.tax,
-        socialSecurity: acc.socialSecurity + record.socialSecurity,
-        net: acc.net + record.net,
-      }),
-      { salary: 0, tax: 0, socialSecurity: 0, net: 0 }
-    );
-  };
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(amount);
 
-  const totals = getTotals();
+  const totalIncome = incomes.reduce((sum, income) => sum + parseFloat(income.amount || 0), 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl">ประวัติรายได้</DialogTitle>
+          <DialogTitle className="flex items-center justify-between">
+            <span>ประวัติการเบิกเงิน</span>
+            <div className="text-2xl font-bold text-primary">
+              รวม: {formatCurrency(totalIncome)}
+            </div>
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Date Filter */}
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <Label>วันที่เริ่มต้น</Label>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
-            <div className="flex-1">
-              <Label>วันที่สิ้นสุด</Label>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </div>
-          </div>
+        <div className="space-y-4">
+          {!showAddForm ? (
+            <Button onClick={() => setShowAddForm(true)} className="gap-2">
+              <Plus size={16} />
+              เพิ่มรายการเบิกเงิน
+            </Button>
+          ) : (
+            <form onSubmit={handleSubmit} className="border rounded-lg p-4 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>จำนวนเงิน *</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={formData.amount}
+                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label>วันที่เบิก *</Label>
+                  <Input
+                    type="date"
+                    value={formData.income_date}
+                    onChange={(e) => setFormData({ ...formData, income_date: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
 
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card className="bg-blue-50 dark:bg-blue-950">
-              <CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">รวมเงินเดือน</p>
-                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                  {formatCurrency(totals.salary)}
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="bg-red-50 dark:bg-red-950">
-              <CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">รวมภาษี</p>
-                <p className="text-2xl font-bold text-red-600 dark:text-red-400">
-                  {formatCurrency(totals.tax)}
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="bg-orange-50 dark:bg-orange-950">
-              <CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">รวมประกันสังคม</p>
-                <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                  {formatCurrency(totals.socialSecurity)}
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="bg-green-50 dark:bg-green-950">
-              <CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">รวมสุทธิ</p>
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  {formatCurrency(totals.net)}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+              <div>
+                <Label>บัญชีที่รับเงิน</Label>
+                <Select
+                  value={formData.payment_account_id}
+                  onValueChange={(value) => setFormData({ ...formData, payment_account_id: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="เลือกบัญชี" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {paymentAccounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.name} - {account.bank_name} ({account.account_number})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {/* History Table */}
-          {loading ? (
-            <p className="text-center py-8">กำลังโหลด...</p>
-          ) : records.length > 0 ? (
+              <div>
+                <Label>รายละเอียด</Label>
+                <Input
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="เช่น เบิกงวดที่ 1"
+                />
+              </div>
+
+              <div>
+                <Label>หมายเหตุ</Label>
+                <Textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  rows={2}
+                />
+              </div>
+
+              <div className="flex gap-2 justify-end">
+                <Button type="button" variant="outline" onClick={() => setShowAddForm(false)}>
+                  ยกเลิก
+                </Button>
+                <Button type="submit">บันทึก</Button>
+              </div>
+            </form>
+          )}
+
+          {incomes.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">ยังไม่มีรายการเบิกเงิน</p>
+          ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>วันที่</TableHead>
-                  <TableHead className="text-right">เงินเดือน</TableHead>
-                  <TableHead className="text-right">ภาษี</TableHead>
-                  <TableHead className="text-right">ประกันสังคม</TableHead>
-                  <TableHead className="text-right">สุทธิ</TableHead>
+                  <TableHead>รายละเอียด</TableHead>
+                  <TableHead>บัญชี</TableHead>
+                  <TableHead className="text-right">จำนวนเงิน</TableHead>
+                  <TableHead>ผู้บันทึก</TableHead>
+                  <TableHead className="text-right">จัดการ</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {records.map((record, index) => (
-                  <TableRow key={index}>
+                {incomes.map((income) => (
+                  <TableRow key={income.id}>
                     <TableCell>
-                      {format(new Date(record.date), "dd/MM/yyyy")}
+                      {new Date(income.income_date).toLocaleDateString("th-TH")}
                     </TableCell>
-                    <TableCell className="text-right font-medium text-primary">
-                      {formatCurrency(record.salary)}
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{income.description || "-"}</div>
+                        {income.notes && (
+                          <div className="text-sm text-muted-foreground">{income.notes}</div>
+                        )}
+                      </div>
                     </TableCell>
-                    <TableCell className="text-right text-red-600">
-                      {formatCurrency(record.tax)}
+                    <TableCell>
+                      {income.payment_account ? (
+                        <div className="text-sm">
+                          <div className="font-medium">{income.payment_account.name}</div>
+                          <div className="text-muted-foreground">
+                            {income.payment_account.bank_name} - {income.payment_account.account_number}
+                          </div>
+                        </div>
+                      ) : (
+                        "-"
+                      )}
                     </TableCell>
-                    <TableCell className="text-right text-orange-600">
-                      {formatCurrency(record.socialSecurity)}
+                    <TableCell className="text-right font-semibold text-green-600">
+                      {formatCurrency(income.amount)}
                     </TableCell>
-                    <TableCell className="text-right font-bold text-green-600">
-                      {formatCurrency(record.net)}
+                    <TableCell>
+                      <div className="text-sm">
+                        <div>{income.creator?.full_name || "-"}</div>
+                        <div className="text-muted-foreground">
+                          {new Date(income.created_at).toLocaleDateString("th-TH")}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleDelete(income.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          ) : (
-            <p className="text-center text-muted-foreground py-8">
-              ไม่พบข้อมูลในช่วงเวลาที่เลือก
-            </p>
           )}
         </div>
       </DialogContent>
