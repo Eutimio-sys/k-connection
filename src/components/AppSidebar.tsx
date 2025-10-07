@@ -42,6 +42,7 @@ const menuItems = [
   { title: "รายการโอนเงิน", url: "/daily-payments", icon: DollarSign },
   { title: "พนักงาน", url: "/employees", icon: Users },
   { title: "จัดการ HR", url: "/hr-management", icon: UserCog },
+  { title: "บัญชีเงินเดือน", url: "/payroll", icon: DollarSign },
   { title: "เช็คอิน/เอาท์", url: "/attendance", icon: Clock },
   { title: "ระบบลา", url: "/leave", icon: Calendar },
   { title: "โปรไฟล์", url: "/profile", icon: User },

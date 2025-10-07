@@ -505,10 +505,6 @@ const EmployeeTaxRow = ({ employee }: { employee: any }) => {
   const [taxData, setTaxData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchTaxData();
-  }, [employee.id]);
-
   const fetchTaxData = async () => {
     const currentYear = new Date().getFullYear();
     const { data, error } = await supabase
@@ -524,6 +520,10 @@ const EmployeeTaxRow = ({ employee }: { employee: any }) => {
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    fetchTaxData();
+  }, [employee.id]);
 
   const formatCurrency = (amount: number | null) => {
     if (!amount) return "฿0.00";

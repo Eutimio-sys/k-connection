@@ -15,6 +15,7 @@ import Approvals from "./pages/Approvals";
 import Employees from "./pages/Employees";
 import EmployeeDetail from "./pages/EmployeeDetail";
 import HRManagement from "./pages/HRManagement";
+import Payroll from "./pages/Payroll";
 import Settings from "./pages/Settings";
 import Accounting from "./pages/Accounting";
 import LaborAccounting from "./pages/LaborAccounting";
@@ -46,6 +47,7 @@ const App = () => (
             <Route path="/employees" element={<Employees />} />
             <Route path="/employees/:id" element={<EmployeeDetail />} />
             <Route path="/hr-management" element={<HRManagement />} />
+            <Route path="/payroll" element={<Payroll />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/attendance" element={<Attendance />} />
             <Route path="/leave" element={<LeaveManagement />} />
