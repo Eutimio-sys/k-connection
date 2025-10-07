@@ -53,9 +53,16 @@ export const EmployeeEditDialog = ({ open, onOpenChange, employee, onSuccess }: 
   const handleSave = async () => {
     setSaving(true);
     
+    // Convert empty strings to null for date fields
+    const updateData = {
+      ...formData,
+      date_of_birth: formData.date_of_birth || null,
+      hire_date: formData.hire_date || null,
+    };
+    
     const { error } = await supabase
       .from("profiles")
-      .update(formData)
+      .update(updateData)
       .eq("id", employee.id);
 
     if (error) {
