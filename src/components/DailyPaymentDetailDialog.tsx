@@ -226,12 +226,43 @@ const DailyPaymentDetailDialog = ({
               </div>
             )}
 
-            {/* Created By */}
-            {payment.creator && (
-              <div className="text-xs text-muted-foreground">
-                สร้างโดย: {payment.creator.full_name}
+            {/* Action History */}
+            <div className="pt-4 border-t">
+              <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground">
+                {payment.creator && (
+                  <div>
+                    <span className="font-medium">สร้างโดย:</span>{" "}
+                    {payment.creator.full_name}
+                    {payment.created_at && (
+                      <span className="ml-1">
+                        ({new Date(payment.created_at).toLocaleDateString("th-TH", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit"
+                        })})
+                      </span>
+                    )}
+                  </div>
+                )}
+                {payment.paid_by_profile && payment.paid_at && (
+                  <div>
+                    <span className="font-medium">จ่ายโดย:</span>{" "}
+                    {payment.paid_by_profile.full_name}
+                    <span className="ml-1">
+                      ({new Date(payment.paid_at).toLocaleDateString("th-TH", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit"
+                      })})
+                    </span>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
 
           <DialogFooter>

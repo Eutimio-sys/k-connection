@@ -164,6 +164,32 @@ const LeaveRequestDetailDialog = ({
               </p>
             </div>
           )}
+
+          {/* Action History */}
+          <div className="pt-4 border-t">
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground">
+              {request.user && (
+                <div>
+                  <span className="font-medium">ขอลาโดย:</span>{" "}
+                  {request.user.full_name}
+                  {request.created_at && (
+                    <span className="ml-1">
+                      ({format(new Date(request.created_at), "dd/MM/yyyy HH:mm")})
+                    </span>
+                  )}
+                </div>
+              )}
+              {request.updated_by_profile && request.updated_at && (
+                <div>
+                  <span className="font-medium">อัพเดทโดย:</span>{" "}
+                  {request.updated_by_profile.full_name}
+                  <span className="ml-1">
+                    ({format(new Date(request.updated_at), "dd/MM/yyyy HH:mm")})
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         <DialogFooter>

@@ -301,6 +301,32 @@ const LaborExpenseDetailDialog = ({
                 <p className="text-sm">{expense.notes}</p>
               </div>
             )}
+
+            {/* Action History */}
+            <div className="pt-4 border-t">
+              <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground">
+                {expense.created_by_profile && (
+                  <div>
+                    <span className="font-medium">สร้างโดย:</span>{" "}
+                    {expense.created_by_profile.full_name}
+                    {expense.created_at && (
+                      <span className="ml-1">
+                        ({format(new Date(expense.created_at), "dd/MM/yyyy HH:mm")})
+                      </span>
+                    )}
+                  </div>
+                )}
+                {expense.updated_by_profile && expense.updated_at && expense.updated_by !== expense.created_by && (
+                  <div>
+                    <span className="font-medium">แก้ไขโดย:</span>{" "}
+                    {expense.updated_by_profile.full_name}
+                    <span className="ml-1">
+                      ({format(new Date(expense.updated_at), "dd/MM/yyyy HH:mm")})
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           <DialogFooter>
