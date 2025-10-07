@@ -9,6 +9,9 @@ import { CheckCircle, XCircle, FileText, Users, Calendar, ArrowLeft } from "luci
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import ExpenseDetailDialog from "@/components/ExpenseDetailDialog";
+import LaborExpenseDetailDialog from "@/components/LaborExpenseDetailDialog";
+import LeaveRequestDetailDialog from "@/components/LeaveRequestDetailDialog";
 
 const Approvals = () => {
   const navigate = useNavigate();
@@ -16,6 +19,12 @@ const Approvals = () => {
   const [materialExpenses, setMaterialExpenses] = useState<any[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedLaborExpense, setSelectedLaborExpense] = useState<any>(null);
+  const [selectedMaterialExpense, setSelectedMaterialExpense] = useState<any>(null);
+  const [selectedLeaveRequest, setSelectedLeaveRequest] = useState<any>(null);
+  const [laborDialogOpen, setLaborDialogOpen] = useState(false);
+  const [materialDialogOpen, setMaterialDialogOpen] = useState(false);
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchAllPendingItems();
@@ -24,36 +33,40 @@ const Approvals = () => {
   const fetchAllPendingItems = async () => {
     setLoading(true);
 
-    // Fetch pending labor expenses
+    // Fetch pending labor expenses with full details
     const { data: laborData } = await supabase
       .from("labor_expenses")
       .select(`
         *,
         worker:workers(full_name),
         project:projects(name),
-        company:companies(name)
+        company:companies(name),
+        labor_expense_items(*,category:expense_categories(name)),
+        labor_expense_deductions(*)
       `)
       .eq("status", "pending")
       .order("created_at", { ascending: false });
 
-    // Fetch pending material expenses
+    // Fetch pending material expenses with full details
     const { data: materialData } = await supabase
       .from("expenses")
       .select(`
         *,
         vendor:vendors(name),
         project:projects(name),
-        company:companies(name)
+        company:companies(name),
+        expense_items(*,category:expense_categories(name))
       `)
       .eq("status", "pending")
       .order("created_at", { ascending: false });
 
-    // Fetch pending leave requests
+    // Fetch pending leave requests with approver info
     const { data: leaveData } = await supabase
       .from("leave_requests")
       .select(`
         *,
-        user:profiles!leave_requests_user_id_fkey(full_name, position, department)
+        user:profiles!leave_requests_user_id_fkey(full_name, position, department),
+        approver:profiles!leave_requests_approved_by_fkey(full_name)
       `)
       .eq("status", "pending")
       .order("created_at", { ascending: false });
@@ -64,52 +77,19 @@ const Approvals = () => {
     setLoading(false);
   };
 
-  const handleLaborApproval = async (id: string, status: "approved" | "rejected") => {
-    const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await supabase
-      .from("labor_expenses")
-      .update({ status })
-      .eq("id", id);
-
-    if (error) {
-      toast.error("เกิดข้อผิดพลาด");
-    } else {
-      toast.success(status === "approved" ? "อนุมัติสำเร็จ" : "ปฏิเสธสำเร็จ");
-      fetchAllPendingItems();
-    }
+  const handleLaborClick = (expense: any) => {
+    setSelectedLaborExpense(expense);
+    setLaborDialogOpen(true);
   };
 
-  const handleMaterialApproval = async (id: string, status: "approved" | "rejected") => {
-    const { error } = await supabase
-      .from("expenses")
-      .update({ status })
-      .eq("id", id);
-
-    if (error) {
-      toast.error("เกิดข้อผิดพลาด");
-    } else {
-      toast.success(status === "approved" ? "อนุมัติสำเร็จ" : "ปฏิเสธสำเร็จ");
-      fetchAllPendingItems();
-    }
+  const handleMaterialClick = (expense: any) => {
+    setSelectedMaterialExpense(expense);
+    setMaterialDialogOpen(true);
   };
 
-  const handleLeaveApproval = async (id: string, status: "approved" | "rejected") => {
-    const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await supabase
-      .from("leave_requests")
-      .update({
-        status,
-        approved_by: user?.id,
-        approved_at: new Date().toISOString(),
-      })
-      .eq("id", id);
-
-    if (error) {
-      toast.error("เกิดข้อผิดพลาด");
-    } else {
-      toast.success(status === "approved" ? "อนุมัติสำเร็จ" : "ปฏิเสธสำเร็จ");
-      fetchAllPendingItems();
-    }
+  const handleLeaveClick = (request: any) => {
+    setSelectedLeaveRequest(request);
+    setLeaveDialogOpen(true);
   };
 
   const formatCurrency = (amount: number) =>
@@ -182,7 +162,14 @@ const Approvals = () => {
                   <TableBody>
                     {laborExpenses.map((expense) => (
                       <TableRow key={expense.id}>
-                        <TableCell className="font-medium">{expense.invoice_number}</TableCell>
+                        <TableCell className="font-medium">
+                          <button
+                            onClick={() => handleLaborClick(expense)}
+                            className="text-primary hover:underline cursor-pointer"
+                          >
+                            {expense.invoice_number}
+                          </button>
+                        </TableCell>
                         <TableCell>{expense.worker?.full_name || "-"}</TableCell>
                         <TableCell>{expense.project?.name}</TableCell>
                         <TableCell>{expense.company?.name}</TableCell>
@@ -191,25 +178,13 @@ const Approvals = () => {
                           {formatCurrency(expense.net_amount || expense.total_amount)}
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex gap-2 justify-end">
-                            <Button
-                              size="sm"
-                              onClick={() => handleLaborApproval(expense.id, "approved")}
-                              className="gap-1"
-                            >
-                              <CheckCircle size={14} />
-                              อนุมัติ
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleLaborApproval(expense.id, "rejected")}
-                              className="gap-1"
-                            >
-                              <XCircle size={14} />
-                              ปฏิเสธ
-                            </Button>
-                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => handleLaborClick(expense)}
+                            variant="outline"
+                          >
+                            ดูรายละเอียด
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -251,7 +226,14 @@ const Approvals = () => {
                   <TableBody>
                     {materialExpenses.map((expense) => (
                       <TableRow key={expense.id}>
-                        <TableCell className="font-medium">{expense.invoice_number}</TableCell>
+                        <TableCell className="font-medium">
+                          <button
+                            onClick={() => handleMaterialClick(expense)}
+                            className="text-primary hover:underline cursor-pointer"
+                          >
+                            {expense.invoice_number}
+                          </button>
+                        </TableCell>
                         <TableCell>{expense.vendor?.name || "-"}</TableCell>
                         <TableCell>{expense.project?.name}</TableCell>
                         <TableCell>{expense.company?.name}</TableCell>
@@ -260,25 +242,13 @@ const Approvals = () => {
                           {formatCurrency(expense.total_amount)}
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex gap-2 justify-end">
-                            <Button
-                              size="sm"
-                              onClick={() => handleMaterialApproval(expense.id, "approved")}
-                              className="gap-1"
-                            >
-                              <CheckCircle size={14} />
-                              อนุมัติ
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleMaterialApproval(expense.id, "rejected")}
-                              className="gap-1"
-                            >
-                              <XCircle size={14} />
-                              ปฏิเสธ
-                            </Button>
-                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => handleMaterialClick(expense)}
+                            variant="outline"
+                          >
+                            ดูรายละเอียด
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -321,7 +291,14 @@ const Approvals = () => {
                   <TableBody>
                     {leaveRequests.map((request) => (
                       <TableRow key={request.id}>
-                        <TableCell className="font-medium">{request.user?.full_name}</TableCell>
+                        <TableCell className="font-medium">
+                          <button
+                            onClick={() => handleLeaveClick(request)}
+                            className="text-primary hover:underline cursor-pointer"
+                          >
+                            {request.user?.full_name}
+                          </button>
+                        </TableCell>
                         <TableCell>{request.user?.position || "-"}</TableCell>
                         <TableCell>
                           <Badge variant="outline">
@@ -341,25 +318,13 @@ const Approvals = () => {
                         <TableCell className="font-medium">{request.days_count} วัน</TableCell>
                         <TableCell className="max-w-xs truncate">{request.reason}</TableCell>
                         <TableCell className="text-right">
-                          <div className="flex gap-2 justify-end">
-                            <Button
-                              size="sm"
-                              onClick={() => handleLeaveApproval(request.id, "approved")}
-                              className="gap-1"
-                            >
-                              <CheckCircle size={14} />
-                              อนุมัติ
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleLeaveApproval(request.id, "rejected")}
-                              className="gap-1"
-                            >
-                              <XCircle size={14} />
-                              ปฏิเสธ
-                            </Button>
-                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => handleLeaveClick(request)}
+                            variant="outline"
+                          >
+                            ดูรายละเอียด
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -370,6 +335,36 @@ const Approvals = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Detail Dialogs */}
+      {selectedLaborExpense && (
+        <LaborExpenseDetailDialog
+          expense={selectedLaborExpense}
+          open={laborDialogOpen}
+          onOpenChange={setLaborDialogOpen}
+          onSuccess={fetchAllPendingItems}
+          showApprovalButtons={true}
+        />
+      )}
+
+      {selectedMaterialExpense && (
+        <ExpenseDetailDialog
+          expense={selectedMaterialExpense}
+          open={materialDialogOpen}
+          onOpenChange={setMaterialDialogOpen}
+          onSuccess={fetchAllPendingItems}
+        />
+      )}
+
+      {selectedLeaveRequest && (
+        <LeaveRequestDetailDialog
+          request={selectedLeaveRequest}
+          open={leaveDialogOpen}
+          onOpenChange={setLeaveDialogOpen}
+          onSuccess={fetchAllPendingItems}
+          showApprovalButtons={true}
+        />
+      )}
     </div>
   );
 };

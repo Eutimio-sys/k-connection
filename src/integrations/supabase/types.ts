@@ -388,6 +388,7 @@ export type Database = {
           tax_invoice_number: string | null
           total_amount: number
           updated_at: string
+          updated_by: string | null
           vat_amount: number | null
           vat_rate: number | null
           vendor_id: string | null
@@ -407,6 +408,7 @@ export type Database = {
           tax_invoice_number?: string | null
           total_amount?: number
           updated_at?: string
+          updated_by?: string | null
           vat_amount?: number | null
           vat_rate?: number | null
           vendor_id?: string | null
@@ -426,6 +428,7 @@ export type Database = {
           tax_invoice_number?: string | null
           total_amount?: number
           updated_at?: string
+          updated_by?: string | null
           vat_amount?: number | null
           vat_rate?: number | null
           vendor_id?: string | null
@@ -540,6 +543,7 @@ export type Database = {
           subtotal: number
           total_amount: number
           updated_at: string
+          updated_by: string | null
           withholding_tax_amount: number | null
           withholding_tax_rate: number | null
           worker_id: string | null
@@ -559,6 +563,7 @@ export type Database = {
           subtotal?: number
           total_amount?: number
           updated_at?: string
+          updated_by?: string | null
           withholding_tax_amount?: number | null
           withholding_tax_rate?: number | null
           worker_id?: string | null
@@ -578,6 +583,7 @@ export type Database = {
           subtotal?: number
           total_amount?: number
           updated_at?: string
+          updated_by?: string | null
           withholding_tax_amount?: number | null
           withholding_tax_rate?: number | null
           worker_id?: string | null
@@ -670,6 +676,7 @@ export type Database = {
           start_date: string
           status: string
           updated_at: string
+          updated_by: string | null
           user_id: string
         }
         Insert: {
@@ -685,6 +692,7 @@ export type Database = {
           start_date: string
           status?: string
           updated_at?: string
+          updated_by?: string | null
           user_id: string
         }
         Update: {
@@ -700,6 +708,7 @@ export type Database = {
           start_date?: string
           status?: string
           updated_at?: string
+          updated_by?: string | null
           user_id?: string
         }
         Relationships: [
@@ -1206,6 +1215,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      count_pending_approvals: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       generate_invoice_number: {
         Args: {
           p_company_id: string

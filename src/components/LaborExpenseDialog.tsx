@@ -21,8 +21,17 @@ interface Deduction {
   amount: number;
 }
 
-const LaborExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }) => {
-  const [open, setOpen] = useState(false);
+interface LaborExpenseDialogProps {
+  onSuccess?: () => void;
+  expense?: any;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenChange }: LaborExpenseDialogProps) => {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
   const [loading, setLoading] = useState(false);
   const [workers, setWorkers] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);

@@ -1,5 +1,7 @@
 import { Building2, Home, LayoutDashboard, FolderKanban, Trello, CheckCircle, FileText, Wallet, DollarSign, Users, UserCog, Clock, Calendar, User, Settings } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Sidebar,
   SidebarContent,
@@ -11,6 +13,7 @@ import {
   SidebarMenuItem,
   SidebarHeader,
 } from "@/components/ui/sidebar";
+import { Badge } from "@/components/ui/badge";
 
 const menuItems = [
   { title: "หน้าแรก", url: "/", icon: Home },
@@ -30,6 +33,35 @@ const menuItems = [
 ];
 
 export function AppSidebar() {
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    fetchPendingCount();
+    
+    // Subscribe to real-time updates
+    const channel = supabase
+      .channel('approval-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, fetchPendingCount)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'labor_expenses' }, fetchPendingCount)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' }, fetchPendingCount)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchPendingCount = async () => {
+    const [expenses, laborExpenses, leaveRequests] = await Promise.all([
+      supabase.from("expenses").select("id", { count: 'exact', head: true }).eq("status", "pending"),
+      supabase.from("labor_expenses").select("id", { count: 'exact', head: true }).eq("status", "pending"),
+      supabase.from("leave_requests").select("id", { count: 'exact', head: true }).eq("status", "pending"),
+    ]);
+
+    const total = (expenses.count || 0) + (laborExpenses.count || 0) + (leaveRequests.count || 0);
+    setPendingCount(total);
+  };
+
   return (
     <Sidebar className="border-r border-sidebar-border">
       <SidebarHeader className="border-b border-sidebar-border/50 p-6">
@@ -65,6 +97,11 @@ export function AppSidebar() {
                     >
                       <item.icon className="w-5 h-5" />
                       <span className="text-sm">{item.title}</span>
+                      {item.url === "/approvals" && pendingCount > 0 && (
+                        <Badge variant="destructive" className="ml-auto">
+                          {pendingCount}
+                        </Badge>
+                      )}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
