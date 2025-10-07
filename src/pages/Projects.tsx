@@ -1,37 +1,21 @@
-import { DashboardLayout } from "@/components/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Plus } from "lucide-react";
 
 const Projects = () => {
-  return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">โครงการ</h1>
-            <p className="text-muted-foreground mt-2">
-              จัดการโครงการก่อสร้างทั้งหมด
-            </p>
-          </div>
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            สร้างโครงการใหม่
-          </Button>
-        </div>
+  const [projects, setProjects] = useState<any[]>([]);
 
-        <Card>
-          <CardHeader>
-            <CardTitle>รายการโครงการ</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground text-center py-8">
-              ยังไม่มีโครงการในระบบ กดปุ่ม "สร้างโครงการใหม่" เพื่อเริ่มต้น
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    </DashboardLayout>
+  useEffect(() => {
+    supabase.from("projects").select("*").then(({ data }) => setProjects(data || []));
+  }, []);
+
+  return (
+    <div className="p-8 space-y-6">
+      <div className="flex justify-between items-center"><h1 className="text-4xl font-bold">จัดการโครงการ</h1><Button><Plus size={20} />สร้างโครงการ</Button></div>
+      {projects.length === 0 ? <Card className="p-12 text-center"><p>ยังไม่มีโครงการ</p></Card> : <div className="grid gap-4">{projects.map(p => <Card key={p.id} className="p-4"><h3 className="font-bold">{p.name}</h3></Card>)}</div>}
+    </div>
   );
 };
 
