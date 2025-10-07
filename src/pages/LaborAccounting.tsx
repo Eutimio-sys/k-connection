@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Calendar, Building, User, FileText, Filter } from "lucide-react";
 import { toast } from "sonner";
 import LaborExpenseDialog from "@/components/LaborExpenseDialog";
+import LaborExpenseDetailDialog from "@/components/LaborExpenseDetailDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +16,8 @@ const LaborAccounting = () => {
   const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState<any>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: "",
@@ -116,6 +119,11 @@ const LaborAccounting = () => {
   const formatCurrency = (amount: number) => 
     new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(amount);
 
+  const handleExpenseClick = (expense: any) => {
+    setSelectedExpense(expense);
+    setDetailDialogOpen(true);
+  };
+
   return (
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between">
@@ -207,7 +215,8 @@ const LaborAccounting = () => {
           {expenses.map((expense) => (
             <Card 
               key={expense.id} 
-              className={expense.status === 'cancelled' ? 'opacity-50 bg-muted/30 hover:shadow-none' : 'hover:shadow-elegant transition-shadow'}
+              className={`cursor-pointer ${expense.status === 'cancelled' ? 'opacity-50 bg-muted/30 hover:shadow-none' : 'hover:shadow-elegant transition-shadow'}`}
+              onClick={() => handleExpenseClick(expense)}
             >
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -342,6 +351,15 @@ const LaborAccounting = () => {
             </Card>
           ))}
         </div>
+      )}
+
+      {selectedExpense && (
+        <LaborExpenseDetailDialog
+          expense={selectedExpense}
+          open={detailDialogOpen}
+          onOpenChange={setDetailDialogOpen}
+          onSuccess={fetchExpenses}
+        />
       )}
     </div>
   );
