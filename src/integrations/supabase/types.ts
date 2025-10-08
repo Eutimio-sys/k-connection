@@ -419,10 +419,12 @@ export type Database = {
           company_id: string
           created_at: string
           created_by: string
+          credit_days: number | null
           id: string
           invoice_date: string
           invoice_number: string
           notes: string | null
+          payment_terms: string | null
           project_id: string
           receipt_image_url: string | null
           status: string
@@ -439,10 +441,12 @@ export type Database = {
           company_id: string
           created_at?: string
           created_by: string
+          credit_days?: number | null
           id?: string
           invoice_date?: string
           invoice_number: string
           notes?: string | null
+          payment_terms?: string | null
           project_id: string
           receipt_image_url?: string | null
           status?: string
@@ -459,10 +463,12 @@ export type Database = {
           company_id?: string
           created_at?: string
           created_by?: string
+          credit_days?: number | null
           id?: string
           invoice_date?: string
           invoice_number?: string
           notes?: string | null
+          payment_terms?: string | null
           project_id?: string
           receipt_image_url?: string | null
           status?: string

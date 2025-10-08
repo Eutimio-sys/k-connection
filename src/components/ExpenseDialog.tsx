@@ -47,6 +47,8 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
   const [hasVat, setHasVat] = useState(false);
   const [vatRate, setVatRate] = useState("7");
   const [vatIncluded, setVatIncluded] = useState(false);
+  const [paymentTerms, setPaymentTerms] = useState<"cash" | "credit">("cash");
+  const [creditDays, setCreditDays] = useState("");
   const [notes, setNotes] = useState("");
   const [receiptImage, setReceiptImage] = useState<File | null>(null);
   const [receiptImagePreview, setReceiptImagePreview] = useState<string>("");
@@ -68,6 +70,8 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
         setHasVat(expense.vat_amount > 0);
         setVatRate(expense.vat_rate?.toString() || "7");
         setVatIncluded(false); // Reset to false for editing
+        setPaymentTerms(expense.payment_terms || "cash");
+        setCreditDays(expense.credit_days?.toString() || "");
         setNotes(expense.notes || "");
         setReceiptImagePreview(expense.receipt_image_url || "");
         
@@ -266,6 +270,8 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
           total_amount: totalAmount,
           receipt_image_url: receiptImageUrl,
           notes: notes || null,
+          payment_terms: paymentTerms,
+          credit_days: paymentTerms === "credit" ? parseInt(creditDays) || null : null,
           created_by: user.id,
         })
         .select()
@@ -311,6 +317,8 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
     setHasVat(false);
     setVatRate("7");
     setVatIncluded(false);
+    setPaymentTerms("cash");
+    setCreditDays("");
     setNotes("");
     setReceiptImage(null);
     setReceiptImagePreview("");
@@ -443,6 +451,32 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2 col-span-2">
+              <Label>เงื่อนไขการชำระเงิน *</Label>
+              <div className="flex gap-4">
+                <Select value={paymentTerms} onValueChange={(value: "cash" | "credit") => setPaymentTerms(value)}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">เงินสด</SelectItem>
+                    <SelectItem value="credit">เครดิต</SelectItem>
+                  </SelectContent>
+                </Select>
+                {paymentTerms === "credit" && (
+                  <div className="flex items-center gap-2 flex-1">
+                    <Input
+                      type="number"
+                      value={creditDays}
+                      onChange={(e) => setCreditDays(e.target.value)}
+                      placeholder="จำนวนวัน"
+                      className="w-32"
+                    />
+                    <span className="text-sm text-muted-foreground">วัน</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
