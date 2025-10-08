@@ -1093,6 +1093,8 @@ export type Database = {
           payment_account_id: string | null
           project_id: string
           updated_at: string
+          vat_amount: number | null
+          withholding_tax_amount: number | null
         }
         Insert: {
           amount: number
@@ -1105,6 +1107,8 @@ export type Database = {
           payment_account_id?: string | null
           project_id: string
           updated_at?: string
+          vat_amount?: number | null
+          withholding_tax_amount?: number | null
         }
         Update: {
           amount?: number
@@ -1117,6 +1121,8 @@ export type Database = {
           payment_account_id?: string | null
           project_id?: string
           updated_at?: string
+          vat_amount?: number | null
+          withholding_tax_amount?: number | null
         }
         Relationships: [
           {
@@ -1559,7 +1565,7 @@ export type Database = {
       }
     }
     Enums: {
-      category_type: "material" | "labor"
+      category_type: "material" | "labor" | "labor_contractor" | "other"
       leave_type: "sick" | "personal" | "vacation" | "maternity" | "unpaid"
       user_role: "admin" | "manager" | "accountant" | "purchaser" | "worker"
     }
@@ -1689,7 +1695,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      category_type: ["material", "labor"],
+      category_type: ["material", "labor", "labor_contractor", "other"],
       leave_type: ["sick", "personal", "vacation", "maternity", "unpaid"],
       user_role: ["admin", "manager", "accountant", "purchaser", "worker"],
     },

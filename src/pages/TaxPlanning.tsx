@@ -18,13 +18,13 @@ interface MonthlyData {
   salary: number;
   socialSecurity: number;
   employeeWithholding: number;
+  vatToPay: number;
 }
 
 const TaxPlanning = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [additionalVatNeeded, setAdditionalVatNeeded] = useState(0);
   const [additionalWithholdingNeeded, setAdditionalWithholdingNeeded] = useState(0);
   const { toast } = useToast();
 
@@ -80,15 +80,15 @@ const TaxPlanning = () => {
         salary: 0,
         socialSecurity: 0,
         employeeWithholding: 0,
+        vatToPay: 0,
       }));
 
       // Process income data
       incomeData?.forEach((income) => {
         const month = new Date(income.income_date).getMonth();
         const amount = Number(income.amount) || 0;
-        // Assuming income includes 7% VAT and 3% withholding
-        const incomeVat = amount * 0.07 / 1.07;
-        const incomeWithholding = amount * 0.03 / 1.07;
+        const incomeVat = Number(income.vat_amount) || 0;
+        const incomeWithholding = Number(income.withholding_tax_amount) || 0;
         
         data[month].income += amount;
         data[month].incomeVat += incomeVat;
@@ -117,6 +117,16 @@ const TaxPlanning = () => {
         }
       });
 
+      // Calculate VAT to pay (previous month's expense VAT - previous month's income VAT)
+      for (let i = 0; i < 12; i++) {
+        if (i === 0) {
+          // First month - no previous month
+          data[i].vatToPay = 0;
+        } else {
+          data[i].vatToPay = data[i - 1].expenseVat - data[i - 1].incomeVat;
+        }
+      }
+
       setMonthlyData(data);
     } catch (error) {
       console.error("Error fetching tax data:", error);
@@ -142,6 +152,7 @@ const TaxPlanning = () => {
         salary: acc.salary + month.salary,
         socialSecurity: acc.socialSecurity + month.socialSecurity,
         employeeWithholding: acc.employeeWithholding + month.employeeWithholding,
+        vatToPay: acc.vatToPay + month.vatToPay,
       }),
       {
         income: 0,
@@ -153,29 +164,34 @@ const TaxPlanning = () => {
         salary: 0,
         socialSecurity: 0,
         employeeWithholding: 0,
+        vatToPay: 0,
       }
     );
   };
 
   const yearlyTotals = calculateYearlyTotals();
 
-  // Calculate VAT balance (VAT collected - VAT paid)
-  const vatBalance = yearlyTotals.incomeVat - yearlyTotals.expenseVat;
+  // Calculate total expenses (from expenses table, without VAT)
+  const totalExpensesWithoutVat = yearlyTotals.expenseVat / 0.07; // Reverse calculate from VAT
 
-  // Calculate withholding tax balance
-  const withholdingBalance = yearlyTotals.incomeWithholding + yearlyTotals.laborWithholding + yearlyTotals.employeeWithholding;
+  // Calculate labor cost without withholding
+  const laborCostWithoutWithholding = yearlyTotals.laborCost - yearlyTotals.laborWithholding;
 
-  // Calculate net profit (simplified)
-  const netProfit = yearlyTotals.income - yearlyTotals.expenseVat - yearlyTotals.laborCost - yearlyTotals.salary - yearlyTotals.socialSecurity;
+  // Calculate accumulated withholding tax (sum of income withholding from all months)
+  const accumulatedWithholding = yearlyTotals.incomeWithholding;
 
-  // Corporate income tax (20% on net profit, simplified)
+  // Calculate net profit (รายได้ - ยอดบิลไม่รวมVAT - ค่าแรงไม่หักภาษี - เงินเดือน - ประกันสังคม - ภงด.1)
+  const netProfit = yearlyTotals.income - totalExpensesWithoutVat - laborCostWithoutWithholding - yearlyTotals.salary - yearlyTotals.socialSecurity - yearlyTotals.employeeWithholding;
+
+  // Corporate income tax (20% on net profit)
   const corporateIncomeTax = netProfit > 0 ? netProfit * 0.20 : 0;
 
+  // Annual tax payable (20% corporate tax - income withholding)
+  const annualTaxPayable = Math.max(0, corporateIncomeTax - accumulatedWithholding);
+
   // Adjusted calculations with planning
-  const adjustedVatBalance = vatBalance + additionalVatNeeded;
-  const adjustedWithholdingBalance = withholdingBalance + additionalWithholdingNeeded;
-  const adjustedCorporateTax = corporateIncomeTax > 0 ? 
-    Math.max(0, corporateIncomeTax - adjustedWithholdingBalance) : 0;
+  const adjustedWithholding = accumulatedWithholding + additionalWithholdingNeeded;
+  const adjustedAnnualTax = Math.max(0, corporateIncomeTax - adjustedWithholding);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("th-TH", {
@@ -225,6 +241,7 @@ const TaxPlanning = () => {
                       <TableHead className="text-right">VAT รายได้</TableHead>
                       <TableHead className="text-right">หักณที่จ่าย รายได้</TableHead>
                       <TableHead className="text-right">VAT ค่าใช้จ่าย</TableHead>
+                      <TableHead className="text-right">VAT ที่ต้องจ่าย</TableHead>
                       <TableHead className="text-right">ค่าแรง</TableHead>
                       <TableHead className="text-right">หักณที่จ่าย ค่าแรง</TableHead>
                       <TableHead className="text-right">เงินเดือน</TableHead>
@@ -240,6 +257,7 @@ const TaxPlanning = () => {
                         <TableCell className="text-right">{formatCurrency(data.incomeVat)}</TableCell>
                         <TableCell className="text-right">{formatCurrency(data.incomeWithholding)}</TableCell>
                         <TableCell className="text-right">{formatCurrency(data.expenseVat)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(data.vatToPay)}</TableCell>
                         <TableCell className="text-right">{formatCurrency(data.laborCost)}</TableCell>
                         <TableCell className="text-right">{formatCurrency(data.laborWithholding)}</TableCell>
                         <TableCell className="text-right">{formatCurrency(data.salary)}</TableCell>
@@ -253,6 +271,7 @@ const TaxPlanning = () => {
                       <TableCell className="text-right">{formatCurrency(yearlyTotals.incomeVat)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(yearlyTotals.incomeWithholding)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(yearlyTotals.expenseVat)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(yearlyTotals.vatToPay)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(yearlyTotals.laborCost)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(yearlyTotals.laborWithholding)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(yearlyTotals.salary)}</TableCell>
@@ -272,15 +291,19 @@ const TaxPlanning = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-between py-2 border-b">
-                  <span>ยอด VAT รับ - VAT จ่าย</span>
-                  <span className="font-semibold">{formatCurrency(vatBalance)}</span>
+                  <span>รายได้รวม</span>
+                  <span className="font-semibold">{formatCurrency(yearlyTotals.income)}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b">
-                  <span>หักณที่จ่ายรวม (ภงด.1 + ภงด.3)</span>
-                  <span className="font-semibold">{formatCurrency(withholdingBalance)}</span>
+                  <span>ค่าใช้จ่ายรวม (ไม่รวม VAT)</span>
+                  <span className="font-semibold">{formatCurrency(totalExpensesWithoutVat)}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b">
-                  <span>กำไรสุทธิ (ประมาณการ)</span>
+                  <span>หักณที่จ่ายสะสม (รายได้)</span>
+                  <span className="font-semibold">{formatCurrency(accumulatedWithholding)}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b">
+                  <span>กำไรสุทธิ</span>
                   <span className="font-semibold">{formatCurrency(netProfit)}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b">
@@ -288,8 +311,8 @@ const TaxPlanning = () => {
                   <span className="font-semibold text-destructive">{formatCurrency(corporateIncomeTax)}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b">
-                  <span>ประกันสังคม (ภพ.20)</span>
-                  <span className="font-semibold">{formatCurrency(yearlyTotals.socialSecurity)}</span>
+                  <span>ภาษีที่ต้องนำส่งประจำปี</span>
+                  <span className="font-semibold text-destructive">{formatCurrency(annualTaxPayable)}</span>
                 </div>
               </CardContent>
             </Card>
@@ -300,20 +323,6 @@ const TaxPlanning = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="additionalVat">จำนวนที่ต้องหาเพิ่ม VAT</Label>
-                  <Input
-                    id="additionalVat"
-                    type="number"
-                    value={additionalVatNeeded}
-                    onChange={(e) => setAdditionalVatNeeded(Number(e.target.value) || 0)}
-                    placeholder="0.00"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    เพื่อลด VAT ต้องจ่าย: {formatCurrency(adjustedVatBalance)}
-                  </p>
-                </div>
-
-                <div className="space-y-2">
                   <Label htmlFor="additionalWithholding">จำนวนที่ต้องหาเพิ่ม หักณที่จ่าย</Label>
                   <Input
                     id="additionalWithholding"
@@ -323,7 +332,7 @@ const TaxPlanning = () => {
                     placeholder="0.00"
                   />
                   <p className="text-sm text-muted-foreground">
-                    หักณที่จ่ายรวม: {formatCurrency(adjustedWithholdingBalance)}
+                    หักณที่จ่ายรวม: {formatCurrency(adjustedWithholding)}
                   </p>
                 </div>
 
@@ -331,11 +340,11 @@ const TaxPlanning = () => {
                   <div className="flex justify-between">
                     <span className="font-semibold">ภาษีนิติบุคคลที่ต้องจ่ายหลังวางแผน</span>
                     <span className="font-bold text-lg text-destructive">
-                      {formatCurrency(adjustedCorporateTax)}
+                      {formatCurrency(adjustedAnnualTax)}
                     </span>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    ประหยัด: {formatCurrency(corporateIncomeTax - adjustedCorporateTax)}
+                    ประหยัด: {formatCurrency(annualTaxPayable - adjustedAnnualTax)}
                   </p>
                 </div>
 

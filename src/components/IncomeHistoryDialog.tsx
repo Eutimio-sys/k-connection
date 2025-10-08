@@ -27,6 +27,8 @@ const IncomeHistoryDialog = ({ open, onOpenChange, projectId, onSuccess }: Incom
     payment_account_id: "",
     description: "",
     notes: "",
+    vat_amount: "",
+    withholding_tax_amount: "",
   });
 
   useEffect(() => {
@@ -84,6 +86,8 @@ const IncomeHistoryDialog = ({ open, onOpenChange, projectId, onSuccess }: Incom
       payment_account_id: formData.payment_account_id || null,
       description: formData.description,
       notes: formData.notes,
+      vat_amount: parseFloat(formData.vat_amount) || 0,
+      withholding_tax_amount: parseFloat(formData.withholding_tax_amount) || 0,
       created_by: user?.id,
     });
 
@@ -98,6 +102,8 @@ const IncomeHistoryDialog = ({ open, onOpenChange, projectId, onSuccess }: Incom
         payment_account_id: "",
         description: "",
         notes: "",
+        vat_amount: "",
+        withholding_tax_amount: "",
       });
       setShowAddForm(false);
       fetchIncomes();
@@ -168,6 +174,29 @@ const IncomeHistoryDialog = ({ open, onOpenChange, projectId, onSuccess }: Incom
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>VAT</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={formData.vat_amount}
+                    onChange={(e) => setFormData({ ...formData, vat_amount: e.target.value })}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div>
+                  <Label>หักณที่จ่าย</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={formData.withholding_tax_amount}
+                    onChange={(e) => setFormData({ ...formData, withholding_tax_amount: e.target.value })}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+
               <div>
                 <Label>บัญชีที่รับเงิน</Label>
                 <Select
@@ -228,6 +257,8 @@ const IncomeHistoryDialog = ({ open, onOpenChange, projectId, onSuccess }: Incom
                   <TableHead>รายละเอียด</TableHead>
                   <TableHead>บัญชี</TableHead>
                   <TableHead className="text-right">จำนวนเงิน</TableHead>
+                  <TableHead className="text-right">VAT</TableHead>
+                  <TableHead className="text-right">หักณที่จ่าย</TableHead>
                   <TableHead>ผู้บันทึก</TableHead>
                   <TableHead className="text-right">จัดการ</TableHead>
                 </TableRow>
@@ -260,6 +291,12 @@ const IncomeHistoryDialog = ({ open, onOpenChange, projectId, onSuccess }: Incom
                     </TableCell>
                     <TableCell className="text-right font-semibold text-green-600">
                       {formatCurrency(income.amount)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatCurrency(income.vat_amount || 0)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatCurrency(income.withholding_tax_amount || 0)}
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
