@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
 interface ExpenseItem {
   id: string;
@@ -17,6 +18,8 @@ interface ExpenseItem {
   total_amount: number;
   net_amount?: number;
   notes?: string;
+  payment_terms?: string;
+  credit_days?: number;
   project: { name: string };
   vendor?: { id: string; name: string; bank_name: string; bank_account: string };
   worker?: { id: string; full_name: string; bank_name: string; bank_account: string };
@@ -87,6 +90,8 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
           project_id,
           total_amount,
           notes,
+          payment_terms,
+          credit_days,
           project:projects(name),
           vendor:vendors(id, name, bank_name, bank_account)
         `)
@@ -436,6 +441,18 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
                       const account = expenseType === "material"
                         ? item.vendor?.bank_account
                         : item.worker?.bank_account;
+                      
+                      // Calculate due date and days remaining for credit payments
+                      let dueDate: Date | null = null;
+                      let daysRemaining: number | null = null;
+                      if (item.payment_terms === 'credit' && item.credit_days && item.invoice_date) {
+                        const invoiceDate = new Date(item.invoice_date);
+                        dueDate = new Date(invoiceDate);
+                        dueDate.setDate(dueDate.getDate() + item.credit_days);
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        daysRemaining = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                      }
                       const amount = expenseType === "material" ? item.total_amount : (item.net_amount || 0);
                       const isAlreadyPaid = paidExpenseIds.includes(item.id);
 
@@ -473,6 +490,16 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
                               {account}
                             </p>
                             {item.notes && <p className="text-xs text-muted-foreground">{item.notes}</p>}
+                            {dueDate && daysRemaining !== null && (
+                              <p className="text-xs mt-1">
+                                <span className={`font-medium ${daysRemaining < 0 ? 'text-destructive' : daysRemaining <= 7 ? 'text-orange-500' : 'text-muted-foreground'}`}>
+                                  {daysRemaining < 0 ? `เกินกำหนด ${Math.abs(daysRemaining)} วัน` : `อีก ${daysRemaining} วันครบกำหนด`}
+                                </span>
+                                <span className="text-muted-foreground ml-2">
+                                  (ครบกำหนด: {format(dueDate, "dd/MM/yyyy")})
+                                </span>
+                              </p>
+                            )}
                             <p className="font-semibold text-accent mt-1">{formatCurrency(amount)}</p>
                           </div>
                         </div>

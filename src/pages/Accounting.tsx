@@ -273,6 +273,13 @@ const Accounting = () => {
                       <p>โครงการ: <span className="font-medium text-foreground">{expense.project?.name}</span></p>
                       <p>บริษัท: <span className="font-medium text-foreground">{expense.company?.name}</span></p>
                       <p>วันที่: <span className="font-medium text-foreground">{format(new Date(expense.invoice_date), "dd/MM/yyyy")}</span></p>
+                      {expense.payment_terms === 'credit' && expense.credit_days && (
+                        <p>
+                          <span className="text-orange-600 font-medium">
+                            วันที่ครบกำหนด: {format(new Date(new Date(expense.invoice_date).getTime() + expense.credit_days * 24 * 60 * 60 * 1000), "dd/MM/yyyy")}
+                          </span>
+                        </p>
+                      )}
                       {expense.receipt_image_url && (
                         <p className="flex items-center gap-1">
                           <a 
