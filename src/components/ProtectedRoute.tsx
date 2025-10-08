@@ -49,6 +49,11 @@ export const ProtectedRoute = ({
     );
   }
 
+  // Immediate bypass for admin to prevent a one-render redirect flicker
+  if (role === "admin") {
+    return <>{children}</>;
+  }
+
   if (!hasAccess) {
     return <Navigate to="/" replace />;
   }
