@@ -13,7 +13,7 @@ import DocumentTypesSettings from "@/components/settings/DocumentTypesSettings";
 
 const Settings = () => {
   const navigate = useNavigate();
-  
+
   return (
     <div className="p-8 space-y-6">
       <div>
@@ -34,7 +34,7 @@ const Settings = () => {
           <TabsTrigger value="categories">หมวดหมู่</TabsTrigger>
           <TabsTrigger value="vendors">ร้านค้า</TabsTrigger>
           <TabsTrigger value="workers">ช่าง</TabsTrigger>
-          <TabsTrigger value="payments">บัญชีจ่ายเงิน</TabsTrigger>
+          <TabsTrigger value="payments">บัญชีรับจ่ายเงิน</TabsTrigger>
           <TabsTrigger value="payment-types">ประเภทการโอน</TabsTrigger>
           <TabsTrigger value="documents">ประเภทเอกสาร</TabsTrigger>
         </TabsList>

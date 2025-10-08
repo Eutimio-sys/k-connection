@@ -45,26 +45,21 @@ const PaymentAccountsSettings = () => {
     }
 
     if (editingAccount) {
-      const { error } = await supabase
-        .from("payment_accounts")
-        .update(formData)
-        .eq("id", editingAccount.id);
+      const { error } = await supabase.from("payment_accounts").update(formData).eq("id", editingAccount.id);
 
       if (error) toast.error("เกิดข้อผิดพลาด: " + error.message);
       else {
-        toast.success("แก้ไขบัญชีจ่ายเงินสำเร็จ");
+        toast.success("แก้ไขบัญชีรับจ่ายเงินสำเร็จ");
         setDialogOpen(false);
         resetForm();
         fetchAccounts();
       }
     } else {
-      const { error } = await supabase
-        .from("payment_accounts")
-        .insert(formData);
+      const { error } = await supabase.from("payment_accounts").insert(formData);
 
       if (error) toast.error("เกิดข้อผิดพลาด: " + error.message);
       else {
-        toast.success("เพิ่มบัญชีจ่ายเงินสำเร็จ");
+        toast.success("เพิ่มบัญชีรับจ่ายเงินสำเร็จ");
         setDialogOpen(false);
         resetForm();
         fetchAccounts();
@@ -102,12 +97,15 @@ const PaymentAccountsSettings = () => {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
           <CreditCard size={20} />
-          บัญชีจ่ายเงิน
+          บัญชีรับจ่ายเงิน
         </CardTitle>
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) resetForm();
-        }}>
+        <Dialog
+          open={dialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) resetForm();
+          }}
+        >
           <DialogTrigger asChild>
             <Button>
               <Plus size={16} className="mr-2" />
@@ -116,7 +114,7 @@ const PaymentAccountsSettings = () => {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{editingAccount ? "แก้ไข" : "เพิ่ม"}บัญชีจ่ายเงิน</DialogTitle>
+              <DialogTitle>{editingAccount ? "แก้ไข" : "เพิ่ม"}บัญชีรับจ่ายเงิน</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
@@ -168,7 +166,7 @@ const PaymentAccountsSettings = () => {
       </CardHeader>
       <CardContent>
         {accounts.length === 0 ? (
-          <p className="text-center py-8 text-muted-foreground">ยังไม่มีบัญชีจ่ายเงิน</p>
+          <p className="text-center py-8 text-muted-foreground">ยังไม่มีบัญชีรับจ่ายเงิน</p>
         ) : (
           <Table>
             <TableHeader>
@@ -194,11 +192,7 @@ const PaymentAccountsSettings = () => {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleEdit(account)}
-                    >
+                    <Button size="sm" variant="outline" onClick={() => handleEdit(account)}>
                       <Pencil size={14} className="mr-1" />
                       แก้ไข
                     </Button>
