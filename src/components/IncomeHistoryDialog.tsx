@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, DollarSign } from "lucide-react";
 import { toast } from "sonner";
@@ -29,6 +30,7 @@ const IncomeHistoryDialog = ({ open, onOpenChange, projectId, onSuccess }: Incom
     notes: "",
     vat_amount: "",
     withholding_tax_amount: "",
+    is_outside_company: false,
   });
 
   useEffect(() => {
@@ -88,6 +90,7 @@ const IncomeHistoryDialog = ({ open, onOpenChange, projectId, onSuccess }: Incom
       notes: formData.notes,
       vat_amount: parseFloat(formData.vat_amount) || 0,
       withholding_tax_amount: parseFloat(formData.withholding_tax_amount) || 0,
+      is_outside_company: formData.is_outside_company,
       created_by: user?.id,
     });
 
@@ -104,6 +107,7 @@ const IncomeHistoryDialog = ({ open, onOpenChange, projectId, onSuccess }: Incom
         notes: "",
         vat_amount: "",
         withholding_tax_amount: "",
+        is_outside_company: false,
       });
       setShowAddForm(false);
       fetchIncomes();
@@ -223,6 +227,17 @@ const IncomeHistoryDialog = ({ open, onOpenChange, projectId, onSuccess }: Incom
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="เช่น เบิกงวดที่ 1"
                 />
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="isOutsideCompany"
+                  checked={formData.is_outside_company}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_outside_company: checked === true })}
+                />
+                <Label htmlFor="isOutsideCompany" className="text-sm font-normal cursor-pointer">
+                  รับเงินแบบไม่ผ่านบริษัท (ไม่นำมาคำนวณภาษี)
+                </Label>
               </div>
 
               <div>

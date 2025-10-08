@@ -1089,6 +1089,7 @@ export type Database = {
           description: string | null
           id: string
           income_date: string
+          is_outside_company: boolean
           notes: string | null
           payment_account_id: string | null
           project_id: string
@@ -1103,6 +1104,7 @@ export type Database = {
           description?: string | null
           id?: string
           income_date?: string
+          is_outside_company?: boolean
           notes?: string | null
           payment_account_id?: string | null
           project_id: string
@@ -1117,6 +1119,7 @@ export type Database = {
           description?: string | null
           id?: string
           income_date?: string
+          is_outside_company?: boolean
           notes?: string | null
           payment_account_id?: string | null
           project_id?: string

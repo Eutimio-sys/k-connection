@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 interface MonthlyData {
   month: number;
@@ -23,9 +24,13 @@ interface MonthlyData {
 
 const TaxPlanning = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedCompany, setSelectedCompany] = useState<string>("");
+  const [companies, setCompanies] = useState<any[]>([]);
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
   const [loading, setLoading] = useState(true);
   const [additionalWithholdingNeeded, setAdditionalWithholdingNeeded] = useState(0);
+  const [monthlyPlanningInputs, setMonthlyPlanningInputs] = useState<{[key: number]: {additionalVat: number, additionalWithholding: number}}>({});
+  const [monthlyPlanningResults, setMonthlyPlanningResults] = useState<{[key: number]: {totalVat: number, totalWithholding: number, totalSocialSecurity: number}}>({});
   const { toast } = useToast();
 
   const months = [
@@ -34,17 +39,41 @@ const TaxPlanning = () => {
   ];
 
   useEffect(() => {
-    fetchTaxData();
-  }, [selectedYear]);
+    fetchCompanies();
+  }, []);
+
+  useEffect(() => {
+    if (selectedCompany) {
+      fetchTaxData();
+    }
+  }, [selectedYear, selectedCompany]);
+
+  const fetchCompanies = async () => {
+    const { data } = await supabase
+      .from("companies")
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
+    
+    if (data && data.length > 0) {
+      setCompanies(data);
+      setSelectedCompany(data[0].id);
+    }
+  };
 
   const fetchTaxData = async () => {
     try {
       setLoading(true);
 
-      // Fetch project income
+      // Fetch project income (only through company)
       const { data: incomeData } = await supabase
         .from("project_income")
-        .select("*")
+        .select(`
+          *,
+          projects!inner(company_id)
+        `)
+        .eq("projects.company_id", selectedCompany)
+        .eq("is_outside_company", false)
         .gte("income_date", `${selectedYear}-01-01`)
         .lte("income_date", `${selectedYear}-12-31`);
 
@@ -52,6 +81,7 @@ const TaxPlanning = () => {
       const { data: expensesData } = await supabase
         .from("expenses")
         .select("*")
+        .eq("company_id", selectedCompany)
         .gte("invoice_date", `${selectedYear}-01-01`)
         .lte("invoice_date", `${selectedYear}-12-31`);
 
@@ -59,6 +89,7 @@ const TaxPlanning = () => {
       const { data: laborData } = await supabase
         .from("labor_expenses")
         .select("*")
+        .eq("company_id", selectedCompany)
         .gte("invoice_date", `${selectedYear}-01-01`)
         .lte("invoice_date", `${selectedYear}-12-31`);
 
@@ -202,28 +233,59 @@ const TaxPlanning = () => {
 
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
 
+  const handleMonthlyCalculate = (month: number) => {
+    const monthData = monthlyData[month - 1];
+    const inputs = monthlyPlanningInputs[month] || { additionalVat: 0, additionalWithholding: 0 };
+    
+    setMonthlyPlanningResults({
+      ...monthlyPlanningResults,
+      [month]: {
+        totalVat: monthData.vatToPay + inputs.additionalVat,
+        totalWithholding: monthData.incomeWithholding + monthData.laborWithholding + inputs.additionalWithholding,
+        totalSocialSecurity: monthData.socialSecurity,
+      }
+    });
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">วางแผนภาษี</h1>
-        <Select
-          value={selectedYear.toString()}
-          onValueChange={(value) => setSelectedYear(parseInt(value))}
-        >
-          <SelectTrigger className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {years.map((year) => (
-              <SelectItem key={year} value={year.toString()}>
-                {year + 543}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-4">
+          <Select
+            value={selectedCompany}
+            onValueChange={setSelectedCompany}
+          >
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="เลือกบริษัท" />
+            </SelectTrigger>
+            <SelectContent>
+              {companies.map((company) => (
+                <SelectItem key={company.id} value={company.id}>
+                  {company.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={selectedYear.toString()}
+            onValueChange={(value) => setSelectedYear(parseInt(value))}
+          >
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {years.map((year) => (
+                <SelectItem key={year} value={year.toString()}>
+                  {year + 543}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      {loading ? (
+      {loading || !selectedCompany ? (
         <div className="text-center py-8">กำลังโหลดข้อมูล...</div>
       ) : (
         <>
@@ -280,6 +342,92 @@ const TaxPlanning = () => {
                     </TableRow>
                   </TableBody>
                 </Table>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>สรุปภาษีประจำเดือน</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {monthlyData.map((data, index) => {
+                  const monthInputs = monthlyPlanningInputs[data.month] || { additionalVat: 0, additionalWithholding: 0 };
+                  const monthResults = monthlyPlanningResults[data.month];
+                  
+                  return (
+                    <div key={data.month} className="p-4 border rounded-lg space-y-4">
+                      <h3 className="font-semibold text-lg">{months[index]}</h3>
+                      
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">หักณที่จ่าย</p>
+                          <p className="font-semibold">{formatCurrency(data.incomeWithholding + data.laborWithholding)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">ประกันสังคม</p>
+                          <p className="font-semibold">{formatCurrency(data.socialSecurity)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">VAT ที่ต้องจ่าย</p>
+                          <p className="font-semibold">{formatCurrency(data.vatToPay)}</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>VAT เพิ่มเติม</Label>
+                          <Input
+                            type="number"
+                            value={monthInputs.additionalVat}
+                            onChange={(e) => setMonthlyPlanningInputs({
+                              ...monthlyPlanningInputs,
+                              [data.month]: { ...monthInputs, additionalVat: Number(e.target.value) || 0 }
+                            })}
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <div>
+                          <Label>หักณที่จ่ายเพิ่มเติม</Label>
+                          <Input
+                            type="number"
+                            value={monthInputs.additionalWithholding}
+                            onChange={(e) => setMonthlyPlanningInputs({
+                              ...monthlyPlanningInputs,
+                              [data.month]: { ...monthInputs, additionalWithholding: Number(e.target.value) || 0 }
+                            })}
+                            placeholder="0.00"
+                          />
+                        </div>
+                      </div>
+
+                      <Button onClick={() => handleMonthlyCalculate(data.month)} className="w-full">
+                        คำนวณ
+                      </Button>
+
+                      {monthResults && (
+                        <div className="mt-4 p-4 bg-muted rounded-lg space-y-2">
+                          <h4 className="font-semibold">ผลลัพธ์หลังวางแผน</h4>
+                          <div className="grid grid-cols-3 gap-4">
+                            <div>
+                              <p className="text-sm text-muted-foreground">VAT รวม</p>
+                              <p className="font-semibold">{formatCurrency(monthResults.totalVat)}</p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-muted-foreground">หักณที่จ่ายรวม</p>
+                              <p className="font-semibold">{formatCurrency(monthResults.totalWithholding)}</p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-muted-foreground">ประกันสังคม</p>
+                              <p className="font-semibold">{formatCurrency(monthResults.totalSocialSecurity)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
