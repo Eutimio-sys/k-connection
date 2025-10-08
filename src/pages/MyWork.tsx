@@ -11,8 +11,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
-import { Plus, CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import { Plus, CheckCircle2, Clock, AlertCircle, X } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { TaskDetailDialog } from "@/components/TaskDetailDialog";
+import { Badge } from "@/components/ui/badge";
 
 interface Task {
   id: string;
@@ -21,14 +23,24 @@ interface Task {
   status: string;
   priority: string;
   due_date: string;
+  due_time: string;
   assigned_to: string;
   project_id: string;
+  created_by: string;
   profiles?: {
     full_name: string;
   };
   projects?: {
     name: string;
   };
+  created_by_profile?: {
+    full_name: string;
+  };
+  task_assignees?: Array<{
+    profiles: {
+      full_name: string;
+    };
+  }>;
 }
 
 interface Profile {
@@ -49,13 +61,16 @@ export default function MyWork() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentUser, setCurrentUser] = useState<Profile | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     priority: "medium",
     status: "todo",
-    assigned_to: "",
     project_id: "",
+    due_time: "17:00",
   });
   const { toast } = useToast();
 
@@ -82,7 +97,7 @@ export default function MyWork() {
         .eq("id", user.id)
         .single();
       setCurrentUser(data);
-      setFormData(prev => ({ ...prev, assigned_to: user.id }));
+      setSelectedAssignees([user.id]);
     }
   };
 
@@ -115,17 +130,32 @@ export default function MyWork() {
       .select(`
         *,
         profiles!tasks_assigned_to_fkey(full_name),
-        projects(name)
+        projects(name),
+        created_by_profile:profiles!tasks_created_by_fkey(full_name),
+        task_assignees(profiles(full_name))
       `)
       .gte("due_date", startOfDay.toISOString())
       .lte("due_date", endOfDay.toISOString());
 
-    // If not manager/admin, only show own tasks
+    // If not manager/admin, only show tasks assigned to them
     if (currentUser.role !== 'admin' && currentUser.role !== 'manager') {
-      query = query.eq("assigned_to", currentUser.id);
+      // Get tasks where user is in task_assignees
+      const { data: myTaskIds } = await supabase
+        .from("task_assignees")
+        .select("task_id")
+        .eq("user_id", currentUser.id);
+      
+      if (myTaskIds && myTaskIds.length > 0) {
+        const taskIds = myTaskIds.map(t => t.task_id);
+        query = query.in("id", taskIds);
+      } else {
+        // No tasks assigned
+        setTasks([]);
+        return;
+      }
     }
 
-    const { data } = await query.order("created_at", { ascending: false });
+    const { data } = await query.order("due_time", { ascending: true });
     if (data) setTasks(data as any);
   };
 
@@ -137,33 +167,76 @@ export default function MyWork() {
       return;
     }
 
+    if (selectedAssignees.length === 0) {
+      toast({ title: "กรุณาเลือกผู้รับผิดชอบอย่างน้อย 1 คน", variant: "destructive" });
+      return;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
     const dueDate = new Date(selectedDate);
     dueDate.setHours(23, 59, 59, 999);
 
-    const { error } = await supabase.from("tasks").insert({
-      ...formData,
-      due_date: dueDate.toISOString(),
-      created_by: user.id,
-    });
+    // Insert task
+    const { data: newTask, error: taskError } = await supabase
+      .from("tasks")
+      .insert({
+        ...formData,
+        due_date: dueDate.toISOString(),
+        created_by: user.id,
+        assigned_to: selectedAssignees[0], // Keep for backward compatibility
+      })
+      .select()
+      .single();
 
-    if (error) {
-      toast({ title: "เกิดข้อผิดพลาด", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "เพิ่มงานสำเร็จ" });
-      setIsDialogOpen(false);
-      setFormData({
-        title: "",
-        description: "",
-        priority: "medium",
-        status: "todo",
-        assigned_to: user.id,
-        project_id: "",
-      });
-      fetchTasks();
+    if (taskError) {
+      toast({ title: "เกิดข้อผิดพลาด", description: taskError.message, variant: "destructive" });
+      return;
     }
+
+    // Insert task assignees
+    if (newTask) {
+      const assigneesData = selectedAssignees.map(userId => ({
+        task_id: newTask.id,
+        user_id: userId,
+      }));
+
+      const { error: assigneesError } = await supabase
+        .from("task_assignees")
+        .insert(assigneesData);
+
+      if (assigneesError) {
+        toast({ title: "เกิดข้อผิดพลาดในการบันทึกผู้รับผิดชอบ", variant: "destructive" });
+      }
+    }
+
+    toast({ title: "เพิ่มงานสำเร็จ" });
+    setIsDialogOpen(false);
+    setFormData({
+      title: "",
+      description: "",
+      priority: "medium",
+      status: "todo",
+      project_id: "",
+      due_time: "17:00",
+    });
+    setSelectedAssignees([user.id]);
+    fetchTasks();
+  };
+
+  const handleAddAssignee = (userId: string) => {
+    if (!selectedAssignees.includes(userId)) {
+      setSelectedAssignees([...selectedAssignees, userId]);
+    }
+  };
+
+  const handleRemoveAssignee = (userId: string) => {
+    setSelectedAssignees(selectedAssignees.filter(id => id !== userId));
+  };
+
+  const getSelectedUsers = () => {
+    return users.filter(u => selectedAssignees.includes(u.id));
   };
 
   const getStatusIcon = (status: string) => {
@@ -241,26 +314,54 @@ export default function MyWork() {
                       </SelectContent>
                     </Select>
                   </div>
-                  {canAssignToOthers && (
-                    <div>
-                      <Label>มอบหมายให้</Label>
-                      <Select
-                        value={formData.assigned_to}
-                        onValueChange={(value) => setFormData({ ...formData, assigned_to: value })}
-                      >
+                  
+                  <div>
+                    <Label>เวลา</Label>
+                    <Input
+                      type="time"
+                      value={formData.due_time}
+                      onChange={(e) => setFormData({ ...formData, due_time: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label>ผู้รับผิดชอบ</Label>
+                  <div className="space-y-2">
+                    {canAssignToOthers && (
+                      <Select onValueChange={handleAddAssignee}>
                         <SelectTrigger className="bg-background z-50">
-                          <SelectValue placeholder="เลือกผู้รับผิดชอบ" />
+                          <SelectValue placeholder="เพิ่มผู้รับผิดชอบ" />
                         </SelectTrigger>
                         <SelectContent className="bg-background z-50">
-                          {users.map((user) => (
-                            <SelectItem key={user.id} value={user.id}>
-                              {user.full_name}
-                            </SelectItem>
-                          ))}
+                          {users
+                            .filter(u => !selectedAssignees.includes(u.id))
+                            .map((user) => (
+                              <SelectItem key={user.id} value={user.id}>
+                                {user.full_name}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
+                    )}
+                    
+                    <div className="flex flex-wrap gap-2">
+                      {getSelectedUsers().map((user) => (
+                        <Badge key={user.id} variant="secondary" className="flex items-center gap-1">
+                          {user.full_name}
+                          {canAssignToOthers && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveAssignee(user.id)}
+                              className="ml-1 hover:text-destructive"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          )}
+                        </Badge>
+                      ))}
                     </div>
-                  )}
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -334,13 +435,25 @@ export default function MyWork() {
                 <p className="text-muted-foreground text-center py-8">ไม่มีงานในวันนี้</p>
               ) : (
                 tasks.map((task) => (
-                  <Card key={task.id} className={`${getPriorityColor(task.priority)}`}>
+                  <Card 
+                    key={task.id} 
+                    className={`${getPriorityColor(task.priority)} cursor-pointer hover:shadow-md transition-shadow`}
+                    onClick={() => {
+                      setSelectedTaskId(task.id);
+                      setIsDetailDialogOpen(true);
+                    }}
+                  >
                     <CardContent className="pt-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
                             {getStatusIcon(task.status)}
                             <h3 className="font-semibold">{task.title}</h3>
+                            {task.due_time && (
+                              <span className="text-xs text-muted-foreground">
+                                {task.due_time.substring(0, 5)}
+                              </span>
+                            )}
                           </div>
                           {task.description && (
                             <p className="text-sm text-muted-foreground mb-2">{task.description}</p>
@@ -351,9 +464,14 @@ export default function MyWork() {
                                 โครงการ: {task.projects.name}
                               </span>
                             )}
-                            {task.profiles && (
+                            {task.created_by_profile && (
                               <span className="bg-muted px-2 py-1 rounded">
-                                ผู้รับผิดชอบ: {task.profiles.full_name}
+                                มอบหมายโดย: {task.created_by_profile.full_name}
+                              </span>
+                            )}
+                            {task.task_assignees && task.task_assignees.length > 0 && (
+                              <span className="bg-muted px-2 py-1 rounded">
+                                ผู้รับผิดชอบ: {task.task_assignees.map(a => a.profiles.full_name).join(", ")}
                               </span>
                             )}
                           </div>
@@ -366,6 +484,14 @@ export default function MyWork() {
             </CardContent>
           </Card>
         </div>
+        
+        <TaskDetailDialog
+          taskId={selectedTaskId}
+          open={isDetailDialogOpen}
+          onOpenChange={setIsDetailDialogOpen}
+          onTaskUpdated={fetchTasks}
+          canEdit={currentUser?.role === 'admin' || currentUser?.role === 'manager'}
+        />
       </div>
     </DashboardLayout>
   );

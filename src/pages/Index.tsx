@@ -14,6 +14,8 @@ import {
   Wallet,
   UserCog,
   CheckCircle,
+  ClipboardList,
+  MessageCircle,
 } from "lucide-react";
 
 type UserRole = "admin" | "manager" | "accountant" | "worker";
@@ -58,6 +60,14 @@ const Index = () => {
       icon: LayoutDashboard,
       gradient: "from-blue-500 to-blue-600",
       roles: ["admin", "manager", "accountant"],
+    },
+    {
+      title: "งานของฉัน",
+      description: "จัดการงานและติดตามความคืบหน้า",
+      url: "/mywork",
+      icon: ClipboardList,
+      gradient: "from-violet-500 to-violet-600",
+      roles: ["admin", "manager", "accountant", "worker"],
     },
     {
       title: "โครงการ",
