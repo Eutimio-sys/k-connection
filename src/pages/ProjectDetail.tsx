@@ -542,9 +542,9 @@ const ProjectDetail = () => {
                     <SelectTrigger className="w-48">
                       <SelectValue placeholder="หมวดหมู่" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-background z-50">
                       <SelectItem value="all">ทั้งหมด</SelectItem>
-                      {categories.map(cat => (
+                      {categories.filter(cat => ['material', 'labor_contractor', 'other'].includes(cat.category_type)).map(cat => (
                         <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                       ))}
                     </SelectContent>
@@ -633,9 +633,9 @@ const ProjectDetail = () => {
                     <SelectTrigger className="w-48">
                       <SelectValue placeholder="หมวดหมู่" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-background z-50">
                       <SelectItem value="all">ทั้งหมด</SelectItem>
-                      {categories.map(cat => (
+                      {categories.filter(cat => ['labor', 'labor_contractor'].includes(cat.category_type)).map(cat => (
                         <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                       ))}
                     </SelectContent>
@@ -647,7 +647,7 @@ const ProjectDetail = () => {
                     <SelectTrigger className="w-48">
                       <SelectValue placeholder="เลือกช่าง" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-background z-50">
                       <SelectItem value="all">ทั้งหมด</SelectItem>
                       {workers.map(worker => (
                         <SelectItem key={worker.id} value={worker.id}>{worker.full_name}</SelectItem>
