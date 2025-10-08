@@ -31,6 +31,8 @@ export const EmployeeEditDialog = ({ open, onOpenChange, employee, onSuccess }: 
     emergency_phone: employee?.emergency_phone || "",
     hire_date: employee?.hire_date || "",
     role: employee?.role || "worker",
+    bank_name: employee?.bank_name || "",
+    bank_account_number: employee?.bank_account_number || "",
   });
 
   useEffect(() => {
@@ -158,6 +160,26 @@ export const EmployeeEditDialog = ({ open, onOpenChange, employee, onSuccess }: 
                 type="date"
                 value={formData.hire_date}
                 onChange={(e) => setFormData({ ...formData, hire_date: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="bank_name">ธนาคาร</Label>
+              <Input
+                id="bank_name"
+                value={formData.bank_name}
+                onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
+                placeholder="เช่น ธนาคารกรุงเทพ"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="bank_account_number">เลขที่บัญชี</Label>
+              <Input
+                id="bank_account_number"
+                value={formData.bank_account_number}
+                onChange={(e) => setFormData({ ...formData, bank_account_number: e.target.value })}
+                placeholder="XXX-X-XXXXX-X"
               />
             </div>
 

@@ -360,6 +360,16 @@ const Profile = () => {
             </div>
 
             <div>
+              <Label>ธนาคาร</Label>
+              <Input value={profile?.bank_name || "-"} disabled />
+            </div>
+
+            <div>
+              <Label>เลขที่บัญชี</Label>
+              <Input value={profile?.bank_account_number || "-"} disabled />
+            </div>
+
+            <div className="md:col-span-2">
               <Label>ที่อยู่</Label>
               <Textarea value={profile?.address || "-"} disabled rows={3} />
             </div>
