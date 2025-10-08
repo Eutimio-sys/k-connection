@@ -3,11 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
-import { Send, Paperclip, X } from "lucide-react";
+import { Send, Paperclip, X, AtSign } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 
 interface Message {
   id: string;
@@ -17,30 +21,72 @@ interface Message {
   file_type: string | null;
   created_at: string;
   user_id: string;
+  mentioned_users?: string[];
 }
+
+interface Profile {
+  id: string;
+  full_name: string;
+  avatar_url: string | null;
+}
+
+interface Project {
+  id: string;
+  name: string;
+}
+
+const getUserColor = (userId: string): string => {
+  const colors = [
+    'bg-blue-500',
+    'bg-green-500',
+    'bg-purple-500',
+    'bg-pink-500',
+    'bg-yellow-500',
+    'bg-indigo-500',
+    'bg-red-500',
+    'bg-teal-500',
+  ];
+  const index = userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return colors[index % colors.length];
+};
 
 export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [profileMap, setProfileMap] = useState<Record<string, string>>({});
+  const [profileMap, setProfileMap] = useState<Record<string, Profile>>({});
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("general");
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [showMentionPopover, setShowMentionPopover] = useState(false);
+  const [mentionSearch, setMentionSearch] = useState("");
+  const [cursorPosition, setCursorPosition] = useState(0);
+  
   const { toast } = useToast();
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     document.title = "แชทรวม | ระบบบริหารงาน";
+    fetchProjects();
+    getCurrentUser();
+  }, []);
+
+  useEffect(() => {
     fetchMessages();
 
     // Subscribe to real-time updates
+    const tableName = selectedProjectId === "general" ? "general_chat" : "project_messages";
     const channel = supabase
-      .channel('general_chat')
+      .channel(`chat_${selectedProjectId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'general_chat',
+          table: tableName,
+          ...(selectedProjectId !== "general" && { filter: `project_id=eq.${selectedProjectId}` })
         },
         () => {
           fetchMessages();
@@ -51,11 +97,21 @@ export default function Chat() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [selectedProjectId]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const getCurrentUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) setCurrentUserId(user.id);
+  };
+
+  const fetchProjects = async () => {
+    const { data } = await supabase.from('projects').select('id, name').order('name');
+    if (data) setProjects(data);
+  };
 
   const scrollToBottom = () => {
     if (scrollRef.current) {
@@ -64,10 +120,22 @@ export default function Chat() {
   };
 
   const fetchMessages = async () => {
-    const { data: rows, error } = await supabase
-      .from('general_chat')
-      .select('*')
-      .order('created_at', { ascending: true });
+    let query;
+    
+    if (selectedProjectId === "general") {
+      query = supabase
+        .from('general_chat')
+        .select('*')
+        .order('created_at', { ascending: true });
+    } else {
+      query = supabase
+        .from('project_messages')
+        .select('*')
+        .eq('project_id', selectedProjectId)
+        .order('created_at', { ascending: true });
+    }
+
+    const { data: rows, error } = await query;
 
     if (error) {
       console.error('Error fetching messages:', error);
@@ -77,15 +145,22 @@ export default function Chat() {
     const messages = (rows || []) as Message[];
     setMessages(messages);
 
-    // Load sender names
+    // Load sender profiles with avatars
     const userIds = Array.from(new Set(messages.map((m) => m.user_id).filter(Boolean)));
     if (userIds.length) {
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, full_name')
+        .select('id, full_name, avatar_url')
         .in('id', userIds);
       if (!profilesError && profilesData) {
-        const map = Object.fromEntries(profilesData.map((p: any) => [p.id, p.full_name]));
+        const map: Record<string, Profile> = {};
+        profilesData.forEach((p: any) => {
+          map[p.id] = {
+            id: p.id,
+            full_name: p.full_name,
+            avatar_url: p.avatar_url
+          };
+        });
         setProfileMap(map);
       }
     }
@@ -120,6 +195,18 @@ export default function Chat() {
     return { url: signed.signedUrl, type: fileType };
   };
 
+  const extractMentions = (text: string): string[] => {
+    const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
+    const mentions: string[] = [];
+    let match;
+    
+    while ((match = mentionRegex.exec(text)) !== null) {
+      mentions.push(match[2]); // userId
+    }
+    
+    return mentions;
+  };
+
   const handleSendMessage = async () => {
     if (!newMessage.trim() && !file) return;
 
@@ -138,17 +225,28 @@ export default function Chat() {
       fileType = result.type;
     }
 
-    const { error } = await supabase.from('general_chat').insert({
+    const mentionedUsers = extractMentions(newMessage);
+    const messageData: any = {
       user_id: user.id,
       message: newMessage.trim() || '(ส่งไฟล์)',
       file_url: fileUrl,
       file_name: fileName,
       file_type: fileType,
-    });
+    };
 
-    if (error) {
-      toast({ title: 'ไม่สามารถส่งข้อความได้', variant: 'destructive' });
-      return;
+    if (selectedProjectId === "general") {
+      const { error } = await supabase.from('general_chat').insert(messageData);
+      if (error) {
+        toast({ title: 'ไม่สามารถส่งข้อความได้', variant: 'destructive' });
+        return;
+      }
+    } else {
+      messageData.project_id = selectedProjectId;
+      const { error } = await supabase.from('project_messages').insert(messageData);
+      if (error) {
+        toast({ title: 'ไม่สามารถส่งข้อความได้', variant: 'destructive' });
+        return;
+      }
     }
 
     setNewMessage('');
@@ -166,6 +264,77 @@ export default function Chat() {
     }
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const cursorPos = e.target.selectionStart || 0;
+    
+    setNewMessage(value);
+    setCursorPosition(cursorPos);
+
+    // Check for @ mention trigger
+    const textBeforeCursor = value.substring(0, cursorPos);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    
+    if (lastAtIndex !== -1) {
+      const textAfterAt = textBeforeCursor.substring(lastAtIndex + 1);
+      if (!textAfterAt.includes(' ') && !textAfterAt.includes('\n')) {
+        setMentionSearch(textAfterAt);
+        setShowMentionPopover(true);
+      } else {
+        setShowMentionPopover(false);
+      }
+    } else {
+      setShowMentionPopover(false);
+    }
+  };
+
+  const insertMention = (profile: Profile) => {
+    const textBeforeCursor = newMessage.substring(0, cursorPosition);
+    const textAfterCursor = newMessage.substring(cursorPosition);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    
+    const beforeMention = newMessage.substring(0, lastAtIndex);
+    const mention = `@[${profile.full_name}](${profile.id})`;
+    const newText = beforeMention + mention + ' ' + textAfterCursor;
+    
+    setNewMessage(newText);
+    setShowMentionPopover(false);
+    inputRef.current?.focus();
+  };
+
+  const renderMessage = (text: string): React.ReactNode => {
+    const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = mentionRegex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(text.substring(lastIndex, match.index));
+      }
+      
+      const [, name, userId] = match;
+      const isCurrentUser = userId === currentUserId;
+      
+      parts.push(
+        <span
+          key={match.index}
+          className={`font-semibold ${isCurrentUser ? 'bg-primary/20 text-primary' : 'text-blue-500'} px-1 rounded`}
+        >
+          @{name}
+        </span>
+      );
+      
+      lastIndex = match.index + match[0].length;
+    }
+
+    if (lastIndex < text.length) {
+      parts.push(text.substring(lastIndex));
+    }
+
+    return parts.length > 0 ? parts : text;
+  };
+
   const isImageFile = (fileName: string | null, fileType: string | null) => {
     if (fileType === 'image') return true;
     if (!fileName) return false;
@@ -173,54 +342,94 @@ export default function Chat() {
     return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext || '');
   };
 
+  const filteredProfiles = Object.values(profileMap).filter(profile =>
+    profile.full_name.toLowerCase().includes(mentionSearch.toLowerCase())
+  );
+
   return (
     <div className="p-8 space-y-6">
-      <header>
+      <header className="flex items-center justify-between">
         <h1 className="text-4xl font-bold">แชทรวม</h1>
+        <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+          <SelectTrigger className="bg-background w-[300px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="bg-background">
+            <SelectItem value="general">💬 ห้องสนทนากลาง</SelectItem>
+            {projects.map((p) => (
+              <SelectItem key={p.id} value={p.id}>📁 {p.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </header>
 
       <Card className="h-[calc(100vh-200px)] flex flex-col">
         <CardHeader>
-          <CardTitle>ห้องสนทนากลาง</CardTitle>
+          <CardTitle>
+            {selectedProjectId === "general" ? "ห้องสนทนากลาง" : projects.find(p => p.id === selectedProjectId)?.name || "แชทโครงการ"}
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col p-0">
           <ScrollArea className="flex-1 px-4" ref={scrollRef}>
             <div className="space-y-4 py-4">
-              {messages.map((msg) => (
-                <div key={msg.id} className="space-y-1">
-                  <div className="text-xs text-muted-foreground">
-                    {profileMap[msg.user_id] || 'ไม่ทราบผู้ส่ง'} • {format(new Date(msg.created_at), 'dd/MM/yyyy HH:mm', { locale: th })}
-                  </div>
-                  <div className="bg-muted rounded-lg p-3 space-y-2">
-                    <p className="text-sm">{msg.message}</p>
+              {messages.map((msg) => {
+                const profile = profileMap[msg.user_id];
+                const userColor = getUserColor(msg.user_id);
+                
+                return (
+                  <div key={msg.id} className="flex gap-3">
+                    <Avatar className="w-10 h-10">
+                      {profile?.avatar_url ? (
+                        <AvatarImage src={profile.avatar_url} alt={profile.full_name} />
+                      ) : (
+                        <AvatarFallback className={userColor}>
+                          {profile?.full_name.charAt(0).toUpperCase() || '?'}
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
                     
-                    {msg.file_url && isImageFile(msg.file_name, msg.file_type) && (
-                      <div className="mt-2">
-                        <img 
-                          src={msg.file_url} 
-                          alt={msg.file_name || 'รูปภาพ'} 
-                          className="max-w-sm max-h-64 rounded-lg border object-cover cursor-pointer"
-                          onClick={() => window.open(msg.file_url!, '_blank')}
-                        />
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm">
+                          {profile?.full_name || 'ไม่ทราบผู้ส่ง'}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(msg.created_at), 'dd/MM/yyyy HH:mm', { locale: th })}
+                        </span>
                       </div>
-                    )}
-                    
-                    {msg.file_url && !isImageFile(msg.file_name, msg.file_type) && (
-                      <div className="flex items-center gap-2 p-2 bg-background rounded border">
-                        <Paperclip className="w-4 h-4" />
-                        <span className="text-sm flex-1">{msg.file_name}</span>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => window.open(msg.file_url!, '_blank')}
-                        >
-                          เปิด
-                        </Button>
+                      
+                      <div className="bg-muted rounded-lg p-3 space-y-2">
+                        <p className="text-sm">{renderMessage(msg.message)}</p>
+                        
+                        {msg.file_url && isImageFile(msg.file_name, msg.file_type) && (
+                          <div className="mt-2">
+                            <img 
+                              src={msg.file_url} 
+                              alt={msg.file_name || 'รูปภาพ'} 
+                              className="max-w-sm max-h-64 rounded-lg border object-cover cursor-pointer"
+                              onClick={() => window.open(msg.file_url!, '_blank')}
+                            />
+                          </div>
+                        )}
+                        
+                        {msg.file_url && !isImageFile(msg.file_name, msg.file_type) && (
+                          <div className="flex items-center gap-2 p-2 bg-background rounded border">
+                            <Paperclip className="w-4 h-4" />
+                            <span className="text-sm flex-1">{msg.file_name}</span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => window.open(msg.file_url!, '_blank')}
+                            >
+                              เปิด
+                            </Button>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </ScrollArea>
 
@@ -235,7 +444,7 @@ export default function Chat() {
               </div>
             )}
             
-            <div className="flex gap-2">
+            <div className="flex gap-2 relative">
               <input
                 type="file"
                 ref={fileInputRef}
@@ -251,11 +460,46 @@ export default function Chat() {
                 <Paperclip className="w-4 h-4" />
               </Button>
 
+              <Popover open={showMentionPopover} onOpenChange={setShowMentionPopover}>
+                <PopoverTrigger asChild>
+                  <Button size="icon" variant="outline">
+                    <AtSign className="w-4 h-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[300px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="ค้นหาผู้ใช้..." />
+                    <CommandEmpty>ไม่พบผู้ใช้</CommandEmpty>
+                    <CommandGroup>
+                      {filteredProfiles.map((profile) => (
+                        <CommandItem
+                          key={profile.id}
+                          onSelect={() => insertMention(profile)}
+                          className="flex items-center gap-2"
+                        >
+                          <Avatar className="w-6 h-6">
+                            {profile.avatar_url ? (
+                              <AvatarImage src={profile.avatar_url} />
+                            ) : (
+                              <AvatarFallback className={getUserColor(profile.id)}>
+                                {profile.full_name.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            )}
+                          </Avatar>
+                          <span>{profile.full_name}</span>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+
               <Input
-                placeholder="พิมพ์ข้อความ..."
+                ref={inputRef}
+                placeholder="พิมพ์ข้อความ... (ใช้ @ เพื่อแท็กผู้ใช้)"
                 value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                onChange={handleInputChange}
+                onKeyPress={(e) => e.key === 'Enter' && !showMentionPopover && handleSendMessage()}
                 className="flex-1"
               />
               

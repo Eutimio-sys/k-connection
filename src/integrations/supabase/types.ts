@@ -1052,6 +1052,7 @@ export type Database = {
       profiles: {
         Row: {
           address: string | null
+          avatar_url: string | null
           company_id: string | null
           created_at: string
           date_of_birth: string | null
@@ -1070,6 +1071,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          avatar_url?: string | null
           company_id?: string | null
           created_at?: string
           date_of_birth?: string | null
@@ -1088,6 +1090,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          avatar_url?: string | null
           company_id?: string | null
           created_at?: string
           date_of_birth?: string | null

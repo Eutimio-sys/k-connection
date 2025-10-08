@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Mail, Calendar, Briefcase, FileText, ArrowLeft } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Mail, Calendar, Briefcase, FileText, ArrowLeft, Camera } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
@@ -20,6 +21,8 @@ const Profile = () => {
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
   const [selectedDocumentType, setSelectedDocumentType] = useState("");
   const [documentNotes, setDocumentNotes] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchProfile();
@@ -103,6 +106,67 @@ const Profile = () => {
     }
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('กรุณาเลือกไฟล์รูปภาพ');
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('ขนาดไฟล์ต้องไม่เกิน 2MB');
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('ไม่พบข้อมูลผู้ใช้');
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/avatar.${fileExt}`;
+
+      // Delete old avatar if exists
+      if (profile?.avatar_url) {
+        const oldPath = profile.avatar_url.split('/').pop();
+        await supabase.storage.from('avatars').remove([`${user.id}/${oldPath}`]);
+      }
+
+      // Upload new avatar
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      // Update profile
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      toast.success('อัพโหลดรูปภาพสำเร็จ');
+      fetchProfile();
+    } catch (error: any) {
+      console.error('Error uploading avatar:', error);
+      toast.error('เกิดข้อผิดพลาดในการอัพโหลดรูปภาพ');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (loading) {
     return <div className="p-8 text-center"><p>กำลังโหลด...</p></div>;
   }
@@ -170,6 +234,44 @@ const Profile = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>รูปโปรไฟล์</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <Avatar className="w-32 h-32">
+                {profile?.avatar_url ? (
+                  <AvatarImage src={profile.avatar_url} alt={profile.full_name} />
+                ) : (
+                  <AvatarFallback className="text-4xl bg-primary/10">
+                    {profile?.full_name?.charAt(0).toUpperCase() || '?'}
+                  </AvatarFallback>
+                )}
+              </Avatar>
+              <Button
+                size="icon"
+                className="absolute bottom-0 right-0 rounded-full"
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={uploading}
+              >
+                <Camera className="w-4 h-4" />
+              </Button>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarUpload}
+              />
+            </div>
+            <div className="text-center">
+              <p className="font-semibold text-lg">{profile?.full_name}</p>
+              <p className="text-sm text-muted-foreground">{profile?.role}</p>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>ข้อมูลส่วนตัว</CardTitle>
