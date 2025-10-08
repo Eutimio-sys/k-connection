@@ -95,7 +95,7 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
       supabase.from("vendors").select("*").eq("is_active", true).order("name"),
       supabase.from("projects").select("*").order("name"),
       supabase.from("companies").select("*").eq("is_active", true).order("name"),
-      supabase.from("expense_categories").select("*").eq("is_active", true).eq("category_type", "material").order("name"),
+      supabase.from("expense_categories").select("*").eq("is_active", true).in("category_type", ["material", "other"]).order("name"),
     ]);
 
     setVendors(vendorsRes.data || []);

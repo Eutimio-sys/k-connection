@@ -56,7 +56,7 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
       supabase.from("workers").select("*").eq("is_active", true),
       supabase.from("projects").select("*"),
       supabase.from("companies").select("*").eq("is_active", true),
-      supabase.from("expense_categories").select("*").eq("is_active", true).eq("category_type", "labor"),
+      supabase.from("expense_categories").select("*").eq("is_active", true).in("category_type", ["labor", "labor_contractor"]),
     ]);
     
     if (workersRes.data) setWorkers(workersRes.data);
