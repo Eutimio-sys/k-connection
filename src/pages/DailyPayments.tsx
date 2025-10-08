@@ -47,8 +47,9 @@ const DailyPayments = () => {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-      if (profile) setUserRole(profile.role);
+      const { data: userRoles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
+      const primaryRole = userRoles?.find(r => r.role === "admin")?.role || userRoles?.[0]?.role || "worker";
+      setUserRole(primaryRole);
     }
 
     let query = supabase

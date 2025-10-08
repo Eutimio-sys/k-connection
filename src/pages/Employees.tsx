@@ -17,7 +17,6 @@ const Employees = () => {
   const [rolePermissions, setRolePermissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  type Role = Database["public"]["Enums"]["user_role"];
   const sb = supabase as any;
 
   useEffect(() => {
@@ -45,18 +44,9 @@ const Employees = () => {
     setLoading(false);
   };
 
-  const handleRoleChange = async (userId: string, newRole: Role) => {
-    const { error } = await supabase
-      .from("profiles")
-      .update({ role: newRole })
-      .eq("id", userId);
-
-    if (error) {
-      toast.error("เกิดข้อผิดพลาด: " + error.message);
-    } else {
-      toast.success("อัพเดท role สำเร็จ");
-      fetchData();
-    }
+  const handleRoleChange = async (userId: string, newRole: string) => {
+    // This function is no longer used - redirecting to UserRoles page instead
+    toast.error("กรุณาจัดการ role ในหน้า จัดการสิทธิ์ผู้ใช้");
   };
 
   const handlePermissionToggle = async (role: string, featureCode: string, currentValue: boolean) => {
@@ -175,17 +165,13 @@ const Employees = () => {
                   <TableCell>{user.department || "-"}</TableCell>
                   <TableCell>{getRoleBadge(user.role)}</TableCell>
                   <TableCell className="text-right">
-                    <select
-                      className="border rounded-md p-1 text-sm"
-                      value={user.role}
-                      onChange={(e) => handleRoleChange(user.id, e.target.value as Role)}
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => window.location.href = '/user-roles'}
                     >
-                      <option value="worker">พนักงาน</option>
-                      <option value="purchaser">จัดซื้อ</option>
-                      <option value="accountant">บัญชี</option>
-                      <option value="manager">ผู้จัดการ</option>
-                      <option value="admin">ผู้ดูแลระบบ</option>
-                    </select>
+                      จัดการสิทธิ์
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}

@@ -27,25 +27,27 @@ export const usePermissions = (): UserPermissions => {
         return;
       }
 
-      // Get user role
-      const { data: profile } = await supabase
-        .from("profiles")
+      // Get user roles from user_roles table
+      const { data: userRoles } = await supabase
+        .from("user_roles")
         .select("role")
-        .eq("id", user.id)
-        .single();
+        .eq("user_id", user.id);
 
-      if (!profile) {
+      if (!userRoles || userRoles.length === 0) {
         setLoading(false);
         return;
       }
 
-      setRole(profile.role);
+      // Use first role as primary role (or admin if exists)
+      const primaryRole = userRoles.find(r => r.role === "admin")?.role || userRoles[0].role;
+      setRole(primaryRole);
 
-      // Get role permissions
+      // Get role permissions for all user's roles
+      const allRoles = userRoles.map(r => r.role);
       const { data: rolePermissions } = await supabase
         .from("role_permissions")
         .select("feature_code, can_access")
-        .eq("role", profile.role);
+        .in("role", allRoles);
 
       // Convert to object for easy lookup
       const permissionsMap: Record<string, boolean> = {};

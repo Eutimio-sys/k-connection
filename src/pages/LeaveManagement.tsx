@@ -34,13 +34,13 @@ const LeaveManagement = () => {
     const { data: { user } } = await supabase.auth.getUser();
     
     if (user) {
-      const { data: profile } = await supabase
-        .from("profiles")
+      const { data: userRoles } = await supabase
+        .from("user_roles")
         .select("role")
-        .eq("id", user.id)
-        .single();
+        .eq("user_id", user.id);
       
-      if (profile) setUserRole(profile.role);
+      const primaryRole = userRoles?.find(r => r.role === "admin")?.role || userRoles?.[0]?.role || "worker";
+      setUserRole(primaryRole);
 
       // Fetch leave balance
       const currentYear = new Date().getFullYear();
@@ -63,7 +63,7 @@ const LeaveManagement = () => {
         `)
         .order("created_at", { ascending: false });
 
-      if (profile?.role === 'worker') {
+      if (primaryRole === 'worker') {
         query.eq("user_id", user.id);
       }
 

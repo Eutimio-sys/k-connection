@@ -46,7 +46,6 @@ interface Task {
 interface Profile {
   id: string;
   full_name: string;
-  role: string;
 }
 
 interface Project {
@@ -82,18 +81,31 @@ export default function MyWork() {
   useEffect(() => {
     if (currentUser) {
       fetchTasks();
-      if (currentUser.role === 'admin' || currentUser.role === 'manager') {
+      checkUserRoleAndFetchUsers();
+    }
+  }, [currentUser, selectedDate]);
+
+  const checkUserRoleAndFetchUsers = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: userRoles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
+      
+      const hasAdminOrManager = userRoles?.some(r => r.role === 'admin' || r.role === 'manager');
+      if (hasAdminOrManager) {
         fetchUsers();
       }
     }
-  }, [currentUser, selectedDate]);
+  };
 
   const fetchCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       const { data } = await supabase
         .from("profiles")
-        .select("*")
+        .select("id, full_name")
         .eq("id", user.id)
         .single();
       setCurrentUser(data);
@@ -104,7 +116,7 @@ export default function MyWork() {
   const fetchUsers = async () => {
     const { data } = await supabase
       .from("profiles")
-      .select("id, full_name, role")
+      .select("id, full_name")
       .order("full_name");
     if (data) setUsers(data);
   };
@@ -137,8 +149,17 @@ export default function MyWork() {
       .gte("due_date", startOfDay.toISOString())
       .lte("due_date", endOfDay.toISOString());
 
+    // Check if user has admin or manager role
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const { data: userRoles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", authUser!.id);
+    
+    const hasAdminOrManager = userRoles?.some(r => r.role === 'admin' || r.role === 'manager');
+    
     // If not manager/admin, only show tasks assigned to them
-    if (currentUser.role !== 'admin' && currentUser.role !== 'manager') {
+    if (!hasAdminOrManager) {
       // Get tasks where user is in task_assignees
       const { data: myTaskIds } = await supabase
         .from("task_assignees")
@@ -261,7 +282,23 @@ export default function MyWork() {
     }
   };
 
-  const canAssignToOthers = currentUser?.role === 'admin' || currentUser?.role === 'manager';
+  const [canAssignToOthers, setCanAssignToOthers] = useState(false);
+
+  useEffect(() => {
+    const checkCanAssign = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: userRoles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id);
+        
+        const hasAdminOrManager = userRoles?.some(r => r.role === 'admin' || r.role === 'manager');
+        setCanAssignToOthers(!!hasAdminOrManager);
+      }
+    };
+    checkCanAssign();
+  }, []);
 
   return (
     <div className="p-8 space-y-6">
@@ -489,7 +526,7 @@ export default function MyWork() {
           open={isDetailDialogOpen}
           onOpenChange={setIsDetailDialogOpen}
           onTaskUpdated={fetchTasks}
-          canEdit={currentUser?.role === 'admin' || currentUser?.role === 'manager'}
+          canEdit={canAssignToOthers}
         />
       </div>
     
