@@ -32,7 +32,7 @@ interface MenuItem {
 
 const Index = () => {
   const navigate = useNavigate();
-  const { permissions, loading } = usePermissions();
+  const { role, permissions, loading } = usePermissions();
 
   const allMenuItems: MenuItem[] = [
     {
@@ -49,7 +49,7 @@ const Index = () => {
       url: "/mywork",
       icon: ClipboardList,
       gradient: "from-violet-500 to-violet-600",
-      featureCode: "my_work",
+      featureCode: "tasks",
     },
     {
       title: "โครงการ",
@@ -81,7 +81,7 @@ const Index = () => {
       url: "/labor-accounting",
       icon: Wallet,
       gradient: "from-purple-500 to-purple-600",
-      featureCode: "labor_accounting",
+      featureCode: "labor_expenses",
     },
     {
       title: "รายการโอนเงิน",
@@ -166,6 +166,7 @@ const Index = () => {
   ];
 
   const visibleMenuItems = allMenuItems.filter((item) => {
+    if (role === "admin") return true; // Admin sees all
     if (!item.featureCode) return true; // Always show items without feature code
     return hasFeatureAccess(permissions, item.featureCode);
   });

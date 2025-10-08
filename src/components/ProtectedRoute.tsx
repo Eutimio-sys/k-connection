@@ -17,21 +17,27 @@ export const ProtectedRoute = ({
   const [hasAccess, setHasAccess] = useState<boolean>(false);
 
   useEffect(() => {
-    if (!loading) {
-      // Check role-based access
-      if (requiredRoles && requiredRoles.length > 0) {
-        if (!requiredRoles.includes(role)) {
-          setHasAccess(false);
-          return;
-        }
-      }
+    if (loading) return;
 
-      // Check feature-based access
-      if (featureCode) {
-        setHasAccess(permissions[featureCode] === true);
-      } else {
-        setHasAccess(true);
+    // Admin bypass: full access
+    if (role === "admin") {
+      setHasAccess(true);
+      return;
+    }
+
+    // Check role-based access
+    if (requiredRoles && requiredRoles.length > 0) {
+      if (!requiredRoles.includes(role)) {
+        setHasAccess(false);
+        return;
       }
+    }
+
+    // Check feature-based access
+    if (featureCode) {
+      setHasAccess(permissions[featureCode] === true);
+    } else {
+      setHasAccess(true);
     }
   }, [loading, role, permissions, featureCode, requiredRoles]);
 

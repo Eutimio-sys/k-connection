@@ -39,13 +39,13 @@ const menuItems = [
   { title: "โครงการ", url: "/projects", icon: FolderKanban, featureCode: "projects" },
   { title: "อนุมัติรายการ", url: "/approvals", icon: CheckCircle, featureCode: "approvals" },
   { title: "บัญชีวัสดุ", url: "/accounting", icon: FileText, featureCode: "accounting" },
-  { title: "บัญชีค่าแรง", url: "/labor-accounting", icon: Wallet, featureCode: "labor_accounting" },
+  { title: "บัญชีค่าแรง", url: "/labor-accounting", icon: Wallet, featureCode: "labor_expenses" },
   { title: "บัญชีเงินเดือน", url: "/payroll", icon: Wallet, featureCode: "payroll" },
   { title: "รายการโอนเงิน", url: "/daily-payments", icon: Wallet, featureCode: "daily_payments" },
   { title: "วางแผนภาษี", url: "/tax-planning", icon: TrendingUp, featureCode: "tax_planning" },
   { title: "เช็คอิน/เอาท์", url: "/attendance", icon: Clock, featureCode: "attendance" },
   { title: "ระบบลา", url: "/leave", icon: Calendar, featureCode: "leave_management" },
-  { title: "งานของฉัน", url: "/mywork", icon: CheckCircle, featureCode: "my_work" },
+  { title: "งานของฉัน", url: "/mywork", icon: CheckCircle, featureCode: "tasks" },
   { title: "แชทรวม", url: "/chat", icon: MessageCircle, featureCode: "chat" },
   { title: "๊จัดการผู้ใช้งานในระบบ", url: "/employees", icon: Users, featureCode: "employees" },
   { title: "จัดการพนักงาน", url: "/hr-management", icon: UserCog, featureCode: "hr_management" },
@@ -56,10 +56,11 @@ const menuItems = [
 
 export function AppSidebar() {
   const [pendingCount, setPendingCount] = useState(0);
-  const { permissions, loading } = usePermissions();
+  const { role, permissions, loading } = usePermissions();
 
   // Filter menu items based on permissions
   const visibleMenuItems = menuItems.filter((item) => {
+    if (role === "admin") return true; // Admin sees all
     if (!item.featureCode) return true; // Always show items without feature code
     if (loading) return false; // Hide during loading
     return hasFeatureAccess(permissions, item.featureCode);

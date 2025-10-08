@@ -47,7 +47,7 @@ const App = () => (
             <Route path="/kanban" element={<ProtectedRoute featureCode="projects"><Kanban /></ProtectedRoute>} />
             <Route path="/approvals" element={<ProtectedRoute featureCode="approvals"><Approvals /></ProtectedRoute>} />
             <Route path="/accounting" element={<ProtectedRoute featureCode="accounting"><Accounting /></ProtectedRoute>} />
-            <Route path="/labor-accounting" element={<ProtectedRoute featureCode="labor_accounting"><LaborAccounting /></ProtectedRoute>} />
+            <Route path="/labor-accounting" element={<ProtectedRoute featureCode="labor_expenses"><LaborAccounting /></ProtectedRoute>} />
             <Route path="/daily-payments" element={<ProtectedRoute featureCode="daily_payments"><DailyPayments /></ProtectedRoute>} />
             <Route path="/employees" element={<ProtectedRoute featureCode="employees"><Employees /></ProtectedRoute>} />
             <Route path="/employees/:id" element={<ProtectedRoute featureCode="employees"><EmployeeDetail /></ProtectedRoute>} />
@@ -58,7 +58,7 @@ const App = () => (
             <Route path="/profile" element={<Profile />} />
             <Route path="/attendance" element={<ProtectedRoute featureCode="attendance"><Attendance /></ProtectedRoute>} />
             <Route path="/leave" element={<ProtectedRoute featureCode="leave_management"><LeaveManagement /></ProtectedRoute>} />
-            <Route path="/mywork" element={<ProtectedRoute featureCode="my_work"><MyWork /></ProtectedRoute>} />
+            <Route path="/mywork" element={<ProtectedRoute featureCode="tasks"><MyWork /></ProtectedRoute>} />
             <Route path="/chat" element={<ProtectedRoute featureCode="chat"><Chat /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute featureCode="settings"><Settings /></ProtectedRoute>} />
           </Route>
