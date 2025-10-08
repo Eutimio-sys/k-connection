@@ -46,6 +46,7 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [hasVat, setHasVat] = useState(false);
   const [vatRate, setVatRate] = useState("7");
+  const [vatIncluded, setVatIncluded] = useState(false);
   const [notes, setNotes] = useState("");
   const [receiptImage, setReceiptImage] = useState<File | null>(null);
   const [receiptImagePreview, setReceiptImagePreview] = useState<string>("");
@@ -66,6 +67,7 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
         setInvoiceDate(expense.invoice_date || new Date().toISOString().split('T')[0]);
         setHasVat(expense.vat_amount > 0);
         setVatRate(expense.vat_rate?.toString() || "7");
+        setVatIncluded(false); // Reset to false for editing
         setNotes(expense.notes || "");
         setReceiptImagePreview(expense.receipt_image_url || "");
         
@@ -124,16 +126,39 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
   };
 
   const calculateSubtotal = () => {
-    return items.reduce((sum, item) => sum + item.amount, 0);
+    const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
+    
+    // If VAT is included in the price, we need to extract it
+    if (hasVat && vatIncluded) {
+      const vatMultiplier = 1 + (parseFloat(vatRate) / 100);
+      return totalAmount / vatMultiplier;
+    }
+    
+    return totalAmount;
   };
 
   const calculateVAT = () => {
     if (!hasVat) return 0;
-    const subtotal = calculateSubtotal();
-    return (subtotal * parseFloat(vatRate)) / 100;
+    
+    if (vatIncluded) {
+      // If VAT is included, calculate it from the total entered amount
+      const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
+      const vatMultiplier = 1 + (parseFloat(vatRate) / 100);
+      const subtotal = totalAmount / vatMultiplier;
+      return totalAmount - subtotal;
+    } else {
+      // If VAT is not included, calculate it from subtotal
+      const subtotal = calculateSubtotal();
+      return (subtotal * parseFloat(vatRate)) / 100;
+    }
   };
 
   const calculateTotal = () => {
+    if (vatIncluded) {
+      // If VAT is included, total is what was entered
+      return items.reduce((sum, item) => sum + item.amount, 0);
+    }
+    // If VAT is not included, add VAT to subtotal
     return calculateSubtotal() + calculateVAT();
   };
 
@@ -285,6 +310,7 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
     setInvoiceDate(new Date().toISOString().split('T')[0]);
     setHasVat(false);
     setVatRate("7");
+    setVatIncluded(false);
     setNotes("");
     setReceiptImage(null);
     setReceiptImagePreview("");
@@ -556,23 +582,17 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
           </div>
 
           <div className="space-y-3 pt-4 border-t">
-            <div className="flex justify-between text-sm">
-              <span>ยอดรวม (ก่อน VAT):</span>
-              <span className="font-medium">
-                {calculateSubtotal().toLocaleString('th-TH', { style: 'currency', currency: 'THB' })}
-              </span>
-            </div>
-            <div className="flex justify-between items-center text-sm">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <Checkbox 
-                    id="hasVat" 
-                    checked={hasVat} 
-                    onCheckedChange={(checked) => setHasVat(checked as boolean)}
-                  />
-                  <Label htmlFor="hasVat" className="cursor-pointer mb-0">มี VAT</Label>
-                </div>
-                {hasVat && (
+            <div className="flex items-center gap-3 text-sm mb-2">
+              <div className="flex items-center gap-2">
+                <Checkbox 
+                  id="hasVat" 
+                  checked={hasVat} 
+                  onCheckedChange={(checked) => setHasVat(checked as boolean)}
+                />
+                <Label htmlFor="hasVat" className="cursor-pointer mb-0">มี VAT</Label>
+              </div>
+              {hasVat && (
+                <>
                   <div className="flex items-center gap-2">
                     <Input
                       type="number"
@@ -583,8 +603,25 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
                     />
                     <span>%</span>
                   </div>
-                )}
-              </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox 
+                      id="vatIncluded" 
+                      checked={vatIncluded} 
+                      onCheckedChange={(checked) => setVatIncluded(checked as boolean)}
+                    />
+                    <Label htmlFor="vatIncluded" className="cursor-pointer mb-0">รายการรวม VAT แล้ว</Label>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="flex justify-between text-sm">
+              <span>ยอดรวม (ก่อน VAT):</span>
+              <span className="font-medium">
+                {calculateSubtotal().toLocaleString('th-TH', { style: 'currency', currency: 'THB' })}
+              </span>
+            </div>
+            <div className="flex justify-between items-center text-sm">
+              <span>VAT ({vatRate}%):</span>
               <span className="font-medium">
                 {hasVat ? calculateVAT().toLocaleString('th-TH', { style: 'currency', currency: 'THB' }) : '฿0.00'}
               </span>
