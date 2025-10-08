@@ -3,13 +3,13 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, User, DollarSign, Calendar, FileText, Plus } from "lucide-react";
+import { ArrowLeft, User, DollarSign, Calendar, FileText } from "lucide-react";
 import { toast } from "sonner";
 
 const EmployeeDetail = () => {
@@ -21,12 +21,6 @@ const EmployeeDetail = () => {
   const [leaveBalance, setLeaveBalance] = useState<any>(null);
   const [taxRecords, setTaxRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [salaryForm, setSalaryForm] = useState({
-    salary_amount: "",
-    effective_date: new Date().toISOString().split('T')[0],
-    notes: "",
-  });
 
   useEffect(() => {
     fetchData();
@@ -53,7 +47,7 @@ const EmployeeDetail = () => {
     // Fetch salary records
     const { data: salaryData, error: salaryError } = await supabase
       .from("salary_records")
-      .select("*, creator:created_by(full_name)")
+      .select("*")
       .eq("user_id", id)
       .order("effective_date", { ascending: false });
 
@@ -95,34 +89,6 @@ const EmployeeDetail = () => {
     setLoading(false);
   };
 
-  const handleAddSalary = async () => {
-    if (!salaryForm.salary_amount || !salaryForm.effective_date) {
-      toast.error("กรุณากรอกข้อมูลที่จำเป็น");
-      return;
-    }
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { error } = await supabase
-      .from("salary_records")
-      .insert({
-        user_id: id,
-        salary_amount: parseFloat(salaryForm.salary_amount),
-        effective_date: salaryForm.effective_date,
-        notes: salaryForm.notes,
-        created_by: user.id,
-      });
-
-    if (error) {
-      toast.error("เกิดข้อผิดพลาด: " + error.message);
-    } else {
-      toast.success("เพิ่มข้อมูลเงินเดือนสำเร็จ");
-      setDialogOpen(false);
-      setSalaryForm({ salary_amount: "", effective_date: new Date().toISOString().split('T')[0], notes: "" });
-      fetchData();
-    }
-  };
 
   const formatCurrency = (amount: number) => new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(amount);
 
@@ -270,51 +236,8 @@ const EmployeeDetail = () => {
 
         <TabsContent value="salary" className="mt-6">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader>
               <CardTitle>ประวัติการปรับเงินเดือน</CardTitle>
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm">
-                    <Plus size={16} className="mr-2" />
-                    เพิ่มข้อมูลเงินเดือน
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>เพิ่มข้อมูลเงินเดือน</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label>จำนวนเงิน (บาท) *</Label>
-                      <Input
-                        type="number"
-                        value={salaryForm.salary_amount}
-                        onChange={(e) => setSalaryForm({ ...salaryForm, salary_amount: e.target.value })}
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <div>
-                      <Label>วันที่มีผล *</Label>
-                      <Input
-                        type="date"
-                        value={salaryForm.effective_date}
-                        onChange={(e) => setSalaryForm({ ...salaryForm, effective_date: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <Label>หมายเหตุ</Label>
-                      <Input
-                        value={salaryForm.notes}
-                        onChange={(e) => setSalaryForm({ ...salaryForm, notes: e.target.value })}
-                        placeholder="เช่น การปรับเงินประจำปี"
-                      />
-                    </div>
-                    <Button onClick={handleAddSalary} className="w-full">
-                      บันทึก
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
             </CardHeader>
             <CardContent>
               {salaryRecords.length === 0 ? (
@@ -324,15 +247,14 @@ const EmployeeDetail = () => {
                   <div>
                     <h3 className="font-semibold mb-3">ประวัติเงินเดือน</h3>
                     <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>วันที่มีผล</TableHead>
-                          <TableHead className="text-right">จำนวนเงิน</TableHead>
-                          <TableHead>หมายเหตุ</TableHead>
-                          <TableHead>บันทึกโดย</TableHead>
-                          <TableHead>วันที่บันทึก</TableHead>
-                        </TableRow>
-                      </TableHeader>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>วันที่มีผล</TableHead>
+                            <TableHead className="text-right">จำนวนเงิน</TableHead>
+                            <TableHead>หมายเหตุ</TableHead>
+                            <TableHead>วันที่บันทึก</TableHead>
+                          </TableRow>
+                        </TableHeader>
                       <TableBody>
                         {salaryRecords.map((record) => (
                           <TableRow key={record.id}>
@@ -344,9 +266,6 @@ const EmployeeDetail = () => {
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground">
                               {record.notes || "-"}
-                            </TableCell>
-                            <TableCell>
-                              {salaryRecords.find(s => s.id === record.id)?.creator?.full_name || "-"}
                             </TableCell>
                             <TableCell>
                               {new Date(record.created_at).toLocaleDateString("th-TH")}
