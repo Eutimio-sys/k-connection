@@ -85,16 +85,20 @@ export default function ProjectChat({ projectId }: ProjectChatProps) {
   };
 
   const fetchMessages = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("project_messages")
       .select(`
         *,
-        profiles!project_messages_user_id_fkey(full_name),
-        tasks!project_messages_tagged_task_id_fkey(title)
+        profiles(full_name),
+        tasks(title)
       `)
       .eq("project_id", projectId)
       .order("created_at", { ascending: true });
 
+    if (error) {
+      console.error("Error fetching messages:", error);
+      return;
+    }
     if (data) setMessages(data as any);
   };
 
