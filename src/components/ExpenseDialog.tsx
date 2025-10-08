@@ -232,10 +232,26 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
 
       let receiptImageUrl = null;
 
-      // Upload image if exists
+      // Upload image if exists with organized folder structure
       if (receiptImage) {
+        const invDate = new Date(invoiceDate);
+        const year = invDate.getFullYear();
+        const month = String(invDate.getMonth() + 1).padStart(2, '0');
         const fileExt = receiptImage.name.split('.').pop();
-        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+        
+        // Generate invoice number first to use in filename
+        const { data: invoiceData } = await supabase.rpc('generate_invoice_number', {
+          p_company_id: companyId,
+          p_project_id: projectId,
+          p_invoice_date: invoiceDate,
+          p_expense_type: 'expense'
+        });
+        
+        const invNumber = invoiceData || `TEMP-${Date.now()}`;
+        const safeInvoiceNumber = invNumber.replace(/[\/\\]/g, '-');
+        
+        // Structure: expenses/YYYY/MM/invoice-number.ext
+        const fileName = `expenses/${year}/${month}/${safeInvoiceNumber}.${fileExt}`;
         
         const { error: uploadError } = await supabase.storage
           .from('receipts')

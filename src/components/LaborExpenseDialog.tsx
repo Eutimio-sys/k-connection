@@ -179,8 +179,17 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
 
     let receiptUrl = "";
     if (imageFile) {
+      const invDate = new Date(invoiceDate);
+      const year = invDate.getFullYear();
+      const month = String(invDate.getMonth() + 1).padStart(2, '0');
       const fileExt = imageFile.name.split(".").pop();
-      const fileName = `${Math.random()}.${fileExt}`;
+      
+      // Use the already generated invoice number
+      const safeInvoiceNumber = invoiceNumber.replace(/[\/\\]/g, '-');
+      
+      // Structure: labor_expenses/YYYY/MM/invoice-number.ext
+      const fileName = `labor_expenses/${year}/${month}/${safeInvoiceNumber}.${fileExt}`;
+      
       const { error: uploadError } = await supabase.storage
         .from("receipts")
         .upload(fileName, imageFile);
