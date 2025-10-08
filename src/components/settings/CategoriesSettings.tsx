@@ -20,7 +20,7 @@ const CategoriesSettings = () => {
     code: string;
     name: string;
     description: string;
-    category_type: "material" | "labor";
+    category_type: "material" | "labor" | "labor_contractor" | "other";
   }>({ code: "", name: "", description: "", category_type: "material" });
 
   useEffect(() => {
@@ -99,13 +99,15 @@ const CategoriesSettings = () => {
               </div>
               <div>
                 <Label>ประเภทหมวดหมู่ *</Label>
-                <Select value={formData.category_type} onValueChange={(value) => setFormData({...formData, category_type: value as "material" | "labor"})}>
+                <Select value={formData.category_type} onValueChange={(value) => setFormData({...formData, category_type: value as "material" | "labor" | "labor_contractor" | "other"})}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="material">หมวดหมู่วัสดุ</SelectItem>
                     <SelectItem value="labor">หมวดหมู่ค่าแรง</SelectItem>
+                    <SelectItem value="labor_contractor">หมวดหมู่ค่าแรงเหมา</SelectItem>
+                    <SelectItem value="other">หมวดหมู่อื่นๆ</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -140,7 +142,10 @@ const CategoriesSettings = () => {
                 <TableCell className="font-medium">{cat.name}</TableCell>
                 <TableCell>
                   <Badge variant="outline">
-                    {cat.category_type === "material" ? "วัสดุ" : "ค่าแรง"}
+                    {cat.category_type === "material" ? "วัสดุ" : 
+                     cat.category_type === "labor" ? "ค่าแรง" :
+                     cat.category_type === "labor_contractor" ? "ค่าแรงเหมา" :
+                     "อื่นๆ"}
                   </Badge>
                 </TableCell>
                 <TableCell>{cat.description || "-"}</TableCell>

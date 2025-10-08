@@ -14,11 +14,13 @@ interface MonthlyData {
   incomeVat: number;
   incomeWithholding: number;
   expenseVat: number;
+  materialCost: number;
   laborCost: number;
   laborWithholding: number;
+  contractLaborCost: number;
+  contractLaborWithholding: number;
   salary: number;
   socialSecurity: number;
-  employeeWithholding: number;
   vatToPay: number;
 }
 
@@ -29,8 +31,9 @@ const TaxPlanning = () => {
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
   const [loading, setLoading] = useState(true);
   const [additionalWithholdingNeeded, setAdditionalWithholdingNeeded] = useState(0);
-  const [monthlyPlanningInputs, setMonthlyPlanningInputs] = useState<{[key: number]: {additionalVat: number, additionalWithholding: number}}>({});
-  const [monthlyPlanningResults, setMonthlyPlanningResults] = useState<{[key: number]: {totalVat: number, totalWithholding: number, totalSocialSecurity: number}}>({});
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [monthlyPlanningInputs, setMonthlyPlanningInputs] = useState<{additionalVat: number, additionalWithholding: number}>({ additionalVat: 0, additionalWithholding: 0 });
+  const [monthlyPlanningResults, setMonthlyPlanningResults] = useState<{totalVat: number, totalWithholding: number, totalSocialSecurity: number} | null>(null);
   const { toast } = useToast();
 
   const months = [
@@ -99,6 +102,15 @@ const TaxPlanning = () => {
         .select("*")
         .eq("year", selectedYear);
 
+      // Fetch expense items to categorize by type
+      const { data: expenseItemsData } = await supabase
+        .from("expense_items")
+        .select(`
+          *,
+          expense_id,
+          category:expense_categories(category_type)
+        `);
+
       // Initialize monthly data
       const data: MonthlyData[] = Array.from({ length: 12 }, (_, i) => ({
         month: i + 1,
@@ -106,11 +118,13 @@ const TaxPlanning = () => {
         incomeVat: 0,
         incomeWithholding: 0,
         expenseVat: 0,
+        materialCost: 0,
         laborCost: 0,
         laborWithholding: 0,
+        contractLaborCost: 0,
+        contractLaborWithholding: 0,
         salary: 0,
         socialSecurity: 0,
-        employeeWithholding: 0,
         vatToPay: 0,
       }));
 
@@ -126,10 +140,23 @@ const TaxPlanning = () => {
         data[month].incomeWithholding += incomeWithholding;
       });
 
-      // Process expenses data
+      // Process expenses data and categorize by material vs labor
       expensesData?.forEach((expense) => {
         const month = new Date(expense.invoice_date).getMonth();
         data[month].expenseVat += Number(expense.vat_amount) || 0;
+        
+        // Get expense items for this expense
+        const items = expenseItemsData?.filter(item => item.expense_id === expense.id) || [];
+        items.forEach(item => {
+          const amount = Number(item.amount) || 0;
+          const categoryType = (item.category as any)?.category_type;
+          
+          if (categoryType === 'labor_contractor') {
+            data[month].contractLaborCost += amount;
+          } else if (categoryType === 'material') {
+            data[month].materialCost += amount;
+          }
+        });
       });
 
       // Process labor expenses data
@@ -137,6 +164,10 @@ const TaxPlanning = () => {
         const month = new Date(labor.invoice_date).getMonth();
         data[month].laborCost += Number(labor.total_amount) || 0;
         data[month].laborWithholding += Number(labor.withholding_tax_amount) || 0;
+        
+        // Calculate contract labor withholding (3% of contract labor cost)
+        const contractLaborForMonth = data[month].contractLaborCost;
+        data[month].contractLaborWithholding = contractLaborForMonth * 0.03;
       });
 
       // Process tax and social security data
@@ -144,7 +175,6 @@ const TaxPlanning = () => {
         const month = record.month - 1;
         if (month >= 0 && month < 12) {
           data[month].socialSecurity += Number(record.social_security_amount) || 0;
-          data[month].employeeWithholding += Number(record.tax_amount) || 0;
         }
       });
 
@@ -178,11 +208,13 @@ const TaxPlanning = () => {
         incomeVat: acc.incomeVat + month.incomeVat,
         incomeWithholding: acc.incomeWithholding + month.incomeWithholding,
         expenseVat: acc.expenseVat + month.expenseVat,
+        materialCost: acc.materialCost + month.materialCost,
         laborCost: acc.laborCost + month.laborCost,
         laborWithholding: acc.laborWithholding + month.laborWithholding,
+        contractLaborCost: acc.contractLaborCost + month.contractLaborCost,
+        contractLaborWithholding: acc.contractLaborWithholding + month.contractLaborWithholding,
         salary: acc.salary + month.salary,
         socialSecurity: acc.socialSecurity + month.socialSecurity,
-        employeeWithholding: acc.employeeWithholding + month.employeeWithholding,
         vatToPay: acc.vatToPay + month.vatToPay,
       }),
       {
@@ -190,11 +222,13 @@ const TaxPlanning = () => {
         incomeVat: 0,
         incomeWithholding: 0,
         expenseVat: 0,
+        materialCost: 0,
         laborCost: 0,
         laborWithholding: 0,
+        contractLaborCost: 0,
+        contractLaborWithholding: 0,
         salary: 0,
         socialSecurity: 0,
-        employeeWithholding: 0,
         vatToPay: 0,
       }
     );
@@ -202,17 +236,14 @@ const TaxPlanning = () => {
 
   const yearlyTotals = calculateYearlyTotals();
 
-  // Calculate total expenses (from expenses table, without VAT)
-  const totalExpensesWithoutVat = yearlyTotals.expenseVat / 0.07; // Reverse calculate from VAT
-
   // Calculate labor cost without withholding
   const laborCostWithoutWithholding = yearlyTotals.laborCost - yearlyTotals.laborWithholding;
 
   // Calculate accumulated withholding tax (sum of income withholding from all months)
   const accumulatedWithholding = yearlyTotals.incomeWithholding;
 
-  // Calculate net profit (รายได้ - ยอดบิลไม่รวมVAT - ค่าแรงไม่หักภาษี - เงินเดือน - ประกันสังคม - ภงด.1)
-  const netProfit = yearlyTotals.income - totalExpensesWithoutVat - laborCostWithoutWithholding - yearlyTotals.salary - yearlyTotals.socialSecurity - yearlyTotals.employeeWithholding;
+  // Calculate net profit (รายได้ - ยอดวัสดุ - ค่าแรงไม่หักภาษี - ค่าแรงเหมา - เงินเดือน - ประกันสังคม)
+  const netProfit = yearlyTotals.income - yearlyTotals.materialCost - laborCostWithoutWithholding - yearlyTotals.contractLaborCost - yearlyTotals.salary - yearlyTotals.socialSecurity;
 
   // Corporate income tax (20% on net profit)
   const corporateIncomeTax = netProfit > 0 ? netProfit * 0.20 : 0;
@@ -233,17 +264,13 @@ const TaxPlanning = () => {
 
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
 
-  const handleMonthlyCalculate = (month: number) => {
-    const monthData = monthlyData[month - 1];
-    const inputs = monthlyPlanningInputs[month] || { additionalVat: 0, additionalWithholding: 0 };
+  const handleMonthlyCalculate = () => {
+    const monthData = monthlyData[selectedMonth - 1];
     
     setMonthlyPlanningResults({
-      ...monthlyPlanningResults,
-      [month]: {
-        totalVat: monthData.vatToPay + inputs.additionalVat,
-        totalWithholding: monthData.incomeWithholding + monthData.laborWithholding + inputs.additionalWithholding,
-        totalSocialSecurity: monthData.socialSecurity,
-      }
+      totalVat: monthData.vatToPay + monthlyPlanningInputs.additionalVat,
+      totalWithholding: monthData.incomeWithholding + monthData.laborWithholding + monthData.contractLaborWithholding + monthlyPlanningInputs.additionalWithholding,
+      totalSocialSecurity: monthData.socialSecurity,
     });
   };
 
@@ -304,11 +331,13 @@ const TaxPlanning = () => {
                       <TableHead className="text-right">หักณที่จ่าย รายได้</TableHead>
                       <TableHead className="text-right">VAT ค่าใช้จ่าย</TableHead>
                       <TableHead className="text-right">VAT ที่ต้องจ่าย</TableHead>
+                      <TableHead className="text-right">ยอดวัสดุ</TableHead>
                       <TableHead className="text-right">ค่าแรง</TableHead>
                       <TableHead className="text-right">หักณที่จ่าย ค่าแรง</TableHead>
+                      <TableHead className="text-right">ค่าแรงเหมา</TableHead>
+                      <TableHead className="text-right">หักณที่จ่าย ค่าแรงเหมา</TableHead>
                       <TableHead className="text-right">เงินเดือน</TableHead>
                       <TableHead className="text-right">ประกันสังคม</TableHead>
-                      <TableHead className="text-right">ภงด.1</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -320,11 +349,13 @@ const TaxPlanning = () => {
                         <TableCell className="text-right">{formatCurrency(data.incomeWithholding)}</TableCell>
                         <TableCell className="text-right">{formatCurrency(data.expenseVat)}</TableCell>
                         <TableCell className="text-right">{formatCurrency(data.vatToPay)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(data.materialCost)}</TableCell>
                         <TableCell className="text-right">{formatCurrency(data.laborCost)}</TableCell>
                         <TableCell className="text-right">{formatCurrency(data.laborWithholding)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(data.contractLaborCost)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(data.contractLaborWithholding)}</TableCell>
                         <TableCell className="text-right">{formatCurrency(data.salary)}</TableCell>
                         <TableCell className="text-right">{formatCurrency(data.socialSecurity)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(data.employeeWithholding)}</TableCell>
                       </TableRow>
                     ))}
                     <TableRow className="font-bold bg-muted">
@@ -334,11 +365,13 @@ const TaxPlanning = () => {
                       <TableCell className="text-right">{formatCurrency(yearlyTotals.incomeWithholding)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(yearlyTotals.expenseVat)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(yearlyTotals.vatToPay)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(yearlyTotals.materialCost)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(yearlyTotals.laborCost)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(yearlyTotals.laborWithholding)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(yearlyTotals.contractLaborCost)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(yearlyTotals.contractLaborWithholding)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(yearlyTotals.salary)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(yearlyTotals.socialSecurity)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(yearlyTotals.employeeWithholding)}</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
@@ -351,83 +384,103 @@ const TaxPlanning = () => {
               <CardTitle>สรุปภาษีประจำเดือน</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
-                {monthlyData.map((data, index) => {
-                  const monthInputs = monthlyPlanningInputs[data.month] || { additionalVat: 0, additionalWithholding: 0 };
-                  const monthResults = monthlyPlanningResults[data.month];
-                  
-                  return (
-                    <div key={data.month} className="p-4 border rounded-lg space-y-4">
-                      <h3 className="font-semibold text-lg">{months[index]}</h3>
-                      
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <p className="text-sm text-muted-foreground">หักณที่จ่าย</p>
-                          <p className="font-semibold">{formatCurrency(data.incomeWithholding + data.laborWithholding)}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">ประกันสังคม</p>
-                          <p className="font-semibold">{formatCurrency(data.socialSecurity)}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">VAT ที่ต้องจ่าย</p>
-                          <p className="font-semibold">{formatCurrency(data.vatToPay)}</p>
-                        </div>
+              <div className="space-y-4">
+                <div>
+                  <Label>เลือกเดือน</Label>
+                  <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(Number(value))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {months.map((month, index) => (
+                        <SelectItem key={index + 1} value={(index + 1).toString()}>
+                          {month}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {monthlyData[selectedMonth - 1] && (
+                  <div className="p-4 border rounded-lg space-y-4">
+                    <h3 className="font-semibold text-lg">{months[selectedMonth - 1]}</h3>
+                    
+                    <div className="grid grid-cols-4 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">หักณที่จ่าย รายได้</p>
+                        <p className="font-semibold">{formatCurrency(monthlyData[selectedMonth - 1].incomeWithholding)}</p>
                       </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>VAT เพิ่มเติม</Label>
-                          <Input
-                            type="number"
-                            value={monthInputs.additionalVat}
-                            onChange={(e) => setMonthlyPlanningInputs({
-                              ...monthlyPlanningInputs,
-                              [data.month]: { ...monthInputs, additionalVat: Number(e.target.value) || 0 }
-                            })}
-                            placeholder="0.00"
-                          />
-                        </div>
-                        <div>
-                          <Label>หักณที่จ่ายเพิ่มเติม</Label>
-                          <Input
-                            type="number"
-                            value={monthInputs.additionalWithholding}
-                            onChange={(e) => setMonthlyPlanningInputs({
-                              ...monthlyPlanningInputs,
-                              [data.month]: { ...monthInputs, additionalWithholding: Number(e.target.value) || 0 }
-                            })}
-                            placeholder="0.00"
-                          />
-                        </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">หักณที่จ่าย ค่าแรง</p>
+                        <p className="font-semibold">{formatCurrency(monthlyData[selectedMonth - 1].laborWithholding)}</p>
                       </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">หักณที่จ่าย ค่าแรงเหมา</p>
+                        <p className="font-semibold">{formatCurrency(monthlyData[selectedMonth - 1].contractLaborWithholding)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">ประกันสังคม</p>
+                        <p className="font-semibold">{formatCurrency(monthlyData[selectedMonth - 1].socialSecurity)}</p>
+                      </div>
+                    </div>
 
-                      <Button onClick={() => handleMonthlyCalculate(data.month)} className="w-full">
-                        คำนวณ
-                      </Button>
+                    <div className="pt-2">
+                      <p className="text-sm text-muted-foreground">VAT ที่ต้องจ่าย</p>
+                      <p className="font-semibold">{formatCurrency(monthlyData[selectedMonth - 1].vatToPay)}</p>
+                    </div>
 
-                      {monthResults && (
-                        <div className="mt-4 p-4 bg-muted rounded-lg space-y-2">
-                          <h4 className="font-semibold">ผลลัพธ์หลังวางแผน</h4>
-                          <div className="grid grid-cols-3 gap-4">
-                            <div>
-                              <p className="text-sm text-muted-foreground">VAT รวม</p>
-                              <p className="font-semibold">{formatCurrency(monthResults.totalVat)}</p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">หักณที่จ่ายรวม</p>
-                              <p className="font-semibold">{formatCurrency(monthResults.totalWithholding)}</p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">ประกันสังคม</p>
-                              <p className="font-semibold">{formatCurrency(monthResults.totalSocialSecurity)}</p>
-                            </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>VAT เพิ่มเติม</Label>
+                        <Input
+                          type="number"
+                          value={monthlyPlanningInputs.additionalVat}
+                          onChange={(e) => setMonthlyPlanningInputs({
+                            ...monthlyPlanningInputs,
+                            additionalVat: Number(e.target.value) || 0
+                          })}
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div>
+                        <Label>หักณที่จ่ายเพิ่มเติม</Label>
+                        <Input
+                          type="number"
+                          value={monthlyPlanningInputs.additionalWithholding}
+                          onChange={(e) => setMonthlyPlanningInputs({
+                            ...monthlyPlanningInputs,
+                            additionalWithholding: Number(e.target.value) || 0
+                          })}
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+
+                    <Button onClick={handleMonthlyCalculate} className="w-full">
+                      คำนวณ
+                    </Button>
+
+                    {monthlyPlanningResults && (
+                      <div className="mt-4 p-4 bg-muted rounded-lg space-y-2">
+                        <h4 className="font-semibold">ผลลัพธ์หลังวางแผน</h4>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <p className="text-sm text-muted-foreground">VAT รวม</p>
+                            <p className="font-semibold">{formatCurrency(monthlyPlanningResults.totalVat)}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">หักณที่จ่ายรวม</p>
+                            <p className="font-semibold">{formatCurrency(monthlyPlanningResults.totalWithholding)}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">ประกันสังคม</p>
+                            <p className="font-semibold">{formatCurrency(monthlyPlanningResults.totalSocialSecurity)}</p>
                           </div>
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -443,8 +496,8 @@ const TaxPlanning = () => {
                   <span className="font-semibold">{formatCurrency(yearlyTotals.income)}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b">
-                  <span>ค่าใช้จ่ายรวม (ไม่รวม VAT)</span>
-                  <span className="font-semibold">{formatCurrency(totalExpensesWithoutVat)}</span>
+                  <span>ค่าใช้จ่ายรวม (วัสดุ + ค่าแรงเหมา)</span>
+                  <span className="font-semibold">{formatCurrency(yearlyTotals.materialCost + yearlyTotals.contractLaborCost)}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b">
                   <span>หักณที่จ่ายสะสม (รายได้)</span>
