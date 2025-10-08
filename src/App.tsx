@@ -24,6 +24,7 @@ import Profile from "./pages/Profile";
 import Attendance from "./pages/Attendance";
 import LeaveManagement from "./pages/LeaveManagement";
 import TaxPlanning from "./pages/TaxPlanning";
+import MyWork from "./pages/MyWork";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,6 +56,7 @@ const App = () => (
             <Route path="/profile" element={<Profile />} />
             <Route path="/attendance" element={<Attendance />} />
             <Route path="/leave" element={<LeaveManagement />} />
+            <Route path="/mywork" element={<MyWork />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<NotFound />} />

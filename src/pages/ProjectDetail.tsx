@@ -9,9 +9,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, MapPin, Calendar, TrendingUp, Building2, User, ShoppingCart, Package, Wrench, DollarSign, Info, RefreshCcw } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, TrendingUp, Building2, User, ShoppingCart, Package, Wrench, DollarSign, Info, RefreshCcw, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import IncomeHistoryDialog from "@/components/IncomeHistoryDialog";
+import ProjectChat from "@/components/ProjectChat";
 
 const ProjectDetail = () => {
   const { id } = useParams();
@@ -460,7 +461,7 @@ const ProjectDetail = () => {
       </Dialog>
 
       <Tabs defaultValue="purchases" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="purchases" className="gap-2">
             <ShoppingCart size={16} />
             ใบขอซื้อ
@@ -472,6 +473,10 @@ const ProjectDetail = () => {
           <TabsTrigger value="labor" className="gap-2">
             <Wrench size={16} />
             บัญชีค่าแรง
+          </TabsTrigger>
+          <TabsTrigger value="chat" className="gap-2">
+            <MessageCircle size={16} />
+            แชท
           </TabsTrigger>
         </TabsList>
 
@@ -702,6 +707,10 @@ const ProjectDetail = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="chat" className="mt-6">
+          {id && <ProjectChat projectId={id} />}
         </TabsContent>
       </Tabs>
     </div>
