@@ -58,7 +58,9 @@ const menuItems = [
 
 export function AppSidebar() {
   const [pendingCount, setPendingCount] = useState(0);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
   const { role, permissions, loading } = usePermissions();
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   // Filter menu items based on permissions
   const visibleMenuItems = menuItems.filter((item) => {
@@ -69,7 +71,19 @@ export function AppSidebar() {
   });
 
   useEffect(() => {
+    // Get current user
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setCurrentUserId(user.id);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
     fetchPendingCount();
+    if (currentUserId) {
+      fetchUnreadChatCount();
+    }
 
     // Subscribe to real-time updates
     const channel = supabase
@@ -77,12 +91,18 @@ export function AppSidebar() {
       .on("postgres_changes", { event: "*", schema: "public", table: "expenses" }, fetchPendingCount)
       .on("postgres_changes", { event: "*", schema: "public", table: "labor_expenses" }, fetchPendingCount)
       .on("postgres_changes", { event: "*", schema: "public", table: "leave_requests" }, fetchPendingCount)
+      .on("postgres_changes", { event: "*", schema: "public", table: "general_chat" }, () => {
+        if (currentUserId) fetchUnreadChatCount();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "project_messages" }, () => {
+        if (currentUserId) fetchUnreadChatCount();
+      })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [currentUserId]);
 
   const fetchPendingCount = async () => {
     const [expenses, laborExpenses, leaveRequests] = await Promise.all([
@@ -93,6 +113,46 @@ export function AppSidebar() {
 
     const total = (expenses.count || 0) + (laborExpenses.count || 0) + (leaveRequests.count || 0);
     setPendingCount(total);
+  };
+
+  const fetchUnreadChatCount = async () => {
+    if (!currentUserId) return;
+
+    // Get last read timestamps from localStorage
+    const lastReadGeneral = localStorage.getItem(`lastReadChat_general_${currentUserId}`);
+    const lastReadGeneralTime = lastReadGeneral ? new Date(lastReadGeneral) : new Date(0);
+
+    // Count unread general chat messages
+    const { count: generalCount } = await supabase
+      .from("general_chat")
+      .select("id", { count: "exact", head: true })
+      .neq("user_id", currentUserId)
+      .gt("created_at", lastReadGeneralTime.toISOString());
+
+    // Count unread project messages across all projects
+    const { data: projects } = await supabase
+      .from("projects")
+      .select("id");
+
+    let projectMessagesCount = 0;
+    if (projects) {
+      for (const project of projects) {
+        const lastReadProject = localStorage.getItem(`lastReadChat_project_${project.id}_${currentUserId}`);
+        const lastReadProjectTime = lastReadProject ? new Date(lastReadProject) : new Date(0);
+
+        const { count } = await supabase
+          .from("project_messages")
+          .select("id", { count: "exact", head: true })
+          .eq("project_id", project.id)
+          .neq("user_id", currentUserId)
+          .gt("created_at", lastReadProjectTime.toISOString());
+
+        projectMessagesCount += count || 0;
+      }
+    }
+
+    const total = (generalCount || 0) + projectMessagesCount;
+    setUnreadChatCount(total);
   };
 
   return (
@@ -133,6 +193,11 @@ export function AppSidebar() {
                       {item.url === "/approvals" && pendingCount > 0 && (
                         <Badge variant="destructive" className="ml-auto">
                           {pendingCount}
+                        </Badge>
+                      )}
+                      {item.url === "/chat" && unreadChatCount > 0 && (
+                        <Badge variant="destructive" className="ml-auto">
+                          {unreadChatCount}
                         </Badge>
                       )}
                     </NavLink>
