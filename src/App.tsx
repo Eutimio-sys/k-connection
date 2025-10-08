@@ -2,9 +2,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import Auth from "./pages/Auth";
-import Layout from "./components/Layout";
+import { DashboardLayout } from "./components/DashboardLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
@@ -40,7 +40,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/auth" element={<Auth />} />
-          <Route element={<Layout />}>
+          <Route element={<DashboardLayout><Outlet /></DashboardLayout>}>
             <Route path="/" element={<Index />} />
             <Route path="/dashboard" element={<ProtectedRoute featureCode="dashboard"><Dashboard /></ProtectedRoute>} />
             <Route path="/projects" element={<ProtectedRoute featureCode="projects"><Projects /></ProtectedRoute>} />
