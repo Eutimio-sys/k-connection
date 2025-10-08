@@ -20,6 +20,8 @@ const Payroll = () => {
   const [historyData, setHistoryData] = useState<any[]>([]);
   const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
 
   useEffect(() => {
     fetchEmployees();
@@ -90,8 +92,8 @@ const Payroll = () => {
         salary: emp.current_salary || 0,
         tax: previousTaxMap[emp.id] || 0,
         social_security: 750,
-        year: currentYear,
-        month: currentMonth,
+        year: selectedYear,
+        month: selectedMonth,
       };
     });
 
@@ -251,93 +253,124 @@ const Payroll = () => {
         </TabsList>
 
         <TabsContent value="entry" className="space-y-4">
-          {employees.map((employee) => (
-            <Card key={employee.id}>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <DollarSign className="w-5 h-5 text-primary" />
-                    <div>
-                      <p className="text-lg">{employee.full_name}</p>
-                      <p className="text-sm font-normal text-muted-foreground">
-                        {employee.position || "ไม่ระบุตำแหน่ง"} - {employee.department || "ไม่ระบุแผนก"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right space-y-1">
-                    <div>
-                      <p className="text-sm text-muted-foreground">เงินเดือน</p>
-                      <p className="text-lg font-bold text-primary">
-                        {formatCurrency(employee.current_salary)}
-                      </p>
-                    </div>
-                    <div className="pt-2 border-t">
-                      <p className="text-sm text-muted-foreground">ยอดจ่ายคงเหลือ</p>
-                      <p className="text-xl font-bold text-green-600">
-                        {formatCurrency(
-                          employee.current_salary - 
-                          (parseFloat(formData[employee.id]?.tax) || 0) - 
-                          (parseFloat(formData[employee.id]?.social_security) || 0)
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                  <div>
-                    <Label>ปี</Label>
-                    <Input
-                      type="number"
-                      value={formData[employee.id]?.year || ""}
-                      onChange={(e) => handleInputChange(employee.id, "year", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label>เดือน</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      max="12"
-                      value={formData[employee.id]?.month || ""}
-                      onChange={(e) => handleInputChange(employee.id, "month", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label>ภาษีหัก ณ ที่จ่าย (บาท)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={formData[employee.id]?.tax || ""}
-                      onChange={(e) => handleInputChange(employee.id, "tax", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label>ประกันสังคม (บาท)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="750"
-                      value={formData[employee.id]?.social_security || ""}
-                      onChange={(e) => handleInputChange(employee.id, "social_security", e.target.value)}
-                    />
-                  </div>
-                  <div className="flex items-end">
-                    <Button
-                      onClick={() => handleSave(employee.id)}
-                      disabled={saving === employee.id}
-                      className="w-full"
-                    >
-                      <Save size={16} className="mr-2" />
-                      {saving === employee.id ? "กำลังบันทึก..." : "บันทึก"}
-                    </Button>
-                  </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="w-5 h-5" />
+                บันทึกข้อมูลเงินเดือน
+              </CardTitle>
+              <div className="flex items-end gap-4 mt-4">
+                <div>
+                  <Label>ปี</Label>
+                  <Input
+                    type="number"
+                    value={selectedYear}
+                    onChange={(e) => {
+                      const year = parseInt(e.target.value);
+                      setSelectedYear(year);
+                      const newFormData = { ...formData };
+                      Object.keys(newFormData).forEach(key => {
+                        newFormData[key] = { ...newFormData[key], year };
+                      });
+                      setFormData(newFormData);
+                    }}
+                    className="w-32"
+                  />
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+                <div>
+                  <Label>เดือน</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="12"
+                    value={selectedMonth}
+                    onChange={(e) => {
+                      const month = parseInt(e.target.value);
+                      setSelectedMonth(month);
+                      const newFormData = { ...formData };
+                      Object.keys(newFormData).forEach(key => {
+                        newFormData[key] = { ...newFormData[key], month };
+                      });
+                      setFormData(newFormData);
+                    }}
+                    className="w-32"
+                  />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ชื่อพนักงาน</TableHead>
+                    <TableHead>ตำแหน่ง</TableHead>
+                    <TableHead className="text-right">เงินเดือน</TableHead>
+                    <TableHead className="text-right">ภาษีหัก ณ ที่จ่าย</TableHead>
+                    <TableHead className="text-right">ประกันสังคม</TableHead>
+                    <TableHead className="text-right">ยอดจ่ายคงเหลือ</TableHead>
+                    <TableHead className="text-center">การดำเนินการ</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {employees.map((employee) => {
+                    const tax = parseFloat(formData[employee.id]?.tax) || 0;
+                    const socialSecurity = parseFloat(formData[employee.id]?.social_security) || 0;
+                    const netPay = employee.current_salary - tax - socialSecurity;
+                    
+                    return (
+                      <TableRow key={employee.id}>
+                        <TableCell className="font-medium">
+                          <div>
+                            <p>{employee.full_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {employee.department || "ไม่ระบุแผนก"}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>{employee.position || "-"}</TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(employee.current_salary)}
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={formData[employee.id]?.tax || ""}
+                            onChange={(e) => handleInputChange(employee.id, "tax", e.target.value)}
+                            className="text-right w-32"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="750"
+                            value={formData[employee.id]?.social_security || ""}
+                            onChange={(e) => handleInputChange(employee.id, "social_security", e.target.value)}
+                            className="text-right w-32"
+                          />
+                        </TableCell>
+                        <TableCell className="text-right font-bold text-green-600">
+                          {formatCurrency(netPay)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            onClick={() => handleSave(employee.id)}
+                            disabled={saving === employee.id}
+                            size="sm"
+                          >
+                            <Save size={14} className="mr-1" />
+                            {saving === employee.id ? "กำลังบันทึก..." : "บันทึก"}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="history" className="space-y-6">
