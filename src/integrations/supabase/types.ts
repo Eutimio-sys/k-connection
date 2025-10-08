@@ -1068,7 +1068,6 @@ export type Database = {
           id_card: string | null
           phone: string | null
           position: string | null
-          role: Database["public"]["Enums"]["user_role"]
           updated_at: string
         }
         Insert: {
@@ -1089,7 +1088,6 @@ export type Database = {
           id_card?: string | null
           phone?: string | null
           position?: string | null
-          role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
         Update: {
@@ -1110,7 +1108,6 @@ export type Database = {
           id_card?: string | null
           phone?: string | null
           position?: string | null
-          role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
         Relationships: [
@@ -1413,7 +1410,7 @@ export type Database = {
           created_at: string
           feature_code: string
           id: string
-          role: Database["public"]["Enums"]["user_role"]
+          role: string
           updated_at: string
         }
         Insert: {
@@ -1421,7 +1418,7 @@ export type Database = {
           created_at?: string
           feature_code: string
           id?: string
-          role: Database["public"]["Enums"]["user_role"]
+          role: string
           updated_at?: string
         }
         Update: {
@@ -1429,10 +1426,17 @@ export type Database = {
           created_at?: string
           feature_code?: string
           id?: string
-          role?: Database["public"]["Enums"]["user_role"]
+          role?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_role_permissions_role"
+            columns: ["role"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["code"]
+          },
           {
             foreignKeyName: "role_permissions_feature_code_fkey"
             columns: ["feature_code"]
@@ -1441,6 +1445,36 @@ export type Database = {
             referencedColumns: ["code"]
           },
         ]
+      }
+      roles: {
+        Row: {
+          code: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       salary_records: {
         Row: {
@@ -1591,24 +1625,32 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
-          role: Database["public"]["Enums"]["user_role"]
+          role: string
           user_id: string
         }
         Insert: {
           created_at?: string
           created_by?: string | null
           id?: string
-          role: Database["public"]["Enums"]["user_role"]
+          role: string
           user_id: string
         }
         Update: {
           created_at?: string
           created_by?: string | null
           id?: string
-          role?: Database["public"]["Enums"]["user_role"]
+          role?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_user_roles_role"
+            columns: ["role"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["code"]
+          },
+        ]
       }
       vendors: {
         Row: {
@@ -1719,10 +1761,7 @@ export type Database = {
         Returns: string
       }
       has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["user_role"]
-          _user_id: string
-        }
+        Args: { _role: string; _user_id: string }
         Returns: boolean
       }
       is_admin_or_manager: {
@@ -1733,7 +1772,6 @@ export type Database = {
     Enums: {
       category_type: "material" | "labor" | "labor_contractor" | "other"
       leave_type: "sick" | "personal" | "vacation" | "maternity" | "unpaid"
-      user_role: "admin" | "manager" | "accountant" | "purchaser" | "worker"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1863,7 +1901,6 @@ export const Constants = {
     Enums: {
       category_type: ["material", "labor", "labor_contractor", "other"],
       leave_type: ["sick", "personal", "vacation", "maternity", "unpaid"],
-      user_role: ["admin", "manager", "accountant", "purchaser", "worker"],
     },
   },
 } as const

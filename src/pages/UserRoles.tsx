@@ -10,8 +10,6 @@ import { Loader2, Shield, UserCog, Settings } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 
-type Role = "admin" | "manager" | "accountant" | "worker" | "purchaser";
-
 interface UserProfile {
   id: string;
   full_name: string;
@@ -23,7 +21,7 @@ interface UserProfile {
 interface UserRole {
   id: string;
   user_id: string;
-  role: Role;
+  role: string;
   created_at: string;
 }
 
@@ -37,18 +35,30 @@ interface Feature {
 
 interface RolePermission {
   id: string;
-  role: Role;
+  role: string;
   feature_code: string;
   can_access: boolean;
+}
+
+interface Role {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
 }
 
 export default function UserRoles() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [features, setFeatures] = useState<Feature[]>([]);
   const [rolePermissions, setRolePermissions] = useState<RolePermission[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
+  const [showRoleDialog, setShowRoleDialog] = useState(false);
+  const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [newRoleData, setNewRoleData] = useState({ code: '', name: '', description: '' });
 
   useEffect(() => {
     fetchData();
@@ -74,6 +84,15 @@ export default function UserRoles() {
 
       if (rolesError) throw rolesError;
 
+      // Fetch all roles from roles table
+      const { data: allRolesData, error: allRolesError } = await supabase
+        .from("roles")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+
+      if (allRolesError) throw allRolesError;
+
       // Fetch all features
       const { data: featuresData, error: featuresError } = await supabase
         .from("features")
@@ -92,6 +111,7 @@ export default function UserRoles() {
 
       setUsers(profilesData || []);
       setUserRoles(rolesData || []);
+      setRoles(allRolesData || []);
       setFeatures(featuresData || []);
       setRolePermissions(permissionsData || []);
     } catch (error: any) {
@@ -101,13 +121,13 @@ export default function UserRoles() {
     }
   };
 
-  const getUserRoles = (userId: string): Role[] => {
+  const getUserRoles = (userId: string): string[] => {
     return userRoles
       .filter(ur => ur.user_id === userId)
       .map(ur => ur.role);
   };
 
-  const handleAddRole = async (userId: string, role: Role) => {
+  const handleAddRole = async (userId: string, roleCode: string) => {
     try {
       setSaving(userId);
       
@@ -115,7 +135,7 @@ export default function UserRoles() {
         .from("user_roles")
         .insert({
           user_id: userId,
-          role: role,
+          role: roleCode,
         });
 
       if (error) {
@@ -126,7 +146,7 @@ export default function UserRoles() {
         }
       } else {
         toast.success("เพิ่มบทบาทสำเร็จ");
-        fetchData();
+        await fetchData();
       }
     } catch (error: any) {
       toast.error("เกิดข้อผิดพลาด: " + error.message);
@@ -135,7 +155,7 @@ export default function UserRoles() {
     }
   };
 
-  const handleRemoveRole = async (userId: string, role: Role) => {
+  const handleRemoveRole = async (userId: string, roleCode: string) => {
     try {
       setSaving(userId);
       
@@ -143,12 +163,12 @@ export default function UserRoles() {
         .from("user_roles")
         .delete()
         .eq("user_id", userId)
-        .eq("role", role);
+        .eq("role", roleCode);
 
       if (error) throw error;
 
       toast.success("ลบบทบาทสำเร็จ");
-      fetchData();
+      await fetchData();
     } catch (error: any) {
       toast.error("เกิดข้อผิดพลาด: " + error.message);
     } finally {
@@ -156,8 +176,8 @@ export default function UserRoles() {
     }
   };
 
-  const getRoleBadgeVariant = (role: Role) => {
-    switch (role) {
+  const getRoleBadgeVariant = (roleCode: string) => {
+    switch (roleCode) {
       case "admin":
         return "destructive";
       case "manager":
@@ -169,33 +189,26 @@ export default function UserRoles() {
     }
   };
 
-  const getRoleLabel = (role: Role) => {
-    const labels: Record<Role, string> = {
-      admin: "ผู้ดูแลระบบ",
-      manager: "ผู้จัดการ",
-      accountant: "นักบัญชี",
-      worker: "พนักงาน",
-      purchaser: "จัดซื้อ",
-    };
-    return labels[role] || role;
+  const getRoleLabel = (roleCode: string) => {
+    const role = roles.find(r => r.code === roleCode);
+    return role?.name || roleCode;
   };
 
-  const availableRoles: Role[] = ["admin", "manager", "accountant", "worker", "purchaser"];
 
-  const hasPermission = (role: Role, featureCode: string): boolean => {
+  const hasPermission = (roleCode: string, featureCode: string): boolean => {
     const permission = rolePermissions.find(
-      p => p.role === role && p.feature_code === featureCode
+      p => p.role === roleCode && p.feature_code === featureCode
     );
     return permission?.can_access || false;
   };
 
-  const handleTogglePermission = async (role: Role, featureCode: string, currentValue: boolean) => {
+  const handleTogglePermission = async (roleCode: string, featureCode: string, currentValue: boolean) => {
     try {
-      setSaving(`${role}-${featureCode}`);
+      setSaving(`${roleCode}-${featureCode}`);
 
       // Check if permission exists
       const existing = rolePermissions.find(
-        p => p.role === role && p.feature_code === featureCode
+        p => p.role === roleCode && p.feature_code === featureCode
       );
 
       if (existing) {
@@ -211,7 +224,7 @@ export default function UserRoles() {
         const { error } = await supabase
           .from("role_permissions")
           .insert({
-            role,
+            role: roleCode,
             feature_code: featureCode,
             can_access: !currentValue
           });
@@ -293,7 +306,7 @@ export default function UserRoles() {
                 </TableHeader>
                 <TableBody>
                   {users.map((user) => {
-                    const roles = getUserRoles(user.id);
+                    const userRolesList = getUserRoles(user.id);
                     const isSaving = saving === user.id;
                     
                     return (
@@ -304,17 +317,17 @@ export default function UserRoles() {
                         <TableCell>{user.department || "-"}</TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
-                            {roles.length === 0 ? (
+                            {userRolesList.length === 0 ? (
                               <Badge variant="outline">ไม่มีบทบาท</Badge>
                             ) : (
-                              roles.map((role) => (
+                              userRolesList.map((roleCode) => (
                                 <Badge
-                                  key={role}
-                                  variant={getRoleBadgeVariant(role)}
+                                  key={roleCode}
+                                  variant={getRoleBadgeVariant(roleCode)}
                                   className="cursor-pointer hover:opacity-80"
-                                  onClick={() => handleRemoveRole(user.id, role)}
+                                  onClick={() => handleRemoveRole(user.id, roleCode)}
                                 >
-                                  {getRoleLabel(role)} ×
+                                  {getRoleLabel(roleCode)} ×
                                 </Badge>
                               ))
                             )}
@@ -323,17 +336,17 @@ export default function UserRoles() {
                         <TableCell>
                           <Select
                             disabled={isSaving}
-                            onValueChange={(value) => handleAddRole(user.id, value as Role)}
+                            onValueChange={(value) => handleAddRole(user.id, value)}
                           >
                             <SelectTrigger className="w-[180px]">
                               <SelectValue placeholder="เลือกบทบาท" />
                             </SelectTrigger>
                             <SelectContent>
-                              {availableRoles
-                                .filter(role => !roles.includes(role))
+                              {roles
+                                .filter(role => !userRolesList.includes(role.code))
                                 .map((role) => (
-                                  <SelectItem key={role} value={role}>
-                                    {getRoleLabel(role)}
+                                  <SelectItem key={role.code} value={role.code}>
+                                    {role.name}
                                   </SelectItem>
                                 ))}
                             </SelectContent>
@@ -352,26 +365,12 @@ export default function UserRoles() {
               <CardTitle>คำอธิบายบทบาท</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <div className="flex items-start gap-2">
-                <Badge variant="destructive">ผู้ดูแลระบบ</Badge>
-                <p className="text-sm text-muted-foreground">มีสิทธิ์เต็มในการจัดการระบบทั้งหมด</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <Badge>ผู้จัดการ</Badge>
-                <p className="text-sm text-muted-foreground">จัดการโครงการ อนุมัติรายการต่างๆ</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <Badge variant="secondary">นักบัญชี</Badge>
-                <p className="text-sm text-muted-foreground">จัดการบัญชี รายรับ-รายจ่าย</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <Badge variant="outline">จัดซื้อ</Badge>
-                <p className="text-sm text-muted-foreground">สร้างคำขอจัดซื้อ</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <Badge variant="outline">พนักงาน</Badge>
-                <p className="text-sm text-muted-foreground">ดูข้อมูลส่วนตัวและทำงานตามที่ได้รับมอบหมาย</p>
-              </div>
+              {roles.map(role => (
+                <div key={role.code} className="flex items-start gap-2">
+                  <Badge variant={getRoleBadgeVariant(role.code)}>{role.name}</Badge>
+                  <p className="text-sm text-muted-foreground">{role.description}</p>
+                </div>
+              ))}
             </CardContent>
           </Card>
         </TabsContent>
@@ -395,9 +394,9 @@ export default function UserRoles() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-[300px]">ฟีเจอร์</TableHead>
-                        {availableRoles.map(role => (
-                          <TableHead key={role} className="text-center">
-                            {getRoleLabel(role)}
+                        {roles.map(role => (
+                          <TableHead key={role.code} className="text-center">
+                            {role.name}
                           </TableHead>
                         ))}
                       </TableRow>
@@ -415,16 +414,16 @@ export default function UserRoles() {
                               )}
                             </div>
                           </TableCell>
-                          {availableRoles.map(role => {
-                            const hasAccess = hasPermission(role, feature.code);
-                            const isSaving = saving === `${role}-${feature.code}`;
+                          {roles.map(role => {
+                            const hasAccess = hasPermission(role.code, feature.code);
+                            const isSaving = saving === `${role.code}-${feature.code}`;
                             
                             return (
-                              <TableCell key={role} className="text-center">
+                              <TableCell key={role.code} className="text-center">
                                 <Switch
                                   checked={hasAccess}
                                   disabled={isSaving}
-                                  onCheckedChange={() => handleTogglePermission(role, feature.code, hasAccess)}
+                                  onCheckedChange={() => handleTogglePermission(role.code, feature.code, hasAccess)}
                                 />
                               </TableCell>
                             );
