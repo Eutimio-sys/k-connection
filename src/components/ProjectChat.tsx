@@ -152,7 +152,7 @@ export default function ProjectChat({ projectId }: ProjectChatProps) {
       message: newMessage.trim() || "(ส่งไฟล์)",
       file_url: fileUrl,
       file_name: fileName,
-      tagged_task_id: selectedTaskId || null,
+      tagged_task_id: selectedTaskId && selectedTaskId !== "none" ? selectedTaskId : null,
     });
 
     if (error) {
@@ -268,7 +268,7 @@ export default function ProjectChat({ projectId }: ProjectChatProps) {
                         <SelectValue placeholder="เลือกงานที่ต้องการแท็ก" />
                       </SelectTrigger>
                       <SelectContent className="bg-background">
-                        <SelectItem value="">ไม่แท็กงาน</SelectItem>
+                        <SelectItem value="none">ไม่แท็กงาน</SelectItem>
                         {tasks.map((task) => (
                           <SelectItem key={task.id} value={task.id}>
                             {task.title}
