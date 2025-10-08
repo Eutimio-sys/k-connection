@@ -19,6 +19,7 @@ interface EmployeeEditDialogProps {
 export const EmployeeEditDialog = ({ open, onOpenChange, employee, onSuccess }: EmployeeEditDialogProps) => {
   const [saving, setSaving] = useState(false);
   const [leaveBalance, setLeaveBalance] = useState<any>(null);
+  const [currentSalary, setCurrentSalary] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     full_name: employee?.full_name || "",
     phone: employee?.phone || "",
@@ -30,14 +31,15 @@ export const EmployeeEditDialog = ({ open, onOpenChange, employee, onSuccess }: 
     emergency_contact: employee?.emergency_contact || "",
     emergency_phone: employee?.emergency_phone || "",
     hire_date: employee?.hire_date || "",
-    role: employee?.role || "worker",
     bank_name: employee?.bank_name || "",
     bank_account_number: employee?.bank_account_number || "",
+    salary: "",
   });
 
   useEffect(() => {
     if (employee?.id) {
       fetchLeaveBalance();
+      fetchCurrentSalary();
     }
   }, [employee]);
 
@@ -52,29 +54,67 @@ export const EmployeeEditDialog = ({ open, onOpenChange, employee, onSuccess }: 
     setLeaveBalance(data);
   };
 
+  const fetchCurrentSalary = async () => {
+    const { data } = await supabase
+      .from("salary_records")
+      .select("salary_amount")
+      .eq("user_id", employee.id)
+      .order("effective_date", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setCurrentSalary(data?.salary_amount || null);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     
-    // Convert empty strings to null for date fields
-    const updateData = {
-      ...formData,
-      date_of_birth: formData.date_of_birth || null,
-      hire_date: formData.hire_date || null,
-    };
-    
-    const { error } = await supabase
-      .from("profiles")
-      .update(updateData)
-      .eq("id", employee.id);
+    try {
+      // Convert empty strings to null for date fields
+      const updateData = {
+        full_name: formData.full_name,
+        phone: formData.phone,
+        address: formData.address,
+        date_of_birth: formData.date_of_birth || null,
+        position: formData.position,
+        department: formData.department,
+        id_card: formData.id_card,
+        emergency_contact: formData.emergency_contact,
+        emergency_phone: formData.emergency_phone,
+        hire_date: formData.hire_date || null,
+        bank_name: formData.bank_name,
+        bank_account_number: formData.bank_account_number,
+      };
+      
+      const { error } = await supabase
+        .from("profiles")
+        .update(updateData)
+        .eq("id", employee.id);
 
-    if (error) {
-      toast.error("เกิดข้อผิดพลาด: " + error.message);
-    } else {
+      if (error) throw error;
+
+      // Create new salary record if salary changed
+      if (formData.salary && parseFloat(formData.salary) > 0 && parseFloat(formData.salary) !== currentSalary) {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { error: salaryError } = await supabase
+          .from("salary_records")
+          .insert({
+            user_id: employee.id,
+            salary_amount: parseFloat(formData.salary),
+            effective_date: new Date().toISOString().split('T')[0],
+            created_by: user?.id,
+          });
+
+        if (salaryError) throw salaryError;
+      }
+
       toast.success("บันทึกข้อมูลสำเร็จ");
       onSuccess();
       onOpenChange(false);
+    } catch (error: any) {
+      toast.error("เกิดข้อผิดพลาด: " + error.message);
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   return (
@@ -184,19 +224,19 @@ export const EmployeeEditDialog = ({ open, onOpenChange, employee, onSuccess }: 
             </div>
 
             <div>
-              <Label htmlFor="role">บทบาท</Label>
-              <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="worker">พนักงาน</SelectItem>
-                  <SelectItem value="purchaser">จัดซื้อ</SelectItem>
-                  <SelectItem value="accountant">บัญชี</SelectItem>
-                  <SelectItem value="manager">ผู้จัดการ</SelectItem>
-                  <SelectItem value="admin">ผู้ดูแลระบบ</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="salary">เงินเดือน</Label>
+              <Input
+                id="salary"
+                type="number"
+                value={formData.salary}
+                onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
+                placeholder={currentSalary ? currentSalary.toLocaleString() : "ยังไม่ระบุ"}
+              />
+              {currentSalary && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  เงินเดือนปัจจุบัน: {currentSalary.toLocaleString()} บาท
+                </p>
+              )}
             </div>
           </div>
 

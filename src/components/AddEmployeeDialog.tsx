@@ -31,7 +31,7 @@ export default function AddEmployeeDialog({ onSuccess, companies }: AddEmployeeD
     hire_date: "",
     date_of_birth: "",
     company_id: "",
-    role: "worker" as const,
+    salary: "",
   });
 
   const handleSubmit = async () => {
@@ -71,11 +71,24 @@ export default function AddEmployeeDialog({ onSuccess, companies }: AddEmployeeD
             hire_date: formData.hire_date || null,
             date_of_birth: formData.date_of_birth || null,
             company_id: formData.company_id || null,
-            role: formData.role,
           })
           .eq("id", authData.user.id);
 
         if (profileError) throw profileError;
+
+        // Create initial salary record if salary is provided
+        if (formData.salary && parseFloat(formData.salary) > 0) {
+          const { error: salaryError } = await supabase
+            .from("salary_records")
+            .insert({
+              user_id: authData.user.id,
+              salary_amount: parseFloat(formData.salary),
+              effective_date: formData.hire_date || new Date().toISOString().split('T')[0],
+              created_by: authData.user.id,
+            });
+
+          if (salaryError) throw salaryError;
+        }
 
         toast.success("เพิ่มพนักงานสำเร็จ");
         setOpen(false);
@@ -93,7 +106,7 @@ export default function AddEmployeeDialog({ onSuccess, companies }: AddEmployeeD
           hire_date: "",
           date_of_birth: "",
           company_id: "",
-          role: "worker",
+          salary: "",
         });
         onSuccess();
       }
@@ -187,18 +200,13 @@ export default function AddEmployeeDialog({ onSuccess, companies }: AddEmployeeD
               </Select>
             </div>
             <div>
-              <Label>บทบาท</Label>
-              <Select value={formData.role} onValueChange={(value: any) => setFormData({ ...formData, role: value })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="worker">พนักงาน</SelectItem>
-                  <SelectItem value="accountant">บัญชี</SelectItem>
-                  <SelectItem value="manager">ผู้จัดการ</SelectItem>
-                  <SelectItem value="admin">ผู้ดูแลระบบ</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>เงินเดือน</Label>
+              <Input
+                type="number"
+                value={formData.salary}
+                onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
+                placeholder="0.00"
+              />
             </div>
           </div>
 
