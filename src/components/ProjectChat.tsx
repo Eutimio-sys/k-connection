@@ -42,6 +42,7 @@ export default function ProjectChat({ projectId }: ProjectChatProps) {
   const [newMessage, setNewMessage] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [profileMap, setProfileMap] = useState<Record<string, string>>({});
   const [selectedTaskId, setSelectedTaskId] = useState<string>("");
   const [isTagDialogOpen, setIsTagDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -85,13 +86,9 @@ export default function ProjectChat({ projectId }: ProjectChatProps) {
   };
 
   const fetchMessages = async () => {
-    const { data, error } = await supabase
+    const { data: rows, error } = await supabase
       .from("project_messages")
-      .select(`
-        *,
-        profiles(full_name),
-        tasks(title)
-      `)
+      .select("*")
       .eq("project_id", projectId)
       .order("created_at", { ascending: true });
 
@@ -99,7 +96,22 @@ export default function ProjectChat({ projectId }: ProjectChatProps) {
       console.error("Error fetching messages:", error);
       return;
     }
-    if (data) setMessages(data as any);
+
+    const messages = (rows || []) as Message[];
+    setMessages(messages);
+
+    // Load sender names without relying on DB foreign key hints
+    const userIds = Array.from(new Set(messages.map((m) => m.user_id).filter(Boolean)));
+    if (userIds.length) {
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", userIds);
+      if (!profilesError && profilesData) {
+        const map = Object.fromEntries(profilesData.map((p: any) => [p.id, p.full_name]));
+        setProfileMap(map);
+      }
+    }
   };
 
   const fetchTasks = async () => {
@@ -197,7 +209,7 @@ export default function ProjectChat({ projectId }: ProjectChatProps) {
               return (
                 <div key={msg.id} className="space-y-1">
                   <div className="text-xs text-muted-foreground">
-                    {msg.profiles?.full_name} • {format(new Date(msg.created_at), "HH:mm", { locale: th })}
+                    {profileMap[msg.user_id] || "ไม่ทราบผู้ส่ง"} • {format(new Date(msg.created_at), "HH:mm", { locale: th })}
                   </div>
                   <div className="bg-muted rounded-lg p-3 space-y-2">
                     <p className="text-sm">{msg.message}</p>
@@ -216,11 +228,15 @@ export default function ProjectChat({ projectId }: ProjectChatProps) {
                       </div>
                     )}
                     
-                    {msg.tasks && (
-                      <div className="text-xs bg-primary/10 text-primary px-2 py-1 rounded inline-block">
-                        🏷️ งาน: {msg.tasks.title}
-                      </div>
-                    )}
+                    {msg.tagged_task_id && (() => {
+                      const t = tasks.find((tk) => tk.id === msg.tagged_task_id);
+                      return t ? (
+                        <div className="text-xs bg-primary/10 text-primary px-2 py-1 rounded inline-block">
+                          🏷️ งาน: {t.title}
+                        </div>
+                      ) : null;
+                    })()}
+
                   </div>
                 </div>
               );

@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
 import { Plus, CheckCircle2, Clock, AlertCircle, X } from "lucide-react";
-import { DashboardLayout } from "@/components/DashboardLayout";
+
 import { TaskDetailDialog } from "@/components/TaskDetailDialog";
 import { Badge } from "@/components/ui/badge";
 
@@ -264,10 +264,9 @@ export default function MyWork() {
   const canAssignToOthers = currentUser?.role === 'admin' || currentUser?.role === 'manager';
 
   return (
-    <DashboardLayout>
-      <div className="container mx-auto p-6 space-y-6">
+    <div className="p-8 space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">งานของฉัน</h1>
+          <h1 className="text-4xl font-bold">งานของฉัน</h1>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -493,6 +492,6 @@ export default function MyWork() {
           canEdit={currentUser?.role === 'admin' || currentUser?.role === 'manager'}
         />
       </div>
-    </DashboardLayout>
+    
   );
 }
