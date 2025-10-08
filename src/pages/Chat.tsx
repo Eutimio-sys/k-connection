@@ -462,20 +462,25 @@ export default function Chat() {
 
               <Popover open={showMentionPopover} onOpenChange={setShowMentionPopover}>
                 <PopoverTrigger asChild>
-                  <Button size="icon" variant="outline">
+                  <Button size="icon" variant="outline" type="button">
                     <AtSign className="w-4 h-4" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="ค้นหาผู้ใช้..." />
-                    <CommandEmpty>ไม่พบผู้ใช้</CommandEmpty>
-                    <CommandGroup>
+                <PopoverContent 
+                  className="w-[300px] p-0 bg-popover z-50" 
+                  align="start"
+                  side="top"
+                  sideOffset={5}
+                >
+                  <Command className="bg-popover">
+                    <CommandInput placeholder="ค้นหาผู้ใช้..." className="bg-popover" />
+                    <CommandEmpty className="py-6 text-center text-sm">ไม่พบผู้ใช้</CommandEmpty>
+                    <CommandGroup className="max-h-[200px] overflow-auto">
                       {filteredProfiles.map((profile) => (
                         <CommandItem
                           key={profile.id}
                           onSelect={() => insertMention(profile)}
-                          className="flex items-center gap-2"
+                          className="flex items-center gap-2 cursor-pointer hover:bg-accent"
                         >
                           <Avatar className="w-6 h-6">
                             {profile.avatar_url ? (
