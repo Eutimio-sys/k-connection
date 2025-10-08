@@ -80,6 +80,8 @@ const Layout = () => {
     { icon: FileText, label: "บัญชีวัสดุ", path: "/accounting" },
     { icon: Wallet, label: "บัญชีค่าแรง", path: "/labor-accounting" },
     { icon: DollarSign, label: "รายการโอนเงิน", path: "/daily-payments" },
+    { icon: CheckCircle, label: "งานของฉัน", path: "/mywork" },
+    { icon: MessageCircle, label: "แชทรวม", path: "/chat" },
     { icon: Users, label: "พนักงาน", path: "/employees" },
     { icon: UserCog, label: "จัดการ HR", path: "/hr-management" },
     { icon: Wallet, label: "บัญชีเงินเดือน", path: "/payroll" },
