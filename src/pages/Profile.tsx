@@ -23,11 +23,19 @@ const Profile = () => {
   const [documentNotes, setDocumentNotes] = useState("");
   const [uploading, setUploading] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [yearSummary, setYearSummary] = useState<any>(null);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
     fetchProfile();
     fetchDocumentTypes();
   }, []);
+
+  useEffect(() => {
+    if (profile) {
+      fetchYearSummary();
+    }
+  }, [selectedYear, profile]);
 
   const fetchDocumentTypes = async () => {
     const { data } = await supabase
@@ -37,6 +45,45 @@ const Profile = () => {
       .order("name");
     
     setDocumentTypes(data || []);
+  };
+
+  const fetchYearSummary = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (user) {
+      // Fetch tax and social security data for the year
+      const { data: taxData } = await supabase
+        .from("employee_tax_social_security")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("year", selectedYear);
+
+      // Fetch salary records for the year
+      const { data: salaryData } = await supabase
+        .from("salary_records")
+        .select("*")
+        .eq("user_id", user.id)
+        .gte("effective_date", `${selectedYear}-01-01`)
+        .lte("effective_date", `${selectedYear}-12-31`)
+        .order("effective_date", { ascending: false });
+
+      // Calculate totals
+      const totalTax = taxData?.reduce((sum, record) => sum + Number(record.tax_amount), 0) || 0;
+      const totalSocialSecurity = taxData?.reduce((sum, record) => sum + Number(record.social_security_amount), 0) || 0;
+      
+      // Calculate total income (salary * 12 months using latest salary)
+      const latestSalary = salaryData && salaryData.length > 0 ? Number(salaryData[0].salary_amount) : 0;
+      const totalIncome = latestSalary * 12;
+
+      setYearSummary({
+        totalIncome,
+        totalTax,
+        totalSocialSecurity,
+        latestSalary,
+        taxRecords: taxData || [],
+        salaryRecords: salaryData || []
+      });
+    }
   };
 
   const fetchProfile = async () => {
@@ -404,6 +451,68 @@ const Profile = () => {
             </Card>
           )}
         </div>
+
+        {yearSummary && (
+          <Card className="lg:col-span-3">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>สรุปประจำปี</CardTitle>
+              <Select value={selectedYear.toString()} onValueChange={(val) => setSelectedYear(parseInt(val))}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year + 543}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="p-6 rounded-lg bg-primary/5 border border-primary/10">
+                  <p className="text-sm text-muted-foreground mb-2">รายได้ทั้งปี</p>
+                  <p className="text-3xl font-bold text-primary">
+                    ฿{yearSummary.totalIncome.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    เงินเดือน: ฿{yearSummary.latestSalary.toLocaleString('th-TH', { minimumFractionDigits: 2 })}/เดือน
+                  </p>
+                </div>
+
+                <div className="p-6 rounded-lg bg-destructive/5 border border-destructive/10">
+                  <p className="text-sm text-muted-foreground mb-2">ภาษีทั้งปี</p>
+                  <p className="text-3xl font-bold text-destructive">
+                    ฿{yearSummary.totalTax.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {yearSummary.taxRecords.length} รายการ
+                  </p>
+                </div>
+
+                <div className="p-6 rounded-lg bg-accent/5 border border-accent/10">
+                  <p className="text-sm text-muted-foreground mb-2">ประกันสังคมทั้งปี</p>
+                  <p className="text-3xl font-bold text-accent">
+                    ฿{yearSummary.totalSocialSecurity.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {yearSummary.taxRecords.length} รายการ
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 p-4 rounded-lg bg-muted/30">
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold">รายได้สุทธิ (หลังหักภาษีและประกันสังคม):</span>
+                  <span className="text-2xl font-bold text-primary">
+                    ฿{(yearSummary.totalIncome - yearSummary.totalTax - yearSummary.totalSocialSecurity).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
