@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { usePermissions, hasFeatureAccess } from "@/hooks/usePermissions";
 import {
   LayoutDashboard,
   FolderKanban,
@@ -26,31 +27,12 @@ interface MenuItem {
   url: string;
   icon: any;
   gradient: string;
-  roles: UserRole[];
+  featureCode: string | null;
 }
 
 const Index = () => {
   const navigate = useNavigate();
-  const [userRole, setUserRole] = useState<UserRole>("worker");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchUserRole();
-  }, []);
-
-  const fetchUserRole = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (user) {
-      const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-
-      if (profile) {
-        setUserRole(profile.role as UserRole);
-      }
-    }
-    setLoading(false);
-  };
+  const { permissions, loading } = usePermissions();
 
   const allMenuItems: MenuItem[] = [
     {
@@ -59,7 +41,7 @@ const Index = () => {
       url: "/dashboard",
       icon: LayoutDashboard,
       gradient: "from-blue-500 to-blue-600",
-      roles: ["admin", "manager", "accountant"],
+      featureCode: "dashboard",
     },
     {
       title: "งานของฉัน",
@@ -67,7 +49,7 @@ const Index = () => {
       url: "/mywork",
       icon: ClipboardList,
       gradient: "from-violet-500 to-violet-600",
-      roles: ["admin", "manager", "accountant", "worker"],
+      featureCode: "my_work",
     },
     {
       title: "โครงการ",
@@ -75,7 +57,7 @@ const Index = () => {
       url: "/projects",
       icon: FolderKanban,
       gradient: "from-primary to-primary/70",
-      roles: ["admin", "manager", "accountant", "worker"],
+      featureCode: "projects",
     },
     {
       title: "อนุมัติรายการ",
@@ -83,7 +65,7 @@ const Index = () => {
       url: "/approvals",
       icon: CheckCircle,
       gradient: "from-accent to-orange-600",
-      roles: ["admin", "manager"],
+      featureCode: "approvals",
     },
     {
       title: "บัญชีวัสดุ",
@@ -91,7 +73,7 @@ const Index = () => {
       url: "/accounting",
       icon: FileText,
       gradient: "from-green-500 to-green-600",
-      roles: ["admin", "manager", "accountant"],
+      featureCode: "accounting",
     },
     {
       title: "บัญชีค่าแรง",
@@ -99,7 +81,7 @@ const Index = () => {
       url: "/labor-accounting",
       icon: Wallet,
       gradient: "from-purple-500 to-purple-600",
-      roles: ["admin", "manager", "accountant"],
+      featureCode: "labor_accounting",
     },
     {
       title: "รายการโอนเงิน",
@@ -107,7 +89,7 @@ const Index = () => {
       url: "/daily-payments",
       icon: Wallet,
       gradient: "from-yellow-500 to-yellow-600",
-      roles: ["admin", "manager", "accountant"],
+      featureCode: "daily_payments",
     },
     {
       title: "เช็คอิน/เอาท์",
@@ -115,7 +97,7 @@ const Index = () => {
       url: "/attendance",
       icon: Clock,
       gradient: "from-teal-500 to-teal-600",
-      roles: ["admin", "manager", "worker"],
+      featureCode: "attendance",
     },
     {
       title: "ระบบลา",
@@ -123,7 +105,7 @@ const Index = () => {
       url: "/leave",
       icon: Calendar,
       gradient: "from-pink-500 to-pink-600",
-      roles: ["admin", "manager", "worker"],
+      featureCode: "leave_management",
     },
     {
       title: "พนักงาน",
@@ -131,7 +113,7 @@ const Index = () => {
       url: "/employees",
       icon: Users,
       gradient: "from-indigo-500 to-indigo-600",
-      roles: ["admin", "manager"],
+      featureCode: "employees",
     },
     {
       title: "จัดการ HR",
@@ -139,7 +121,7 @@ const Index = () => {
       url: "/hr-management",
       icon: UserCog,
       gradient: "from-violet-500 to-violet-600",
-      roles: ["admin", "manager"],
+      featureCode: "hr_management",
     },
     {
       title: "บัญชีเงินเดือน",
@@ -147,7 +129,7 @@ const Index = () => {
       url: "/payroll",
       icon: Wallet,
       gradient: "from-emerald-500 to-emerald-600",
-      roles: ["admin", "manager"],
+      featureCode: "payroll",
     },
     {
       title: "คนงานต่างด้าว",
@@ -155,7 +137,7 @@ const Index = () => {
       url: "/foreign-workers",
       icon: Users,
       gradient: "from-amber-500 to-amber-600",
-      roles: ["admin", "manager"],
+      featureCode: "foreign_workers",
     },
     {
       title: "โปรไฟล์",
@@ -163,7 +145,7 @@ const Index = () => {
       url: "/profile",
       icon: User,
       gradient: "from-cyan-500 to-cyan-600",
-      roles: ["admin", "manager", "accountant", "worker"],
+      featureCode: null,
     },
     {
       title: "ตั้งค่า",
@@ -171,7 +153,7 @@ const Index = () => {
       url: "/settings",
       icon: Settings,
       gradient: "from-gray-500 to-gray-600",
-      roles: ["admin", "manager"],
+      featureCode: "settings",
     },
     {
       title: "แชทรวม",
@@ -179,11 +161,14 @@ const Index = () => {
       url: "/chat",
       icon: MessageCircle,
       gradient: "from-sky-500 to-sky-600",
-      roles: ["admin", "manager", "accountant", "worker"],
+      featureCode: "chat",
     },
   ];
 
-  const visibleMenuItems = allMenuItems.filter((item) => item.roles.includes(userRole));
+  const visibleMenuItems = allMenuItems.filter((item) => {
+    if (!item.featureCode) return true; // Always show items without feature code
+    return hasFeatureAccess(permissions, item.featureCode);
+  });
 
   if (loading) {
     return (

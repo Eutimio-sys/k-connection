@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Auth from "./pages/Auth";
 import Layout from "./components/Layout";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
@@ -40,26 +41,26 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route element={<Layout />}>
             <Route path="/" element={<Index />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/projects" element={<Projects />} />
-            <Route path="/projects/:id" element={<ProjectDetail />} />
-            <Route path="/kanban" element={<Kanban />} />
-            <Route path="/approvals" element={<Approvals />} />
-            <Route path="/accounting" element={<Accounting />} />
-            <Route path="/labor-accounting" element={<LaborAccounting />} />
-            <Route path="/daily-payments" element={<DailyPayments />} />
-            <Route path="/employees" element={<Employees />} />
-            <Route path="/employees/:id" element={<EmployeeDetail />} />
-            <Route path="/hr-management" element={<HRManagement />} />
-          <Route path="/payroll" element={<Payroll />} />
-          <Route path="/foreign-workers" element={<ForeignWorkers />} />
-            <Route path="/tax-planning" element={<TaxPlanning />} />
+            <Route path="/dashboard" element={<ProtectedRoute featureCode="dashboard"><Dashboard /></ProtectedRoute>} />
+            <Route path="/projects" element={<ProtectedRoute featureCode="projects"><Projects /></ProtectedRoute>} />
+            <Route path="/projects/:id" element={<ProtectedRoute featureCode="projects"><ProjectDetail /></ProtectedRoute>} />
+            <Route path="/kanban" element={<ProtectedRoute featureCode="projects"><Kanban /></ProtectedRoute>} />
+            <Route path="/approvals" element={<ProtectedRoute featureCode="approvals"><Approvals /></ProtectedRoute>} />
+            <Route path="/accounting" element={<ProtectedRoute featureCode="accounting"><Accounting /></ProtectedRoute>} />
+            <Route path="/labor-accounting" element={<ProtectedRoute featureCode="labor_accounting"><LaborAccounting /></ProtectedRoute>} />
+            <Route path="/daily-payments" element={<ProtectedRoute featureCode="daily_payments"><DailyPayments /></ProtectedRoute>} />
+            <Route path="/employees" element={<ProtectedRoute featureCode="employees"><Employees /></ProtectedRoute>} />
+            <Route path="/employees/:id" element={<ProtectedRoute featureCode="employees"><EmployeeDetail /></ProtectedRoute>} />
+            <Route path="/hr-management" element={<ProtectedRoute featureCode="hr_management"><HRManagement /></ProtectedRoute>} />
+            <Route path="/payroll" element={<ProtectedRoute featureCode="payroll"><Payroll /></ProtectedRoute>} />
+            <Route path="/foreign-workers" element={<ProtectedRoute featureCode="foreign_workers"><ForeignWorkers /></ProtectedRoute>} />
+            <Route path="/tax-planning" element={<ProtectedRoute featureCode="tax_planning"><TaxPlanning /></ProtectedRoute>} />
             <Route path="/profile" element={<Profile />} />
-            <Route path="/attendance" element={<Attendance />} />
-            <Route path="/leave" element={<LeaveManagement />} />
-            <Route path="/mywork" element={<MyWork />} />
-            <Route path="/chat" element={<Chat />} />
-            <Route path="/settings" element={<Settings />} />
+            <Route path="/attendance" element={<ProtectedRoute featureCode="attendance"><Attendance /></ProtectedRoute>} />
+            <Route path="/leave" element={<ProtectedRoute featureCode="leave_management"><LeaveManagement /></ProtectedRoute>} />
+            <Route path="/mywork" element={<ProtectedRoute featureCode="my_work"><MyWork /></ProtectedRoute>} />
+            <Route path="/chat" element={<ProtectedRoute featureCode="chat"><Chat /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute featureCode="settings"><Settings /></ProtectedRoute>} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
