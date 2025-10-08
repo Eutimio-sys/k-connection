@@ -15,6 +15,7 @@ import DailyPayments from "./pages/DailyPayments";
 import Approvals from "./pages/Approvals";
 import Employees from "./pages/Employees";
 import EmployeeDetail from "./pages/EmployeeDetail";
+import UserRoles from "./pages/UserRoles";
 import HRManagement from "./pages/HRManagement";
 import Payroll from "./pages/Payroll";
 import ForeignWorkers from "./pages/ForeignWorkers";
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="/daily-payments" element={<ProtectedRoute featureCode="daily_payments"><DailyPayments /></ProtectedRoute>} />
             <Route path="/employees" element={<ProtectedRoute featureCode="employees"><Employees /></ProtectedRoute>} />
             <Route path="/employees/:id" element={<ProtectedRoute featureCode="employees"><EmployeeDetail /></ProtectedRoute>} />
+            <Route path="/user-roles" element={<ProtectedRoute><UserRoles /></ProtectedRoute>} />
             <Route path="/hr-management" element={<ProtectedRoute featureCode="hr_management"><HRManagement /></ProtectedRoute>} />
             <Route path="/payroll" element={<ProtectedRoute featureCode="payroll"><Payroll /></ProtectedRoute>} />
             <Route path="/foreign-workers" element={<ProtectedRoute featureCode="foreign_workers"><ForeignWorkers /></ProtectedRoute>} />
