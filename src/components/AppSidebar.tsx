@@ -13,6 +13,7 @@ import {
   User,
   Settings,
   Globe,
+  TrendingUp,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -38,11 +39,12 @@ const menuItems = [
   { title: "บัญชีวัสดุ", url: "/accounting", icon: FileText },
   { title: "บัญชีค่าแรง", url: "/labor-accounting", icon: Wallet },
   { title: "รายการโอนเงิน", url: "/daily-payments", icon: Wallet },
+  { title: "บัญชีเงินเดือน", url: "/payroll", icon: Wallet },
+  { title: "วางแผนภาษี", url: "/tax-planning", icon: TrendingUp },
   { title: "เช็คอิน/เอาท์", url: "/attendance", icon: Clock },
   { title: "ระบบลา", url: "/leave", icon: Calendar },
   { title: "พนักงาน", url: "/employees", icon: Users },
   { title: "จัดการ HR", url: "/hr-management", icon: UserCog },
-  { title: "บัญชีเงินเดือน", url: "/payroll", icon: Wallet },
   { title: "คนงานต่างด้าว", url: "/foreign-workers", icon: Globe },
   { title: "โปรไฟล์", url: "/profile", icon: User },
   { title: "ตั้งค่า", url: "/settings", icon: Settings },

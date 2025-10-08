@@ -23,6 +23,7 @@ import LaborAccounting from "./pages/LaborAccounting";
 import Profile from "./pages/Profile";
 import Attendance from "./pages/Attendance";
 import LeaveManagement from "./pages/LeaveManagement";
+import TaxPlanning from "./pages/TaxPlanning";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,6 +51,7 @@ const App = () => (
             <Route path="/hr-management" element={<HRManagement />} />
           <Route path="/payroll" element={<Payroll />} />
           <Route path="/foreign-workers" element={<ForeignWorkers />} />
+            <Route path="/tax-planning" element={<TaxPlanning />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/attendance" element={<Attendance />} />
             <Route path="/leave" element={<LeaveManagement />} />
