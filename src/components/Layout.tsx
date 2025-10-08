@@ -21,6 +21,7 @@ import {
   Calendar,
   User,
   UserCog,
+  MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 

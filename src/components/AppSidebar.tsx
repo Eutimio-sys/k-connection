@@ -14,6 +14,7 @@ import {
   Settings,
   Globe,
   TrendingUp,
+  MessageCircle,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -44,6 +45,7 @@ const menuItems = [
   { title: "เช็คอิน/เอาท์", url: "/attendance", icon: Clock },
   { title: "ระบบลา", url: "/leave", icon: Calendar },
   { title: "งานของฉัน", url: "/mywork", icon: CheckCircle },
+  { title: "แชทรวม", url: "/chat", icon: MessageCircle },
   { title: "๊จัดการผู้ใช้งานในระบบ", url: "/employees", icon: Users },
   { title: "จัดการพนักงาน", url: "/hr-management", icon: UserCog },
   { title: "จัดการคนงานต่างด้าว", url: "/foreign-workers", icon: Globe },

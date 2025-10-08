@@ -131,20 +131,26 @@ export default function ProjectChat({ projectId }: ProjectChatProps) {
     const fileExt = file.name.split(".").pop();
     const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
-    const { error } = await supabase.storage
+    const { data: uploadData, error } = await supabase.storage
       .from("project_chat_files")
       .upload(fileName, file);
 
-    if (error) {
+    if (error || !uploadData) {
       toast({ title: "ไม่สามารถอัปโหลดไฟล์ได้", variant: "destructive" });
       return null;
     }
 
-    const { data: { publicUrl } } = supabase.storage
+    // Use a signed URL since the bucket is private
+    const { data: signed, error: signErr } = await supabase.storage
       .from("project_chat_files")
-      .getPublicUrl(fileName);
+      .createSignedUrl(uploadData.path, 60 * 60 * 24 * 7); // 7 days
 
-    return publicUrl;
+    if (signErr || !signed?.signedUrl) {
+      toast({ title: "ไม่สามารถสร้างลิงก์ไฟล์ได้", variant: "destructive" });
+      return null;
+    }
+
+    return signed.signedUrl;
   };
 
   const handleSendMessage = async () => {
@@ -173,15 +179,19 @@ export default function ProjectChat({ projectId }: ProjectChatProps) {
 
     if (error) {
       toast({ title: "ไม่สามารถส่งข้อความได้", variant: "destructive" });
-    } else {
-      setNewMessage("");
-      setFile(null);
-      setSelectedTaskId("");
-      setIsTagDialogOpen(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      return;
     }
+
+    setNewMessage("");
+    setFile(null);
+    setSelectedTaskId("");
+    setIsTagDialogOpen(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+
+    // Immediately refresh messages in case realtime isn't active
+    await fetchMessages();
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

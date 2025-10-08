@@ -173,6 +173,14 @@ const Index = () => {
       gradient: "from-gray-500 to-gray-600",
       roles: ["admin", "manager"],
     },
+    {
+      title: "แชทรวม",
+      description: "สนทนาโครงการทั้งหมด",
+      url: "/chat",
+      icon: MessageCircle,
+      gradient: "from-sky-500 to-sky-600",
+      roles: ["admin", "manager", "accountant", "worker"],
+    },
   ];
 
   const visibleMenuItems = allMenuItems.filter((item) => item.roles.includes(userRole));
