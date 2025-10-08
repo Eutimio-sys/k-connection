@@ -296,7 +296,6 @@ const HRManagement = () => {
                     <TableHead>แผนก</TableHead>
                     <TableHead>เบอร์โทร</TableHead>
                     <TableHead>บทบาท</TableHead>
-                    <TableHead>เงินเดือนปัจจุบัน</TableHead>
                     <TableHead className="text-right">จัดการ</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -309,9 +308,6 @@ const HRManagement = () => {
                       <TableCell>{emp.department || "-"}</TableCell>
                       <TableCell>{emp.phone || "-"}</TableCell>
                       <TableCell>{getRoleBadge(emp.role)}</TableCell>
-                      <TableCell className="font-medium text-primary">
-                        {formatCurrency(emp.current_salary)}
-                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button
@@ -468,6 +464,7 @@ const HRManagement = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>ชื่อ-นามสกุล</TableHead>
+                    <TableHead>บริษัท</TableHead>
                     <TableHead>ตำแหน่ง</TableHead>
                     <TableHead className="text-right">เงินเดือนปัจจุบัน</TableHead>
                     <TableHead className="text-right">ภาษีสะสม (ปีนี้)</TableHead>
@@ -646,6 +643,7 @@ const EmployeeTaxRow = ({ employee }: { employee: any }) => {
   return (
     <TableRow>
       <TableCell className="font-medium">{employee.full_name}</TableCell>
+      <TableCell>{employee.company?.name || "-"}</TableCell>
       <TableCell>{employee.position || "-"}</TableCell>
       <TableCell className="text-right font-medium text-primary">
         {formatCurrency(employee.current_salary)}

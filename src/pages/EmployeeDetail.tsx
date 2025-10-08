@@ -51,11 +51,15 @@ const EmployeeDetail = () => {
     setEmployee(profileData);
 
     // Fetch salary records
-    const { data: salaryData } = await supabase
+    const { data: salaryData, error: salaryError } = await supabase
       .from("salary_records")
-      .select("*, creator:profiles!created_by(full_name)")
+      .select("*, creator:created_by(full_name)")
       .eq("user_id", id)
       .order("effective_date", { ascending: false });
+
+    if (salaryError) {
+      console.error("Salary error:", salaryError);
+    }
 
     setSalaryRecords(salaryData || []);
 
@@ -341,7 +345,9 @@ const EmployeeDetail = () => {
                             <TableCell className="text-sm text-muted-foreground">
                               {record.notes || "-"}
                             </TableCell>
-                            <TableCell>{record.creator?.full_name || "-"}</TableCell>
+                            <TableCell>
+                              {salaryRecords.find(s => s.id === record.id)?.creator?.full_name || "-"}
+                            </TableCell>
                             <TableCell>
                               {new Date(record.created_at).toLocaleDateString("th-TH")}
                             </TableCell>
