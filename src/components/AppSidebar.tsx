@@ -88,7 +88,12 @@ export function AppSidebar() {
       if (currentUserId) fetchUnreadChatCount();
     };
 
+    const onApprovalsUpdated = () => {
+      fetchPendingCount();
+    };
+
     window.addEventListener('chat-read', onChatRead);
+    window.addEventListener('approvals-updated', onApprovalsUpdated);
 
     // Subscribe to real-time updates
     const channel = supabase
@@ -106,6 +111,7 @@ export function AppSidebar() {
 
     return () => {
       window.removeEventListener('chat-read', onChatRead);
+      window.removeEventListener('approvals-updated', onApprovalsUpdated);
       supabase.removeChannel(channel);
     };
   }, [currentUserId]);

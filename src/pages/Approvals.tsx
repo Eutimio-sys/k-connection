@@ -225,7 +225,8 @@ const Approvals = () => {
       console.error(error);
     } else {
       toast.success("อนุมัติสำเร็จ");
-      fetchAllPendingItems();
+      await fetchAllPendingItems();
+      window.dispatchEvent(new Event('approvals-updated'));
     }
   };
 
@@ -247,7 +248,8 @@ const Approvals = () => {
       console.error(error);
     } else {
       toast.success("ปฏิเสธสำเร็จ");
-      fetchAllPendingItems();
+      await fetchAllPendingItems();
+      window.dispatchEvent(new Event('approvals-updated'));
     }
   };
 
@@ -269,7 +271,8 @@ const Approvals = () => {
       console.error(error);
     } else {
       toast.success("อนุมัติสำเร็จ");
-      fetchAllPendingItems();
+      await fetchAllPendingItems();
+      window.dispatchEvent(new Event('approvals-updated'));
     }
   };
 
@@ -291,7 +294,8 @@ const Approvals = () => {
       console.error(error);
     } else {
       toast.success("ปฏิเสธสำเร็จ");
-      fetchAllPendingItems();
+      await fetchAllPendingItems();
+      window.dispatchEvent(new Event('approvals-updated'));
     }
   };
 
@@ -367,7 +371,8 @@ const Approvals = () => {
       }
     }
 
-    fetchAllPendingItems();
+    await fetchAllPendingItems();
+    window.dispatchEvent(new Event('approvals-updated'));
   };
 
   const handleRejectLeaveRequest = async (requestId: string) => {
@@ -390,7 +395,8 @@ const Approvals = () => {
       console.error(error);
     } else {
       toast.success("ปฏิเสธสำเร็จ");
-      fetchAllPendingItems();
+      await fetchAllPendingItems();
+      window.dispatchEvent(new Event('approvals-updated'));
     }
   };
 

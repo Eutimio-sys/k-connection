@@ -127,47 +127,29 @@ export default function UserRoles() {
       .map(ur => ur.role);
   };
 
-  const handleAddRole = async (userId: string, roleCode: string) => {
+  const handleChangeRole = async (userId: string, newRoleCode: string) => {
     try {
       setSaving(userId);
       
-      const { error } = await supabase
+      // ลบ role เก่าทั้งหมดของ user
+      const { error: deleteError } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId);
+
+      if (deleteError) throw deleteError;
+
+      // เพิ่ม role ใหม่
+      const { error: insertError } = await supabase
         .from("user_roles")
         .insert({
           user_id: userId,
-          role: roleCode,
+          role: newRoleCode,
         });
 
-      if (error) {
-        if (error.code === '23505') {
-          toast.error("ผู้ใช้มีบทบาทนี้อยู่แล้ว");
-        } else {
-          throw error;
-        }
-      } else {
-        toast.success("เพิ่มบทบาทสำเร็จ");
-        await fetchData();
-      }
-    } catch (error: any) {
-      toast.error("เกิดข้อผิดพลาด: " + error.message);
-    } finally {
-      setSaving(null);
-    }
-  };
+      if (insertError) throw insertError;
 
-  const handleRemoveRole = async (userId: string, roleCode: string) => {
-    try {
-      setSaving(userId);
-      
-      const { error } = await supabase
-        .from("user_roles")
-        .delete()
-        .eq("user_id", userId)
-        .eq("role", roleCode);
-
-      if (error) throw error;
-
-      toast.success("ลบบทบาทสำเร็จ");
+      toast.success("เปลี่ยนบทบาทสำเร็จ");
       await fetchData();
     } catch (error: any) {
       toast.error("เกิดข้อผิดพลาด: " + error.message);
@@ -176,12 +158,17 @@ export default function UserRoles() {
     }
   };
 
+
   const getRoleBadgeVariant = (roleCode: string) => {
     switch (roleCode) {
       case "admin":
         return "destructive";
       case "manager":
         return "default";
+      case "project_manager":
+        return "default";
+      case "foreman":
+        return "secondary";
       case "accountant":
         return "secondary";
       default:
@@ -289,7 +276,7 @@ export default function UserRoles() {
                 รายการผู้ใช้และบทบาท
               </CardTitle>
               <CardDescription>
-                คุณสามารถกำหนดบทบาทได้หลายบทบาทต่อผู้ใช้หนึ่งคน
+                ผู้ใช้แต่ละคนสามารถมีได้เพียง 1 บทบาทเท่านั้น
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -300,13 +287,13 @@ export default function UserRoles() {
                     <TableHead>อีเมล</TableHead>
                     <TableHead>ตำแหน่ง</TableHead>
                     <TableHead>แผนก</TableHead>
-                    <TableHead>บทบาทปัจจุบัน</TableHead>
-                    <TableHead>เพิ่มบทบาท</TableHead>
+                    <TableHead>เลือกบทบาท</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {users.map((user) => {
                     const userRolesList = getUserRoles(user.id);
+                    const currentRole = userRolesList[0] || null;
                     const isSaving = saving === user.id;
                     
                     return (
@@ -316,39 +303,22 @@ export default function UserRoles() {
                         <TableCell>{user.position || "-"}</TableCell>
                         <TableCell>{user.department || "-"}</TableCell>
                         <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {userRolesList.length === 0 ? (
-                              <Badge variant="outline">ไม่มีบทบาท</Badge>
-                            ) : (
-                              userRolesList.map((roleCode) => (
-                                <Badge
-                                  key={roleCode}
-                                  variant={getRoleBadgeVariant(roleCode)}
-                                  className="cursor-pointer hover:opacity-80"
-                                  onClick={() => handleRemoveRole(user.id, roleCode)}
-                                >
-                                  {getRoleLabel(roleCode)} ×
-                                </Badge>
-                              ))
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
                           <Select
                             disabled={isSaving}
-                            onValueChange={(value) => handleAddRole(user.id, value)}
+                            value={currentRole || ""}
+                            onValueChange={(value) => handleChangeRole(user.id, value)}
                           >
-                            <SelectTrigger className="w-[180px]">
-                              <SelectValue placeholder="เลือกบทบาท" />
+                            <SelectTrigger className="w-[200px]">
+                              <SelectValue placeholder="เลือกบทบาท">
+                                {currentRole ? getRoleLabel(currentRole) : "เลือกบทบาท"}
+                              </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
-                              {roles
-                                .filter(role => !userRolesList.includes(role.code))
-                                .map((role) => (
-                                  <SelectItem key={role.code} value={role.code}>
-                                    {role.name}
-                                  </SelectItem>
-                                ))}
+                              {roles.map((role) => (
+                                <SelectItem key={role.code} value={role.code}>
+                                  {role.name}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </TableCell>
