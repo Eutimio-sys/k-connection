@@ -347,6 +347,28 @@ export default function MyWork() {
     checkCanAssign();
   }, []);
 
+  // Custom day renderer for calendar
+  const renderDayContent = (date: Date) => {
+    const dateKey = format(date, 'yyyy-MM-dd');
+    const avatars = monthAvatars[dateKey] || [];
+    
+    return (
+      <div className="relative w-full h-full flex flex-col items-center justify-center">
+        <span className="text-sm">{format(date, 'd')}</span>
+        {avatars.length > 0 && (
+          <div className="flex -space-x-1 mt-0.5">
+            {avatars.slice(0, 3).map((url, idx) => (
+              <Avatar key={idx} className="w-4 h-4 border border-background">
+                <AvatarImage src={url} />
+                <AvatarFallback className="text-[8px]">U</AvatarFallback>
+              </Avatar>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="p-8 space-y-6">
         <div className="flex justify-between items-center">
@@ -501,8 +523,12 @@ export default function MyWork() {
                 mode="single"
                 selected={selectedDate}
                 onSelect={setSelectedDate}
+                onMonthChange={setCurrentMonth}
                 locale={th}
                 className="rounded-md border"
+                components={{
+                  DayContent: ({ date }) => renderDayContent(date)
+                }}
               />
             </CardContent>
           </Card>
