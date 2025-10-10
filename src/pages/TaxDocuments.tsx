@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { FileText, Receipt, CheckCircle2, Filter, Upload, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
+import { FileText, Receipt, CheckCircle2, Filter, Upload, ArrowDownCircle, ArrowUpCircle, TrendingUp } from "lucide-react";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
 
@@ -29,6 +29,7 @@ export default function TaxDocuments() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [documentStatus, setDocumentStatus] = useState("all");
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
   const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
@@ -44,7 +45,7 @@ export default function TaxDocuments() {
     if (currentUserId) {
       fetchDocuments();
     }
-  }, [currentUserId, selectedCompany, startDate, endDate]);
+  }, [currentUserId, selectedCompany, startDate, endDate, documentStatus]);
 
   const fetchCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -119,7 +120,7 @@ export default function TaxDocuments() {
     ]);
 
     // Combine VAT documents from expenses and project income
-    const vatDocs = [
+    let vatDocs = [
       ...(expensesData.data || []).map(doc => ({
         ...doc,
         source: 'expense',
@@ -133,12 +134,24 @@ export default function TaxDocuments() {
         subtotal: doc.amount,
         total_amount: doc.amount + (doc.vat_amount || 0)
       }))
-    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    ];
 
+    // Apply document status filter for VAT
+    if (documentStatus !== "all") {
+      vatDocs = vatDocs.filter(doc => {
+        if (doc.source === 'expense') {
+          return documentStatus === "completed" ? (doc as any).tax_invoice_received : !(doc as any).tax_invoice_received;
+        } else {
+          return documentStatus === "completed" ? (doc as any).vat_document_sent : !(doc as any).vat_document_sent;
+        }
+      });
+    }
+
+    vatDocs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     setVatDocuments(vatDocs);
 
     // Combine withholding documents from labor and project income
-    const withholdingDocs = [
+    let withholdingDocs = [
       ...(laborData.data || []).map(doc => ({
         ...doc,
         source: 'labor',
@@ -152,8 +165,20 @@ export default function TaxDocuments() {
         total_amount: doc.amount,
         net_amount: doc.amount - (doc.withholding_tax_amount || 0)
       }))
-    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    ];
 
+    // Apply document status filter for withholding
+    if (documentStatus !== "all") {
+      withholdingDocs = withholdingDocs.filter(doc => {
+        if (doc.source === 'income') {
+          return documentStatus === "completed" ? (doc as any).withholding_receipt_received : !(doc as any).withholding_receipt_received;
+        } else {
+          return documentStatus === "completed" ? (doc as any).withholding_document_sent : !(doc as any).withholding_document_sent;
+        }
+      });
+    }
+
+    withholdingDocs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     setWithholdingDocuments(withholdingDocs);
     setLoading(false);
   };
@@ -207,11 +232,25 @@ export default function TaxDocuments() {
       const month = String(docDate.getMonth() + 1).padStart(2, '0');
       const fileExt = receiptFile.name.split('.').pop();
       
-      const companyName = selectedDoc.company?.name || 'unknown';
+      const companyName = selectedDoc.company?.name || selectedDoc.project?.name || 'unknown';
       const docNumber = selectedDoc.invoice_number.replace(/[\/\\]/g, '-');
-      const docType = selectedDoc.source === 'expense' ? 'expense-vat' : 
-                      selectedDoc.source === 'labor' ? 'labor-withholding' : 
-                      'income';
+      
+      let docType = '';
+      let isSending = false;
+      
+      if (selectedDoc.source === 'expense') {
+        docType = 'expense-vat-receive';
+      } else if (selectedDoc.source === 'labor') {
+        docType = 'labor-withholding-send';
+        isSending = true;
+      } else if (selectedDoc.source === 'income') {
+        if (selectedDoc.actionType === 'vat') {
+          docType = 'income-vat-send';
+          isSending = true;
+        } else {
+          docType = 'income-withholding-receive';
+        }
+      }
       
       const fileName = `tax-receipts/${companyName}/${year}-${month}/${docType}-${docNumber}.${fileExt}`;
       
@@ -242,18 +281,42 @@ export default function TaxDocuments() {
         const { error } = await supabase
           .from('labor_expenses')
           .update({ 
-            withholding_tax_receipt_received: true,
-            withholding_tax_receipt_received_at: new Date().toISOString(),
-            withholding_tax_receipt_received_by: currentUserId,
-            receipt_image_url: publicUrl 
+            withholding_document_sent: true,
+            withholding_document_sent_at: new Date().toISOString(),
+            withholding_document_sent_by: currentUserId,
+            withholding_sent_receipt_url: publicUrl 
           })
           .eq('id', selectedDoc.id);
         updateError = error;
+      } else if (selectedDoc.source === 'income') {
+        if (selectedDoc.actionType === 'vat') {
+          const { error } = await supabase
+            .from('project_income')
+            .update({ 
+              vat_document_sent: true,
+              vat_document_sent_at: new Date().toISOString(),
+              vat_document_sent_by: currentUserId,
+              vat_receipt_url: publicUrl 
+            })
+            .eq('id', selectedDoc.id);
+          updateError = error;
+        } else {
+          const { error } = await supabase
+            .from('project_income')
+            .update({ 
+              withholding_receipt_received: true,
+              withholding_receipt_received_at: new Date().toISOString(),
+              withholding_receipt_received_by: currentUserId,
+              withholding_receipt_url: publicUrl 
+            })
+            .eq('id', selectedDoc.id);
+          updateError = error;
+        }
       }
 
       if (updateError) throw updateError;
 
-      toast.success('อัพโหลดและบันทึกสำเร็จ');
+      toast.success(isSending ? 'ส่งเอกสารและอัพโหลดสำเร็จ' : 'รับเอกสารและอัพโหลดสำเร็จ');
       setReceiptFile(null);
       setReceiptDialogOpen(false);
       setSelectedDoc(null);
@@ -274,26 +337,34 @@ export default function TaxDocuments() {
     .filter(doc => doc.source === 'income')
     .reduce((acc, doc) => ({
       vat: acc.vat + Number(doc.vat_amount || 0),
-    }), { vat: 0 });
+      subtotal: acc.subtotal + Number(doc.subtotal || 0),
+    }), { vat: 0, subtotal: 0 });
 
   const vatExpenseTotals = vatDocuments
     .filter(doc => doc.source === 'expense')
     .reduce((acc, doc) => ({
       vat: acc.vat + Number(doc.vat_amount || 0),
-    }), { vat: 0 });
+      subtotal: acc.subtotal + Number(doc.subtotal || 0),
+    }), { vat: 0, subtotal: 0 });
+
+  const vatDifference = vatIncomeTotals.vat - vatExpenseTotals.vat;
 
   // Calculate withholding tax totals - separated by income and expense
   const withholdingIncomeTotals = withholdingDocuments
     .filter(doc => doc.source === 'income')
     .reduce((acc, doc) => ({
       withholding: acc.withholding + Number(doc.withholding_tax_amount || 0),
-    }), { withholding: 0 });
+      total: acc.total + Number(doc.total_amount || 0),
+    }), { withholding: 0, total: 0 });
 
   const withholdingExpenseTotals = withholdingDocuments
     .filter(doc => doc.source === 'labor')
     .reduce((acc, doc) => ({
       withholding: acc.withholding + Number(doc.withholding_tax_amount || 0),
-    }), { withholding: 0 });
+      total: acc.total + Number(doc.total_amount || 0),
+    }), { withholding: 0, total: 0 });
+
+  const withholdingDifference = withholdingIncomeTotals.withholding - withholdingExpenseTotals.withholding;
 
   if (loading) {
     return (
@@ -325,7 +396,7 @@ export default function TaxDocuments() {
       {showFilters && (
         <Card>
           <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <Label>บริษัท</Label>
                 <Select value={selectedCompany} onValueChange={setSelectedCompany}>
@@ -339,6 +410,19 @@ export default function TaxDocuments() {
                         {company.name}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>สถานะเอกสาร</Label>
+                <Select value={documentStatus} onValueChange={setDocumentStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="เลือกสถานะ" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">ทั้งหมด</SelectItem>
+                    <SelectItem value="completed">รับ/ส่งเอกสารแล้ว</SelectItem>
+                    <SelectItem value="pending">ยังไม่ได้รับ/ส่ง</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -377,7 +461,7 @@ export default function TaxDocuments() {
 
         <TabsContent value="vat" className="space-y-4">
           {/* VAT Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-green-900 flex items-center gap-2">
@@ -386,10 +470,13 @@ export default function TaxDocuments() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-green-900">
+                <div className="text-2xl font-bold text-green-900">
                   {formatCurrency(vatIncomeTotals.vat)}
                 </div>
                 <p className="text-xs text-green-700 mt-1">
+                  ยอดบิล: {formatCurrency(vatIncomeTotals.subtotal)}
+                </p>
+                <p className="text-xs text-green-700">
                   {vatDocuments.filter(d => d.source === 'income').length} รายการ
                 </p>
               </CardContent>
@@ -403,11 +490,31 @@ export default function TaxDocuments() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-red-900">
+                <div className="text-2xl font-bold text-red-900">
                   {formatCurrency(vatExpenseTotals.vat)}
                 </div>
                 <p className="text-xs text-red-700 mt-1">
+                  ยอดบิล: {formatCurrency(vatExpenseTotals.subtotal)}
+                </p>
+                <p className="text-xs text-red-700">
                   {vatDocuments.filter(d => d.source === 'expense').length} รายการ
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className={`bg-gradient-to-br ${vatDifference >= 0 ? 'from-blue-50 to-blue-100 border-blue-200' : 'from-orange-50 to-orange-100 border-orange-200'}`}>
+              <CardHeader className="pb-3">
+                <CardTitle className={`text-sm font-medium ${vatDifference >= 0 ? 'text-blue-900' : 'text-orange-900'} flex items-center gap-2`}>
+                  <TrendingUp className="h-5 w-5" />
+                  ส่วนต่าง VAT
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className={`text-2xl font-bold ${vatDifference >= 0 ? 'text-blue-900' : 'text-orange-900'}`}>
+                  {formatCurrency(Math.abs(vatDifference))}
+                </div>
+                <p className={`text-xs mt-1 ${vatDifference >= 0 ? 'text-blue-700' : 'text-orange-700'}`}>
+                  {vatDifference >= 0 ? 'รายได้ > รายจ่าย' : 'รายจ่าย > รายได้'}
                 </p>
               </CardContent>
             </Card>
@@ -476,15 +583,15 @@ export default function TaxDocuments() {
                         </TableCell>
                         <TableCell className="text-center">
                           {doc.source === 'expense' ? (
-                            doc.tax_invoice_received ? (
+                            (doc as any).tax_invoice_received ? (
                               <div className="flex flex-col items-center gap-1">
                                 <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                                   <CheckCircle2 size={14} className="mr-1" />
                                   รับแล้ว
                                 </Badge>
-                                {doc.tax_invoice_received_at && (
+                                {(doc as any).tax_invoice_received_at && (
                                   <span className="text-xs text-muted-foreground">
-                                    {format(new Date(doc.tax_invoice_received_at), "dd/MM/yy HH:mm", { locale: th })}
+                                    {format(new Date((doc as any).tax_invoice_received_at), "dd/MM/yy HH:mm", { locale: th })}
                                   </span>
                                 )}
                               </div>
@@ -492,15 +599,29 @@ export default function TaxDocuments() {
                               <Badge variant="secondary">รอรับ</Badge>
                             )
                           ) : (
-                            <Badge variant="outline" className="text-muted-foreground">N/A</Badge>
+                            (doc as any).vat_document_sent ? (
+                              <div className="flex flex-col items-center gap-1">
+                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                  <CheckCircle2 size={14} className="mr-1" />
+                                  ส่งแล้ว
+                                </Badge>
+                                {(doc as any).vat_document_sent_at && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {format(new Date((doc as any).vat_document_sent_at), "dd/MM/yy HH:mm", { locale: th })}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <Badge variant="secondary">รอส่ง</Badge>
+                            )
                           )}
                         </TableCell>
                         <TableCell className="text-center">
                           {doc.source === 'expense' ? (
-                            doc.tax_invoice_received ? (
-                              doc.receipt_image_url ? (
+                            (doc as any).tax_invoice_received ? (
+                              (doc as any).receipt_image_url ? (
                                 <a 
-                                  href={doc.receipt_image_url} 
+                                  href={(doc as any).receipt_image_url} 
                                   target="_blank" 
                                   rel="noopener noreferrer"
                                   className="text-sm text-primary hover:underline"
@@ -525,7 +646,33 @@ export default function TaxDocuments() {
                               </Button>
                             )
                           ) : (
-                            <span className="text-xs text-muted-foreground">-</span>
+                            (doc as any).vat_document_sent ? (
+                              (doc as any).vat_receipt_url ? (
+                                <a 
+                                  href={(doc as any).vat_receipt_url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-primary hover:underline"
+                                >
+                                  ดูเอกสาร
+                                </a>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">ไม่มีไฟล์</span>
+                              )
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedDoc({ ...doc, actionType: 'vat' });
+                                  setReceiptDialogOpen(true);
+                                }}
+                                className="gap-1"
+                              >
+                                <Upload size={16} />
+                                ส่งเอกสาร
+                              </Button>
+                            )
                           )}
                         </TableCell>
                       </TableRow>
@@ -539,7 +686,7 @@ export default function TaxDocuments() {
 
         <TabsContent value="withholding" className="space-y-4">
           {/* Withholding Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-green-900 flex items-center gap-2">
@@ -548,10 +695,13 @@ export default function TaxDocuments() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-green-900">
+                <div className="text-2xl font-bold text-green-900">
                   {formatCurrency(withholdingIncomeTotals.withholding)}
                 </div>
                 <p className="text-xs text-green-700 mt-1">
+                  ยอดรวม: {formatCurrency(withholdingIncomeTotals.total)}
+                </p>
+                <p className="text-xs text-green-700">
                   {withholdingDocuments.filter(d => d.source === 'income').length} รายการ
                 </p>
               </CardContent>
@@ -565,11 +715,31 @@ export default function TaxDocuments() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-red-900">
+                <div className="text-2xl font-bold text-red-900">
                   {formatCurrency(withholdingExpenseTotals.withholding)}
                 </div>
                 <p className="text-xs text-red-700 mt-1">
+                  ยอดรวม: {formatCurrency(withholdingExpenseTotals.total)}
+                </p>
+                <p className="text-xs text-red-700">
                   {withholdingDocuments.filter(d => d.source === 'labor').length} รายการ
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className={`bg-gradient-to-br ${withholdingDifference >= 0 ? 'from-blue-50 to-blue-100 border-blue-200' : 'from-orange-50 to-orange-100 border-orange-200'}`}>
+              <CardHeader className="pb-3">
+                <CardTitle className={`text-sm font-medium ${withholdingDifference >= 0 ? 'text-blue-900' : 'text-orange-900'} flex items-center gap-2`}>
+                  <TrendingUp className="h-5 w-5" />
+                  ส่วนต่างหัก ณ ที่จ่าย
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className={`text-2xl font-bold ${withholdingDifference >= 0 ? 'text-blue-900' : 'text-orange-900'}`}>
+                  {formatCurrency(Math.abs(withholdingDifference))}
+                </div>
+                <p className={`text-xs mt-1 ${withholdingDifference >= 0 ? 'text-blue-700' : 'text-orange-700'}`}>
+                  {withholdingDifference >= 0 ? 'รายได้ > รายจ่าย' : 'รายจ่าย > รายได้'}
                 </p>
               </CardContent>
             </Card>
@@ -637,16 +807,16 @@ export default function TaxDocuments() {
                           {formatCurrency(doc.net_amount || 0)}
                         </TableCell>
                         <TableCell className="text-center">
-                          {doc.source === 'labor' ? (
-                            doc.withholding_tax_receipt_received ? (
+                          {doc.source === 'income' ? (
+                            (doc as any).withholding_receipt_received ? (
                               <div className="flex flex-col items-center gap-1">
                                 <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                                   <CheckCircle2 size={14} className="mr-1" />
                                   รับแล้ว
                                 </Badge>
-                                {doc.withholding_tax_receipt_received_at && (
+                                {(doc as any).withholding_receipt_received_at && (
                                   <span className="text-xs text-muted-foreground">
-                                    {format(new Date(doc.withholding_tax_receipt_received_at), "dd/MM/yy HH:mm", { locale: th })}
+                                    {format(new Date((doc as any).withholding_receipt_received_at), "dd/MM/yy HH:mm", { locale: th })}
                                   </span>
                                 )}
                               </div>
@@ -654,15 +824,57 @@ export default function TaxDocuments() {
                               <Badge variant="secondary">รอรับ</Badge>
                             )
                           ) : (
-                            <Badge variant="outline" className="text-muted-foreground">N/A</Badge>
+                            (doc as any).withholding_document_sent ? (
+                              <div className="flex flex-col items-center gap-1">
+                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                  <CheckCircle2 size={14} className="mr-1" />
+                                  ส่งแล้ว
+                                </Badge>
+                                {(doc as any).withholding_document_sent_at && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {format(new Date((doc as any).withholding_document_sent_at), "dd/MM/yy HH:mm", { locale: th })}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <Badge variant="secondary">รอส่ง</Badge>
+                            )
                           )}
                         </TableCell>
                         <TableCell className="text-center">
-                          {doc.source === 'labor' ? (
-                            doc.withholding_tax_receipt_received ? (
-                              doc.receipt_image_url ? (
+                          {doc.source === 'income' ? (
+                            (doc as any).withholding_receipt_received ? (
+                              (doc as any).withholding_receipt_url ? (
                                 <a 
-                                  href={doc.receipt_image_url} 
+                                  href={(doc as any).withholding_receipt_url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-primary hover:underline"
+                                >
+                                  ดูเอกสาร
+                                </a>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">ไม่มีไฟล์</span>
+                              )
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedDoc({ ...doc, actionType: 'withholding' });
+                                  setReceiptDialogOpen(true);
+                                }}
+                                className="gap-1"
+                              >
+                                <Upload size={16} />
+                                รับเอกสาร
+                              </Button>
+                            )
+                          ) : (
+                            (doc as any).withholding_document_sent ? (
+                              (doc as any).withholding_sent_receipt_url ? (
+                                <a 
+                                  href={(doc as any).withholding_sent_receipt_url} 
                                   target="_blank" 
                                   rel="noopener noreferrer"
                                   className="text-sm text-primary hover:underline"
@@ -683,11 +895,9 @@ export default function TaxDocuments() {
                                 className="gap-1"
                               >
                                 <Upload size={16} />
-                                รับเอกสาร
+                                ส่งเอกสาร
                               </Button>
                             )
-                          ) : (
-                            <span className="text-xs text-muted-foreground">-</span>
                           )}
                         </TableCell>
                        </TableRow>

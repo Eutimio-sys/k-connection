@@ -804,6 +804,10 @@ export type Database = {
           total_amount: number
           updated_at: string
           updated_by: string | null
+          withholding_document_sent: boolean | null
+          withholding_document_sent_at: string | null
+          withholding_document_sent_by: string | null
+          withholding_sent_receipt_url: string | null
           withholding_tax_amount: number | null
           withholding_tax_rate: number | null
           withholding_tax_receipt_received: boolean | null
@@ -832,6 +836,10 @@ export type Database = {
           total_amount?: number
           updated_at?: string
           updated_by?: string | null
+          withholding_document_sent?: boolean | null
+          withholding_document_sent_at?: string | null
+          withholding_document_sent_by?: string | null
+          withholding_sent_receipt_url?: string | null
           withholding_tax_amount?: number | null
           withholding_tax_rate?: number | null
           withholding_tax_receipt_received?: boolean | null
@@ -860,6 +868,10 @@ export type Database = {
           total_amount?: number
           updated_at?: string
           updated_by?: string | null
+          withholding_document_sent?: boolean | null
+          withholding_document_sent_at?: string | null
+          withholding_document_sent_by?: string | null
+          withholding_sent_receipt_url?: string | null
           withholding_tax_amount?: number | null
           withholding_tax_rate?: number | null
           withholding_tax_receipt_received?: boolean | null
@@ -1197,6 +1209,14 @@ export type Database = {
           project_id: string
           updated_at: string
           vat_amount: number | null
+          vat_document_sent: boolean | null
+          vat_document_sent_at: string | null
+          vat_document_sent_by: string | null
+          vat_receipt_url: string | null
+          withholding_receipt_received: boolean | null
+          withholding_receipt_received_at: string | null
+          withholding_receipt_received_by: string | null
+          withholding_receipt_url: string | null
           withholding_tax_amount: number | null
         }
         Insert: {
@@ -1212,6 +1232,14 @@ export type Database = {
           project_id: string
           updated_at?: string
           vat_amount?: number | null
+          vat_document_sent?: boolean | null
+          vat_document_sent_at?: string | null
+          vat_document_sent_by?: string | null
+          vat_receipt_url?: string | null
+          withholding_receipt_received?: boolean | null
+          withholding_receipt_received_at?: string | null
+          withholding_receipt_received_by?: string | null
+          withholding_receipt_url?: string | null
           withholding_tax_amount?: number | null
         }
         Update: {
@@ -1227,6 +1255,14 @@ export type Database = {
           project_id?: string
           updated_at?: string
           vat_amount?: number | null
+          vat_document_sent?: boolean | null
+          vat_document_sent_at?: string | null
+          vat_document_sent_by?: string | null
+          vat_receipt_url?: string | null
+          withholding_receipt_received?: boolean | null
+          withholding_receipt_received_at?: string | null
+          withholding_receipt_received_by?: string | null
+          withholding_receipt_url?: string | null
           withholding_tax_amount?: number | null
         }
         Relationships: [
