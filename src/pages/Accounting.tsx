@@ -21,8 +21,8 @@ const Accounting = () => {
   const [selectedExpense, setSelectedExpense] = useState<any>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [filters, setFilters] = useState({
-    startDate: "",
-    endDate: "",
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0],
     projectId: "all",
     vendorId: "all",
   });
@@ -220,8 +220,8 @@ const Accounting = () => {
               </div>
             </div>
             <div className="flex justify-end mt-4 gap-2">
-              <Button variant="outline" onClick={() => setFilters({ startDate: "", endDate: "", projectId: "all", vendorId: "all" })}>
-                ล้างตัวกรอง
+              <Button variant="outline" onClick={() => setFilters({ startDate: new Date().toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0], projectId: "all", vendorId: "all" })}>
+                รีเซ็ต
               </Button>
               <Button onClick={fetchExpenses}>ค้นหา</Button>
             </div>

@@ -31,13 +31,13 @@ const ProjectDetail = () => {
   const [laborDetailOpen, setLaborDetailOpen] = useState(false);
   
   // Filter states
-  const [materialStartDate, setMaterialStartDate] = useState("");
-  const [materialEndDate, setMaterialEndDate] = useState("");
+  const [materialStartDate, setMaterialStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [materialEndDate, setMaterialEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [materialCategoryFilter, setMaterialCategoryFilter] = useState("all");
   const [materialWorkerFilter, setMaterialWorkerFilter] = useState("all");
   
-  const [laborStartDate, setLaborStartDate] = useState("");
-  const [laborEndDate, setLaborEndDate] = useState("");
+  const [laborStartDate, setLaborStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [laborEndDate, setLaborEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [laborCategoryFilter, setLaborCategoryFilter] = useState("all");
   const [laborWorkerFilter, setLaborWorkerFilter] = useState("all");
   
