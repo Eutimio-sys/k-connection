@@ -109,7 +109,7 @@ export type Database = {
           amount: number
           category_id: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
           description: string | null
           expense_item_id: string | null
           expense_type: string | null
@@ -130,7 +130,7 @@ export type Database = {
           amount: number
           category_id?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           description?: string | null
           expense_item_id?: string | null
           expense_type?: string | null
@@ -151,7 +151,7 @@ export type Database = {
           amount?: number
           category_id?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           description?: string | null
           expense_item_id?: string | null
           expense_type?: string | null
@@ -418,7 +418,7 @@ export type Database = {
         Row: {
           company_id: string
           created_at: string
-          created_by: string
+          created_by: string | null
           credit_days: number | null
           id: string
           invoice_date: string
@@ -440,7 +440,7 @@ export type Database = {
         Insert: {
           company_id: string
           created_at?: string
-          created_by: string
+          created_by?: string | null
           credit_days?: number | null
           id?: string
           invoice_date?: string
@@ -462,7 +462,7 @@ export type Database = {
         Update: {
           company_id?: string
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           credit_days?: number | null
           id?: string
           invoice_date?: string
@@ -759,7 +759,7 @@ export type Database = {
         Row: {
           company_id: string
           created_at: string
-          created_by: string
+          created_by: string | null
           id: string
           invoice_date: string
           invoice_number: string
@@ -779,7 +779,7 @@ export type Database = {
         Insert: {
           company_id: string
           created_at?: string
-          created_by: string
+          created_by?: string | null
           id?: string
           invoice_date?: string
           invoice_number: string
@@ -799,7 +799,7 @@ export type Database = {
         Update: {
           company_id?: string
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           id?: string
           invoice_date?: string
           invoice_number?: string
