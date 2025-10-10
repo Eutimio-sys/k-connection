@@ -25,6 +25,7 @@ import Profile from "./pages/Profile";
 import Attendance from "./pages/Attendance";
 import LeaveManagement from "./pages/LeaveManagement";
 import TaxPlanning from "./pages/TaxPlanning";
+import TaxDocuments from "./pages/TaxDocuments";
 import MyWork from "./pages/MyWork";
 import Chat from "./pages/Chat";
 import NotFound from "./pages/NotFound";
@@ -55,6 +56,7 @@ const App = () => (
             <Route path="/payroll" element={<ProtectedRoute featureCode="payroll"><Payroll /></ProtectedRoute>} />
             <Route path="/foreign-workers" element={<ProtectedRoute featureCode="foreign_workers"><ForeignWorkers /></ProtectedRoute>} />
             <Route path="/tax-planning" element={<ProtectedRoute featureCode="tax_planning"><TaxPlanning /></ProtectedRoute>} />
+            <Route path="/tax-documents" element={<ProtectedRoute featureCode="accounting"><TaxDocuments /></ProtectedRoute>} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/attendance" element={<ProtectedRoute featureCode="attendance"><Attendance /></ProtectedRoute>} />
             <Route path="/leave" element={<ProtectedRoute featureCode="leave_management"><LeaveManagement /></ProtectedRoute>} />

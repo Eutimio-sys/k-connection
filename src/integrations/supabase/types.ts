@@ -435,6 +435,9 @@ export type Database = {
           status: string
           subtotal: number | null
           tax_invoice_number: string | null
+          tax_invoice_received: boolean | null
+          tax_invoice_received_at: string | null
+          tax_invoice_received_by: string | null
           total_amount: number
           updated_at: string
           updated_by: string | null
@@ -462,6 +465,9 @@ export type Database = {
           status?: string
           subtotal?: number | null
           tax_invoice_number?: string | null
+          tax_invoice_received?: boolean | null
+          tax_invoice_received_at?: string | null
+          tax_invoice_received_by?: string | null
           total_amount?: number
           updated_at?: string
           updated_by?: string | null
@@ -489,6 +495,9 @@ export type Database = {
           status?: string
           subtotal?: number | null
           tax_invoice_number?: string | null
+          tax_invoice_received?: boolean | null
+          tax_invoice_received_at?: string | null
+          tax_invoice_received_by?: string | null
           total_amount?: number
           updated_at?: string
           updated_by?: string | null
@@ -794,6 +803,9 @@ export type Database = {
           updated_by: string | null
           withholding_tax_amount: number | null
           withholding_tax_rate: number | null
+          withholding_tax_receipt_received: boolean | null
+          withholding_tax_receipt_received_at: string | null
+          withholding_tax_receipt_received_by: string | null
           worker_id: string | null
         }
         Insert: {
@@ -819,6 +831,9 @@ export type Database = {
           updated_by?: string | null
           withholding_tax_amount?: number | null
           withholding_tax_rate?: number | null
+          withholding_tax_receipt_received?: boolean | null
+          withholding_tax_receipt_received_at?: string | null
+          withholding_tax_receipt_received_by?: string | null
           worker_id?: string | null
         }
         Update: {
@@ -844,6 +859,9 @@ export type Database = {
           updated_by?: string | null
           withholding_tax_amount?: number | null
           withholding_tax_rate?: number | null
+          withholding_tax_receipt_received?: boolean | null
+          withholding_tax_receipt_received_at?: string | null
+          withholding_tax_receipt_received_by?: string | null
           worker_id?: string | null
         }
         Relationships: [

@@ -16,6 +16,7 @@ import {
   Globe,
   TrendingUp,
   MessageCircle,
+  Receipt,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -46,6 +47,7 @@ const menuItems = [
   { title: "บัญชีค่าแรง", url: "/labor-accounting", icon: Wallet, featureCode: "labor_expenses" },
   { title: "บัญชีเงินเดือน", url: "/payroll", icon: Wallet, featureCode: "payroll" },
   { title: "รายการโอนเงิน", url: "/daily-payments", icon: Wallet, featureCode: "daily_payments" },
+  { title: "ติดตามเอกสารภาษี", url: "/tax-documents", icon: Receipt, featureCode: "accounting" },
   { title: "วางแผนภาษี", url: "/tax-planning", icon: TrendingUp, featureCode: "tax_planning" },
   { title: "ระบบลา", url: "/leave", icon: Calendar, featureCode: "leave_management" },
   { title: "จัดการสิทธิ์ผู้ใช้", url: "/user-roles", icon: Shield, featureCode: null },
