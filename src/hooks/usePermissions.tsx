@@ -13,37 +13,55 @@ export const usePermissions = (): UserPermissions => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchPermissions();
+    // Listen to auth changes first, then fetch
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        // Defer to avoid deadlocks per best practices
+        setTimeout(() => {
+          fetchPermissionsForUser(session.user!.id);
+        }, 0);
+      } else {
+        // No session; reset to minimal state
+        setRole("worker");
+        setPermissions({});
+        setLoading(false);
+      }
+    });
+
+    // Initial session fetch
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        fetchPermissionsForUser(session.user.id);
+      } else {
+        setRole("worker");
+        setPermissions({});
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const fetchPermissions = async () => {
+  const fetchPermissionsForUser = async (userId: string) => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
       // Get user roles from user_roles table
       const { data: userRoles } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", user.id);
+        .eq("user_id", userId);
 
       if (!userRoles || userRoles.length === 0) {
         // Default to worker role if none assigned
-        setRole("worker");
+        const fallbackRole = "worker";
+        setRole(fallbackRole);
         const { data: rolePermissions } = await supabase
           .from("role_permissions")
           .select("feature_code, can_access")
-          .in("role", ["worker"]);
+          .in("role", [fallbackRole]);
         const { data: userPermissions } = await supabase
           .from("user_permissions")
           .select("feature_code, can_access")
-          .eq("user_id", user.id);
+          .eq("user_id", userId);
         const permissionsMap: Record<string, boolean> = {};
         rolePermissions?.forEach((perm) => {
           permissionsMap[perm.feature_code] =
@@ -53,6 +71,8 @@ export const usePermissions = (): UserPermissions => {
           permissionsMap[perm.feature_code] = perm.can_access;
         });
         setPermissions(permissionsMap);
+        // Debug: summarize permissions
+        console.log("usePermissions(fallback)", { userId, role: fallbackRole, features: Object.keys(permissionsMap) });
         setLoading(false);
         return;
       }
@@ -72,7 +92,7 @@ export const usePermissions = (): UserPermissions => {
       const { data: userPermissions } = await supabase
         .from("user_permissions")
         .select("feature_code, can_access")
-        .eq("user_id", user.id);
+        .eq("user_id", userId);
 
       // Convert to object for easy lookup
       // Priority: user permissions > role permissions
@@ -90,6 +110,7 @@ export const usePermissions = (): UserPermissions => {
       });
 
       setPermissions(permissionsMap);
+      console.log("usePermissions", { userId, roles: allRoles, primaryRole, features: Object.keys(permissionsMap) });
     } catch (error) {
       console.error("Error fetching permissions:", error);
     } finally {
