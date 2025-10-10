@@ -49,11 +49,25 @@ export const usePermissions = (): UserPermissions => {
         .select("feature_code, can_access")
         .in("role", allRoles);
 
-      // Convert to object for easy lookup (grant if ANY role allows)
+      // Get user-specific permissions
+      const { data: userPermissions } = await supabase
+        .from("user_permissions")
+        .select("feature_code, can_access")
+        .eq("user_id", user.id);
+
+      // Convert to object for easy lookup
+      // Priority: user permissions > role permissions
       const permissionsMap: Record<string, boolean> = {};
+      
+      // First, add role permissions
       rolePermissions?.forEach((perm) => {
         permissionsMap[perm.feature_code] =
           permissionsMap[perm.feature_code] === true || perm.can_access === true;
+      });
+
+      // Then, override with user-specific permissions
+      userPermissions?.forEach((perm) => {
+        permissionsMap[perm.feature_code] = perm.can_access;
       });
 
       setPermissions(permissionsMap);

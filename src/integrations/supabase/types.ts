@@ -1821,6 +1821,44 @@ export type Database = {
           },
         ]
       }
+      user_permissions: {
+        Row: {
+          can_access: boolean
+          created_at: string
+          created_by: string | null
+          feature_code: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          can_access?: boolean
+          created_at?: string
+          created_by?: string | null
+          feature_code: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          can_access?: boolean
+          created_at?: string
+          created_by?: string | null
+          feature_code?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_permissions_feature_code_fkey"
+            columns: ["feature_code"]
+            isOneToOne: false
+            referencedRelation: "features"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string

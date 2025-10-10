@@ -44,6 +44,13 @@ interface RolePermission {
   can_access: boolean;
 }
 
+interface UserPermission {
+  id: string;
+  user_id: string;
+  feature_code: string;
+  can_access: boolean;
+}
+
 interface Role {
   id: string;
   code: string;
@@ -59,6 +66,8 @@ export default function UserRoles() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [features, setFeatures] = useState<Feature[]>([]);
   const [rolePermissions, setRolePermissions] = useState<RolePermission[]>([]);
+  const [userPermissions, setUserPermissions] = useState<UserPermission[]>([]);
+  const [selectedUser, setSelectedUser] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [showRoleDialog, setShowRoleDialog] = useState(false);
@@ -138,13 +147,20 @@ export default function UserRoles() {
 
       if (permissionsError) throw permissionsError;
 
+      // Fetch user permissions
+      const { data: userPermsData, error: userPermsError } = await supabase
+        .from("user_permissions")
+        .select("*");
+
+      if (userPermsError) throw userPermsError;
+
       setUsers(profilesData || []);
       setInactiveUsers(inactiveProfilesData || []);
       setUserRoles(rolesData || []);
       setRoles(allRolesData || []);
       setFeatures(featuresData || []);
-      setFeatures(featuresData || []);
       setRolePermissions(permissionsData || []);
+      setUserPermissions(userPermsData || []);
     } catch (error: any) {
       toast.error("เกิดข้อผิดพลาดในการโหลดข้อมูล: " + error.message);
     } finally {
@@ -338,6 +354,66 @@ export default function UserRoles() {
     }
   };
 
+  const getUserPermission = (userId: string, featureCode: string): boolean | null => {
+    const userPerm = userPermissions.find(
+      p => p.user_id === userId && p.feature_code === featureCode
+    );
+    return userPerm ? userPerm.can_access : null;
+  };
+
+  const handleToggleUserPermission = async (userId: string, featureCode: string, currentValue: boolean | null) => {
+    try {
+      setSaving(`${userId}-${featureCode}`);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("ไม่พบข้อมูลผู้ใช้");
+
+      const existing = userPermissions.find(
+        p => p.user_id === userId && p.feature_code === featureCode
+      );
+
+      if (existing) {
+        if (currentValue === null) {
+          // If was using role default, now set to false
+          const { error } = await supabase
+            .from("user_permissions")
+            .update({ can_access: false })
+            .eq("id", existing.id);
+          if (error) throw error;
+        } else {
+          // Toggle the value
+          const { error } = await supabase
+            .from("user_permissions")
+            .update({ can_access: !currentValue })
+            .eq("id", existing.id);
+          if (error) throw error;
+        }
+      } else {
+        // Create new user permission
+        // If role default is true, set to false; if false, set to true
+        const userRole = getUserRoles(userId)[0];
+        const roleDefault = hasPermission(userRole, featureCode);
+        
+        const { error } = await supabase
+          .from("user_permissions")
+          .insert({
+            user_id: userId,
+            feature_code: featureCode,
+            can_access: !roleDefault,
+            created_by: user.id
+          });
+        if (error) throw error;
+      }
+
+      toast.success("อัปเดตสิทธิ์สำเร็จ");
+      await fetchData();
+    } catch (error: any) {
+      toast.error("เกิดข้อผิดพลาด: " + error.message);
+    } finally {
+      setSaving(null);
+    }
+  };
+
   // Group features by category
   const featuresByCategory = features.reduce((acc, feature) => {
     if (!acc[feature.category]) {
@@ -367,10 +443,14 @@ export default function UserRoles() {
       </div>
 
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="users">
             <UserCog className="h-4 w-4 mr-2" />
             จัดการสิทธิ์ผู้ใช้
+          </TabsTrigger>
+          <TabsTrigger value="user-permissions">
+            <UserCog className="h-4 w-4 mr-2" />
+            สิทธิ์เฉพาะบุคคล
           </TabsTrigger>
           <TabsTrigger value="deleted">
             <UserCog className="h-4 w-4 mr-2" />
@@ -587,6 +667,117 @@ export default function UserRoles() {
                   <p className="text-sm text-muted-foreground">{role.description}</p>
                 </div>
               ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="user-permissions" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>กำหนดสิทธิ์เฉพาะบุคคล</CardTitle>
+              <CardDescription>
+                เลือกผู้ใช้และกำหนดสิทธิ์เข้าถึงฟีเจอร์เฉพาะของแต่ละคน (จะแทนที่สิทธิ์จาก Role)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <Select value={selectedUser} onValueChange={setSelectedUser}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="เลือกผู้ใช้เพื่อกำหนดสิทธิ์" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users.map((user) => {
+                      const userRole = getUserRoles(user.id)[0];
+                      const roleLabel = getRoleLabel(userRole);
+                      return (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.full_name} ({roleLabel})
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+
+                {selectedUser && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 pb-2 border-b">
+                      <h3 className="text-lg font-semibold">
+                        สิทธิ์ของ {users.find(u => u.id === selectedUser)?.full_name}
+                      </h3>
+                      <Badge variant={getRoleBadgeVariant(getUserRoles(selectedUser)[0])}>
+                        {getRoleLabel(getUserRoles(selectedUser)[0])}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      🔘 = ใช้สิทธิ์จาก Role | ✅ = เปิดใช้งานเฉพาะ | ❌ = ปิดใช้งานเฉพาะ
+                    </p>
+
+                    {Object.entries(featuresByCategory).map(([category, categoryFeatures]) => (
+                      <div key={category} className="space-y-3">
+                        <div className="flex items-center gap-2 pb-2 border-b">
+                          <h4 className="font-semibold">
+                            {category === 'general' && '🔧 ทั่วไป'}
+                            {category === 'hr' && '👥 ทรัพยากรบุคคล'}
+                            {category === 'accounting' && '💰 บัญชี'}
+                            {category === 'management' && '📊 จัดการ'}
+                            {category === 'communication' && '💬 สื่อสาร'}
+                            {!['general', 'hr', 'accounting', 'management', 'communication'].includes(category) && category}
+                          </h4>
+                        </div>
+                        <div className="grid gap-2">
+                          {categoryFeatures.map(feature => {
+                            const userRole = getUserRoles(selectedUser)[0];
+                            const rolePermission = hasPermission(userRole, feature.code);
+                            const userPermission = getUserPermission(selectedUser, feature.code);
+                            const isSaving = saving === `${selectedUser}-${feature.code}`;
+                            
+                            // Determine final access status
+                            const finalAccess = userPermission !== null ? userPermission : rolePermission;
+                            const isCustom = userPermission !== null;
+                            
+                            return (
+                              <div key={feature.code} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <div className="font-medium">{feature.name}</div>
+                                    {isCustom && (
+                                      <Badge variant="outline" className="text-xs">
+                                        กำหนดเอง
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  {feature.description && (
+                                    <div className="text-xs text-muted-foreground mt-0.5">
+                                      {feature.description}
+                                      {!isCustom && (
+                                        <span className="ml-2 text-primary">
+                                          (จาก Role: {rolePermission ? '✅' : '❌'})
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Switch
+                                    checked={finalAccess}
+                                    disabled={isSaving}
+                                    onCheckedChange={() => handleToggleUserPermission(selectedUser, feature.code, userPermission)}
+                                  />
+                                  {isCustom && finalAccess !== rolePermission && (
+                                    <span className="text-xs text-muted-foreground">
+                                      {finalAccess ? '✅' : '❌'}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
