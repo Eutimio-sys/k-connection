@@ -22,6 +22,7 @@ export const ProtectedRoute = ({
     // Admin bypass: full access
     if (role === "admin") {
       setHasAccess(true);
+      console.log("ProtectedRoute", { role, featureCode, requiredRoles, decision: "admin-bypass" });
       return;
     }
 
@@ -29,15 +30,25 @@ export const ProtectedRoute = ({
     if (requiredRoles && requiredRoles.length > 0) {
       if (!requiredRoles.includes(role)) {
         setHasAccess(false);
+        console.log("ProtectedRoute", { role, featureCode, requiredRoles, decision: "blocked-requiredRoles" });
         return;
       }
     }
 
     // Check feature-based access
     if (featureCode) {
-      setHasAccess(permissions[featureCode] === true);
+      const allowed = permissions[featureCode] === true;
+      setHasAccess(allowed);
+      console.log("ProtectedRoute", {
+        role,
+        featureCode,
+        requiredRoles,
+        permissionsKeys: Object.keys(permissions || {}),
+        allowed,
+      });
     } else {
       setHasAccess(true);
+      console.log("ProtectedRoute", { role, featureCode, requiredRoles, decision: "no-featureCode-allow" });
     }
   }, [loading, role, permissions, featureCode, requiredRoles]);
 
