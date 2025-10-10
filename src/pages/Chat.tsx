@@ -100,7 +100,10 @@ export default function Chat() {
   }, [selectedProjectId]);
 
   useEffect(() => {
-    scrollToBottom();
+    // Scroll to bottom when messages change OR on initial load
+    setTimeout(() => {
+      scrollToBottom();
+    }, 100);
   }, [messages]);
 
   useEffect(() => {
