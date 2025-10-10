@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { Plus, CheckCircle2, Clock, AlertCircle, X } from "lucide-react";
 
 import { TaskDetailDialog } from "@/components/TaskDetailDialog";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Task {
   id: string;
@@ -55,6 +56,7 @@ interface Project {
 
 export default function MyWork() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [tasks, setTasks] = useState<Task[]>([]);
   const [users, setUsers] = useState<Profile[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -63,6 +65,7 @@ export default function MyWork() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
+  const [monthAvatars, setMonthAvatars] = useState<Record<string, string[]>>({});
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -84,6 +87,12 @@ export default function MyWork() {
       checkUserRoleAndFetchUsers();
     }
   }, [currentUser, selectedDate]);
+
+  useEffect(() => {
+    if (currentUser) {
+      fetchMonthTaskMarkers();
+    }
+  }, [currentUser, currentMonth]);
 
   const checkUserRoleAndFetchUsers = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -180,6 +189,44 @@ export default function MyWork() {
     if (data) setTasks(data as any);
   };
 
+  // Fetch avatars for days with tasks in the current month
+  const fetchMonthTaskMarkers = async () => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const start = new Date(year, month, 1, 0, 0, 0, 0).toISOString();
+    const end = new Date(year, month + 1, 0, 23, 59, 59, 999).toISOString();
+
+    const { data, error } = await supabase
+      .from("tasks")
+      .select(`
+        id, due_date,
+        task_assignees (
+          user_id,
+          profiles ( avatar_url )
+        )
+      `)
+      .gte("due_date", start)
+      .lte("due_date", end);
+
+    if (error || !data) {
+      return;
+    }
+
+    const map: Record<string, string[]> = {};
+    (data as any[]).forEach((t) => {
+      const key = (t.due_date || '').substring(0, 10);
+      const urls: string[] = [];
+      (t.task_assignees || []).forEach((a: any) => {
+        const url = a?.profiles?.avatar_url;
+        if (url && !urls.includes(url)) urls.push(url);
+      });
+      if (urls.length) {
+        map[key] = (map[key] || []).concat(urls).slice(0, 3);
+      }
+    });
+
+    setMonthAvatars(map);
+  };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     

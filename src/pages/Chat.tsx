@@ -107,6 +107,9 @@ export default function Chat() {
     // Clear message and focus input when switching rooms
     setNewMessage('');
     setFile(null);
+    setShowMentionPopover(false);
+    setMentionSearch("");
+    setCursorPosition(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
