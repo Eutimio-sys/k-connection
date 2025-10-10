@@ -27,6 +27,7 @@ const Profile = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [nickname, setNickname] = useState("");
   const [savingNickname, setSavingNickname] = useState(false);
+  const [roles, setRoles] = useState<string[]>([]);
 
   useEffect(() => {
     fetchProfile();
@@ -104,6 +105,12 @@ const Profile = () => {
       } else {
         setProfile(data);
         setNickname(data.nickname || "");
+        // Fetch roles of current user
+        const { data: roleRows } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id);
+        setRoles((roleRows || []).map((r: any) => r.role));
       }
 
       // Fetch leave balance
@@ -336,7 +343,7 @@ const Profile = () => {
             </div>
             <div className="text-center">
               <p className="font-semibold text-lg">{profile?.full_name}</p>
-              <p className="text-sm text-muted-foreground">{profile?.role}</p>
+              <p className="text-sm text-muted-foreground">{roles.length ? roles.map((r) => r === 'admin' ? 'ผู้ดูแลระบบ' : r === 'manager' ? 'ผู้จัดการ' : r === 'accountant' ? 'บัญชี' : r === 'purchaser' ? 'จัดซื้อ' : 'พนักงาน').join(', ') : 'พนักงาน'}</p>
             </div>
           </CardContent>
         </Card>
@@ -422,7 +429,7 @@ const Profile = () => {
               <div className="flex items-center gap-2 text-sm">
                 <Briefcase size={16} className="text-muted-foreground" />
                 <span className="text-muted-foreground">บทบาท:</span>
-                <span className="font-medium">{profile?.role === 'admin' ? 'ผู้ดูแลระบบ' : profile?.role === 'manager' ? 'ผู้จัดการ' : profile?.role === 'accountant' ? 'บัญชี' : profile?.role === 'purchaser' ? 'จัดซื้อ' : 'พนักงาน'}</span>
+                <span className="font-medium">{roles.length ? roles.map((r) => r === 'admin' ? 'ผู้ดูแลระบบ' : r === 'manager' ? 'ผู้จัดการ' : r === 'accountant' ? 'บัญชี' : r === 'purchaser' ? 'จัดซื้อ' : 'พนักงาน').join(', ') : 'พนักงาน'}</span>
               </div>
               {profile?.hire_date && (
                 <div className="flex items-center gap-2 text-sm">
