@@ -49,10 +49,11 @@ export const usePermissions = (): UserPermissions => {
         .select("feature_code, can_access")
         .in("role", allRoles);
 
-      // Convert to object for easy lookup
+      // Convert to object for easy lookup (grant if ANY role allows)
       const permissionsMap: Record<string, boolean> = {};
       rolePermissions?.forEach((perm) => {
-        permissionsMap[perm.feature_code] = perm.can_access;
+        permissionsMap[perm.feature_code] =
+          permissionsMap[perm.feature_code] === true || perm.can_access === true;
       });
 
       setPermissions(permissionsMap);
