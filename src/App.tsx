@@ -50,7 +50,7 @@ const App = () => (
             <Route path="/labor-accounting" element={<ProtectedRoute featureCode="labor_expenses"><LaborAccounting /></ProtectedRoute>} />
             <Route path="/daily-payments" element={<ProtectedRoute featureCode="daily_payments"><DailyPayments /></ProtectedRoute>} />
             <Route path="/employees/:id" element={<ProtectedRoute featureCode="employees"><EmployeeDetail /></ProtectedRoute>} />
-            <Route path="/user-roles" element={<ProtectedRoute><UserRoles /></ProtectedRoute>} />
+            <Route path="/user-roles" element={<ProtectedRoute requiredRoles={["admin"]}><UserRoles /></ProtectedRoute>} />
             <Route path="/hr-management" element={<ProtectedRoute featureCode="hr_management"><HRManagement /></ProtectedRoute>} />
             <Route path="/payroll" element={<ProtectedRoute featureCode="payroll"><Payroll /></ProtectedRoute>} />
             <Route path="/foreign-workers" element={<ProtectedRoute featureCode="foreign_workers"><ForeignWorkers /></ProtectedRoute>} />
@@ -58,8 +58,8 @@ const App = () => (
             <Route path="/profile" element={<Profile />} />
             <Route path="/attendance" element={<ProtectedRoute featureCode="attendance"><Attendance /></ProtectedRoute>} />
             <Route path="/leave" element={<ProtectedRoute featureCode="leave_management"><LeaveManagement /></ProtectedRoute>} />
-            <Route path="/mywork" element={<ProtectedRoute featureCode="tasks"><MyWork /></ProtectedRoute>} />
-            <Route path="/chat" element={<ProtectedRoute featureCode="chat"><Chat /></ProtectedRoute>} />
+            <Route path="/mywork" element={<MyWork />} />
+            <Route path="/chat" element={<Chat />} />
             <Route path="/settings" element={<ProtectedRoute featureCode="settings"><Settings /></ProtectedRoute>} />
           </Route>
           <Route path="*" element={<NotFound />} />
