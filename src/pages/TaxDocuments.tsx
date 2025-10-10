@@ -8,8 +8,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { FileText, Receipt, CheckCircle2, Filter } from "lucide-react";
+import { FileText, Receipt, CheckCircle2, Filter, Upload, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
 
@@ -23,6 +29,10 @@ export default function TaxDocuments() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedDoc, setSelectedDoc] = useState<any>(null);
+  const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     document.title = "ติดตามเอกสารภาษี | ระบบบริหารงาน";
@@ -186,50 +196,106 @@ export default function TaxDocuments() {
     }
   };
 
+  const handleReceiptUpload = async () => {
+    if (!receiptFile || !selectedDoc) {
+      toast.error("กรุณาเลือกไฟล์");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const docDate = new Date(selectedDoc.date);
+      const year = docDate.getFullYear();
+      const month = String(docDate.getMonth() + 1).padStart(2, '0');
+      const fileExt = receiptFile.name.split('.').pop();
+      
+      const companyName = selectedDoc.company?.name || 'unknown';
+      const docNumber = selectedDoc.invoice_number.replace(/[\/\\]/g, '-');
+      const docType = selectedDoc.source === 'expense' ? 'expense-vat' : 
+                      selectedDoc.source === 'labor' ? 'labor-withholding' : 
+                      'income';
+      
+      const fileName = `tax-receipts/${companyName}/${year}-${month}/${docType}-${docNumber}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('receipts')
+        .upload(fileName, receiptFile);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('receipts')
+        .getPublicUrl(fileName);
+
+      // Update the appropriate table
+      let updateError;
+      if (selectedDoc.source === 'expense') {
+        const { error } = await supabase
+          .from('expenses')
+          .update({ 
+            tax_invoice_received: true,
+            tax_invoice_received_at: new Date().toISOString(),
+            tax_invoice_received_by: currentUserId,
+            receipt_image_url: publicUrl 
+          })
+          .eq('id', selectedDoc.id);
+        updateError = error;
+      } else if (selectedDoc.source === 'labor') {
+        const { error } = await supabase
+          .from('labor_expenses')
+          .update({ 
+            withholding_tax_receipt_received: true,
+            withholding_tax_receipt_received_at: new Date().toISOString(),
+            withholding_tax_receipt_received_by: currentUserId,
+            receipt_image_url: publicUrl 
+          })
+          .eq('id', selectedDoc.id);
+        updateError = error;
+      }
+
+      if (updateError) throw updateError;
+
+      toast.success('อัพโหลดและบันทึกสำเร็จ');
+      setReceiptFile(null);
+      setReceiptDialogOpen(false);
+      setSelectedDoc(null);
+      fetchDocuments();
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast.error('เกิดข้อผิดพลาด: ' + error.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const formatCurrency = (amount: number) => 
     new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(amount);
 
-  // Calculate VAT totals
-  const vatTotals = vatDocuments.reduce(
-    (acc, doc) => ({
-      subtotal: acc.subtotal + Number(doc.subtotal || 0),
+  // Calculate VAT totals - separated by income and expense
+  const vatIncomeTotals = vatDocuments
+    .filter(doc => doc.source === 'income')
+    .reduce((acc, doc) => ({
       vat: acc.vat + Number(doc.vat_amount || 0),
-      total: acc.total + Number(doc.total_amount || 0),
-    }),
-    { subtotal: 0, vat: 0, total: 0 }
-  );
+    }), { vat: 0 });
 
-  const vatReceivedTotals = vatDocuments
-    .filter(doc => doc.tax_invoice_received)
-    .reduce(
-      (acc, doc) => ({
-        subtotal: acc.subtotal + Number(doc.subtotal || 0),
-        vat: acc.vat + Number(doc.vat_amount || 0),
-        total: acc.total + Number(doc.total_amount || 0),
-      }),
-      { subtotal: 0, vat: 0, total: 0 }
-    );
+  const vatExpenseTotals = vatDocuments
+    .filter(doc => doc.source === 'expense')
+    .reduce((acc, doc) => ({
+      vat: acc.vat + Number(doc.vat_amount || 0),
+    }), { vat: 0 });
 
-  // Calculate withholding tax totals
-  const withholdingTotals = withholdingDocuments.reduce(
-    (acc, doc) => ({
-      total: acc.total + Number(doc.total_amount || 0),
+  // Calculate withholding tax totals - separated by income and expense
+  const withholdingIncomeTotals = withholdingDocuments
+    .filter(doc => doc.source === 'income')
+    .reduce((acc, doc) => ({
       withholding: acc.withholding + Number(doc.withholding_tax_amount || 0),
-      net: acc.net + Number(doc.net_amount || 0),
-    }),
-    { total: 0, withholding: 0, net: 0 }
-  );
+    }), { withholding: 0 });
 
-  const withholdingReceivedTotals = withholdingDocuments
-    .filter(doc => doc.withholding_tax_receipt_received)
-    .reduce(
-      (acc, doc) => ({
-        total: acc.total + Number(doc.total_amount || 0),
-        withholding: acc.withholding + Number(doc.withholding_tax_amount || 0),
-        net: acc.net + Number(doc.net_amount || 0),
-      }),
-      { total: 0, withholding: 0, net: 0 }
-    );
+  const withholdingExpenseTotals = withholdingDocuments
+    .filter(doc => doc.source === 'labor')
+    .reduce((acc, doc) => ({
+      withholding: acc.withholding + Number(doc.withholding_tax_amount || 0),
+    }), { withholding: 0 });
 
   if (loading) {
     return (
@@ -313,82 +379,38 @@ export default function TaxDocuments() {
 
         <TabsContent value="vat" className="space-y-4">
           {/* VAT Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  รวมทั้งหมด
+                <CardTitle className="text-sm font-medium text-green-900 flex items-center gap-2">
+                  <ArrowUpCircle className="h-5 w-5" />
+                  VAT รายได้
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">ยอดบิล:</span>
-                    <span className="font-semibold">{formatCurrency(vatTotals.subtotal)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">VAT 7%:</span>
-                    <span className="font-semibold text-blue-600">{formatCurrency(vatTotals.vat)}</span>
-                  </div>
-                  <div className="flex justify-between font-bold border-t pt-1">
-                    <span>รวม:</span>
-                    <span className="text-primary">{formatCurrency(vatTotals.total)}</span>
-                  </div>
+                <div className="text-3xl font-bold text-green-900">
+                  {formatCurrency(vatIncomeTotals.vat)}
                 </div>
+                <p className="text-xs text-green-700 mt-1">
+                  {vatDocuments.filter(d => d.source === 'income').length} รายการ
+                </p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  รับเอกสารแล้ว
+                <CardTitle className="text-sm font-medium text-red-900 flex items-center gap-2">
+                  <ArrowDownCircle className="h-5 w-5" />
+                  VAT รายจ่าย
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">ยอดบิล:</span>
-                    <span className="font-semibold">{formatCurrency(vatReceivedTotals.subtotal)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">VAT 7%:</span>
-                    <span className="font-semibold text-green-600">{formatCurrency(vatReceivedTotals.vat)}</span>
-                  </div>
-                  <div className="flex justify-between font-bold border-t pt-1">
-                    <span>รวม:</span>
-                    <span className="text-green-600">{formatCurrency(vatReceivedTotals.total)}</span>
-                  </div>
+                <div className="text-3xl font-bold text-red-900">
+                  {formatCurrency(vatExpenseTotals.vat)}
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  ยังไม่ได้รับ
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">ยอดบิล:</span>
-                    <span className="font-semibold">
-                      {formatCurrency(vatTotals.subtotal - vatReceivedTotals.subtotal)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">VAT 7%:</span>
-                    <span className="font-semibold text-orange-600">
-                      {formatCurrency(vatTotals.vat - vatReceivedTotals.vat)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between font-bold border-t pt-1">
-                    <span>รวม:</span>
-                    <span className="text-orange-600">
-                      {formatCurrency(vatTotals.total - vatReceivedTotals.total)}
-                    </span>
-                  </div>
-                </div>
+                <p className="text-xs text-red-700 mt-1">
+                  {vatDocuments.filter(d => d.source === 'expense').length} รายการ
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -419,11 +441,20 @@ export default function TaxDocuments() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {vatDocuments.map((doc) => (
-                      <TableRow key={`${doc.source}-${doc.id}`}>
+                    {vatDocuments.map((doc) => {
+                      const isIncome = doc.source === 'income';
+                      const rowClass = isIncome 
+                        ? 'bg-green-50/50 hover:bg-green-50' 
+                        : 'bg-red-50/50 hover:bg-red-50';
+                      
+                      return (
+                      <TableRow key={`${doc.source}-${doc.id}`} className={rowClass}>
                         <TableCell>
-                          <Badge variant={doc.source === 'expense' ? 'default' : 'secondary'}>
-                            {doc.source === 'expense' ? 'ค่าวัสดุ' : 'เบิกเงิน'}
+                          <Badge 
+                            variant={isIncome ? 'default' : 'destructive'}
+                            className={isIncome ? 'bg-green-600' : 'bg-red-600'}
+                          >
+                            {isIncome ? 'รายได้' : 'รายจ่าย'}
                           </Badge>
                         </TableCell>
                         <TableCell className="font-medium">{doc.invoice_number}</TableCell>
@@ -455,7 +486,7 @@ export default function TaxDocuments() {
                                 </Badge>
                                 {doc.tax_invoice_received_at && (
                                   <span className="text-xs text-muted-foreground">
-                                    {format(new Date(doc.tax_invoice_received_at), "dd/MM/yyyy HH:mm", { locale: th })}
+                                    {format(new Date(doc.tax_invoice_received_at), "dd/MM/yy HH:mm", { locale: th })}
                                   </span>
                                 )}
                               </div>
@@ -463,24 +494,35 @@ export default function TaxDocuments() {
                               <Badge variant="secondary">รอรับ</Badge>
                             )
                           ) : (
-                            <Badge variant="outline">N/A</Badge>
+                            <Badge variant="outline" className="text-muted-foreground">N/A</Badge>
                           )}
                         </TableCell>
                         <TableCell className="text-center">
                           {doc.source === 'expense' ? (
                             doc.tax_invoice_received ? (
-                              <Button variant="ghost" size="sm" disabled className="gap-1">
-                                <CheckCircle2 size={16} />
-                                รับแล้ว
-                              </Button>
+                              doc.receipt_image_url ? (
+                                <a 
+                                  href={doc.receipt_image_url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-primary hover:underline"
+                                >
+                                  ดูเอกสาร
+                                </a>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">ไม่มีไฟล์</span>
+                              )
                             ) : (
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => markVatReceived(doc.id)}
+                                onClick={() => {
+                                  setSelectedDoc(doc);
+                                  setReceiptDialogOpen(true);
+                                }}
                                 className="gap-1"
                               >
-                                <CheckCircle2 size={16} />
+                                <Upload size={16} />
                                 รับเอกสาร
                               </Button>
                             )
@@ -489,7 +531,7 @@ export default function TaxDocuments() {
                           )}
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )})}
                   </TableBody>
                 </Table>
               )}
@@ -499,86 +541,38 @@ export default function TaxDocuments() {
 
         <TabsContent value="withholding" className="space-y-4">
           {/* Withholding Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  รวมทั้งหมด
+                <CardTitle className="text-sm font-medium text-green-900 flex items-center gap-2">
+                  <ArrowUpCircle className="h-5 w-5" />
+                  หักณที่จ่าย รายได้
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">ยอดรวม:</span>
-                    <span className="font-semibold">{formatCurrency(withholdingTotals.total)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">หัก ณ ที่จ่าย:</span>
-                    <span className="font-semibold text-orange-600">
-                      {formatCurrency(withholdingTotals.withholding)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between font-bold border-t pt-1">
-                    <span>สุทธิ:</span>
-                    <span className="text-primary">{formatCurrency(withholdingTotals.net)}</span>
-                  </div>
+                <div className="text-3xl font-bold text-green-900">
+                  {formatCurrency(withholdingIncomeTotals.withholding)}
                 </div>
+                <p className="text-xs text-green-700 mt-1">
+                  {withholdingDocuments.filter(d => d.source === 'income').length} รายการ
+                </p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  รับเอกสารแล้ว
+                <CardTitle className="text-sm font-medium text-red-900 flex items-center gap-2">
+                  <ArrowDownCircle className="h-5 w-5" />
+                  หักณที่จ่าย รายจ่าย
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">ยอดรวม:</span>
-                    <span className="font-semibold">{formatCurrency(withholdingReceivedTotals.total)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">หัก ณ ที่จ่าย:</span>
-                    <span className="font-semibold text-green-600">
-                      {formatCurrency(withholdingReceivedTotals.withholding)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between font-bold border-t pt-1">
-                    <span>สุทธิ:</span>
-                    <span className="text-green-600">{formatCurrency(withholdingReceivedTotals.net)}</span>
-                  </div>
+                <div className="text-3xl font-bold text-red-900">
+                  {formatCurrency(withholdingExpenseTotals.withholding)}
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  ยังไม่ได้รับ
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">ยอดรวม:</span>
-                    <span className="font-semibold">
-                      {formatCurrency(withholdingTotals.total - withholdingReceivedTotals.total)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">หัก ณ ที่จ่าย:</span>
-                    <span className="font-semibold text-orange-600">
-                      {formatCurrency(withholdingTotals.withholding - withholdingReceivedTotals.withholding)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between font-bold border-t pt-1">
-                    <span>สุทธิ:</span>
-                    <span className="text-orange-600">
-                      {formatCurrency(withholdingTotals.net - withholdingReceivedTotals.net)}
-                    </span>
-                  </div>
-                </div>
+                <p className="text-xs text-red-700 mt-1">
+                  {withholdingDocuments.filter(d => d.source === 'labor').length} รายการ
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -609,11 +603,20 @@ export default function TaxDocuments() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {withholdingDocuments.map((doc) => (
-                      <TableRow key={`${doc.source}-${doc.id}`}>
+                    {withholdingDocuments.map((doc) => {
+                      const isIncome = doc.source === 'income';
+                      const rowClass = isIncome 
+                        ? 'bg-green-50/50 hover:bg-green-50' 
+                        : 'bg-red-50/50 hover:bg-red-50';
+                      
+                      return (
+                      <TableRow key={`${doc.source}-${doc.id}`} className={rowClass}>
                         <TableCell>
-                          <Badge variant={doc.source === 'labor' ? 'default' : 'secondary'}>
-                            {doc.source === 'labor' ? 'ค่าแรง' : 'เบิกเงิน'}
+                          <Badge 
+                            variant={isIncome ? 'default' : 'destructive'}
+                            className={isIncome ? 'bg-green-600' : 'bg-red-600'}
+                          >
+                            {isIncome ? 'รายได้' : 'รายจ่าย'}
                           </Badge>
                         </TableCell>
                         <TableCell className="font-medium">{doc.invoice_number}</TableCell>
@@ -645,7 +648,7 @@ export default function TaxDocuments() {
                                 </Badge>
                                 {doc.withholding_tax_receipt_received_at && (
                                   <span className="text-xs text-muted-foreground">
-                                    {format(new Date(doc.withholding_tax_receipt_received_at), "dd/MM/yyyy HH:mm", { locale: th })}
+                                    {format(new Date(doc.withholding_tax_receipt_received_at), "dd/MM/yy HH:mm", { locale: th })}
                                   </span>
                                 )}
                               </div>
@@ -653,24 +656,35 @@ export default function TaxDocuments() {
                               <Badge variant="secondary">รอรับ</Badge>
                             )
                           ) : (
-                            <Badge variant="outline">N/A</Badge>
+                            <Badge variant="outline" className="text-muted-foreground">N/A</Badge>
                           )}
                         </TableCell>
                         <TableCell className="text-center">
                           {doc.source === 'labor' ? (
                             doc.withholding_tax_receipt_received ? (
-                              <Button variant="ghost" size="sm" disabled className="gap-1">
-                                <CheckCircle2 size={16} />
-                                รับแล้ว
-                              </Button>
+                              doc.receipt_image_url ? (
+                                <a 
+                                  href={doc.receipt_image_url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-primary hover:underline"
+                                >
+                                  ดูเอกสาร
+                                </a>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">ไม่มีไฟล์</span>
+                              )
                             ) : (
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => markWithholdingReceived(doc.id)}
+                                onClick={() => {
+                                  setSelectedDoc(doc);
+                                  setReceiptDialogOpen(true);
+                                }}
                                 className="gap-1"
                               >
-                                <CheckCircle2 size={16} />
+                                <Upload size={16} />
                                 รับเอกสาร
                               </Button>
                             )
@@ -678,8 +692,8 @@ export default function TaxDocuments() {
                             <span className="text-xs text-muted-foreground">-</span>
                           )}
                         </TableCell>
-                      </TableRow>
-                    ))}
+                       </TableRow>
+                    );})}
                   </TableBody>
                 </Table>
               )}
@@ -687,6 +701,61 @@ export default function TaxDocuments() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Receipt Upload Dialog */}
+      <Dialog open={receiptDialogOpen} onOpenChange={setReceiptDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>รับเอกสารและอัพโหลดใบกำกับภาษี</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-muted rounded-lg space-y-2">
+              <p className="text-sm font-medium">เลขที่: {selectedDoc?.invoice_number}</p>
+              <p className="text-sm text-muted-foreground">
+                วันที่: {selectedDoc?.date ? format(new Date(selectedDoc.date), "dd/MM/yyyy", { locale: th }) : '-'}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {selectedDoc?.source === 'expense' ? 'VAT' : 'หักณที่จ่าย'}: {formatCurrency(
+                  selectedDoc?.source === 'expense' 
+                    ? selectedDoc?.vat_amount || 0 
+                    : selectedDoc?.withholding_tax_amount || 0
+                )}
+              </p>
+            </div>
+            
+            <div>
+              <Label htmlFor="receipt-file">เลือกไฟล์ใบกำกับภาษี/ใบหักณที่จ่าย</Label>
+              <Input
+                id="receipt-file"
+                type="file"
+                accept="image/*,.pdf"
+                onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setReceiptDialogOpen(false);
+                  setReceiptFile(null);
+                  setSelectedDoc(null);
+                }}
+              >
+                ยกเลิก
+              </Button>
+              <Button 
+                onClick={handleReceiptUpload}
+                disabled={!receiptFile || uploading}
+                className="gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                {uploading ? 'กำลังอัพโหลด...' : 'บันทึก'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
