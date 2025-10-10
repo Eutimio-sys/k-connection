@@ -1066,6 +1066,7 @@ export type Database = {
           hire_date: string | null
           id: string
           id_card: string | null
+          nickname: string | null
           phone: string | null
           position: string | null
           updated_at: string
@@ -1086,6 +1087,7 @@ export type Database = {
           hire_date?: string | null
           id: string
           id_card?: string | null
+          nickname?: string | null
           phone?: string | null
           position?: string | null
           updated_at?: string
@@ -1106,6 +1108,7 @@ export type Database = {
           hire_date?: string | null
           id?: string
           id_card?: string | null
+          nickname?: string | null
           phone?: string | null
           position?: string | null
           updated_at?: string

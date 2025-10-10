@@ -25,6 +25,8 @@ const Profile = () => {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [yearSummary, setYearSummary] = useState<any>(null);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [nickname, setNickname] = useState("");
+  const [savingNickname, setSavingNickname] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -101,6 +103,7 @@ const Profile = () => {
         toast.error("เกิดข้อผิดพลาด");
       } else {
         setProfile(data);
+        setNickname(data.nickname || "");
       }
 
       // Fetch leave balance
@@ -218,6 +221,25 @@ const Profile = () => {
     return <div className="p-8 text-center"><p>กำลังโหลด...</p></div>;
   }
 
+  const handleSaveNickname = async () => {
+    try {
+      setSavingNickname(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { error } = await supabase
+        .from('profiles')
+        .update({ nickname })
+        .eq('id', user.id);
+      if (error) throw error;
+      toast.success('บันทึกชื่อเล่นสำเร็จ');
+      fetchProfile();
+    } catch (e: any) {
+      toast.error('บันทึกไม่สำเร็จ');
+    } finally {
+      setSavingNickname(false);
+    }
+  };
+
   return (
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between">
@@ -328,6 +350,16 @@ const Profile = () => {
               <div>
                 <Label>ชื่อ-นามสกุล</Label>
                 <Input value={profile?.full_name || "-"} disabled />
+              </div>
+
+              <div>
+                <Label>ชื่อเล่น</Label>
+                <div className="flex gap-2">
+                  <Input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="เช่น ต้น, โจ้" />
+                  <Button onClick={handleSaveNickname} disabled={savingNickname}>
+                    บันทึก
+                  </Button>
+                </div>
               </div>
 
               <div>
