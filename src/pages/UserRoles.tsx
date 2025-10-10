@@ -659,55 +659,71 @@ export default function UserRoles() {
                 จัดการสิทธิ์การเข้าถึงตามบทบาท
               </CardTitle>
               <CardDescription>
-                กำหนดว่าแต่ละบทบาทสามารถเข้าถึงฟีเจอร์ใดได้บ้าง
+                กำหนดว่าแต่ละบทบาทสามารถเข้าถึงฟีเจอร์ใดได้บ้าง แบ่งตามหมวดหมู่ของระบบ
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-8">
               {Object.entries(featuresByCategory).map(([category, categoryFeatures]) => (
-                <div key={category} className="mb-6">
-                  <h3 className="text-lg font-semibold mb-3 capitalize">{category}</h3>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[300px]">ฟีเจอร์</TableHead>
-                        {roles.map(role => (
-                          <TableHead key={role.code} className="text-center">
-                            {role.name}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {categoryFeatures.map((feature) => (
-                        <TableRow key={feature.id}>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{feature.name}</div>
-                              {feature.description && (
-                                <div className="text-xs text-muted-foreground">
-                                  {feature.description}
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                          {roles.map(role => {
-                            const hasAccess = hasPermission(role.code, feature.code);
-                            const isSaving = saving === `${role.code}-${feature.code}`;
-                            
-                            return (
-                              <TableCell key={role.code} className="text-center">
-                                <Switch
-                                  checked={hasAccess}
-                                  disabled={isSaving}
-                                  onCheckedChange={() => handleTogglePermission(role.code, feature.code, hasAccess)}
-                                />
-                              </TableCell>
-                            );
-                          })}
+                <div key={category} className="space-y-4">
+                  <div className="flex items-center gap-2 pb-2 border-b">
+                    <h3 className="text-lg font-semibold">
+                      {category === 'general' && '🔧 ทั่วไป'}
+                      {category === 'hr' && '👥 ทรัพยากรบุคคล'}
+                      {category === 'accounting' && '💰 บัญชี'}
+                      {category === 'management' && '📊 จัดการ'}
+                      {category === 'communication' && '💬 สื่อสาร'}
+                      {!['general', 'hr', 'accounting', 'management', 'communication'].includes(category) && category}
+                    </h3>
+                    <Badge variant="outline">{categoryFeatures.length} ฟีเจอร์</Badge>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[280px] sticky left-0 bg-background z-10">ฟีเจอร์</TableHead>
+                          {roles.map(role => (
+                            <TableHead key={role.code} className="text-center min-w-[100px]">
+                              <Badge variant={getRoleBadgeVariant(role.code)} className="whitespace-nowrap">
+                                {role.name}
+                              </Badge>
+                            </TableHead>
+                          ))}
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {categoryFeatures.map((feature) => (
+                          <TableRow key={feature.id} className="hover:bg-muted/50">
+                            <TableCell className="sticky left-0 bg-background">
+                              <div>
+                                <div className="font-medium">{feature.name}</div>
+                                {feature.description && (
+                                  <div className="text-xs text-muted-foreground mt-0.5">
+                                    {feature.description}
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            {roles.map(role => {
+                              const hasAccess = hasPermission(role.code, feature.code);
+                              const isSaving = saving === `${role.code}-${feature.code}`;
+                              
+                              return (
+                                <TableCell key={role.code} className="text-center">
+                                  <div className="flex items-center justify-center">
+                                    <Switch
+                                      checked={hasAccess}
+                                      disabled={isSaving}
+                                      onCheckedChange={() => handleTogglePermission(role.code, feature.code, hasAccess)}
+                                    />
+                                  </div>
+                                </TableCell>
+                              );
+                            })}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
               ))}
             </CardContent>
