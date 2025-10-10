@@ -11,11 +11,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
-import { Plus, CheckCircle2, Clock, AlertCircle, X } from "lucide-react";
+import { Plus, CheckCircle2, Clock, AlertCircle, X, LayoutGrid, Calendar as CalendarIcon } from "lucide-react";
 
 import { TaskDetailDialog } from "@/components/TaskDetailDialog";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useNavigate, useLocation } from "react-router-dom";
 
 interface Task {
   id: string;
@@ -55,6 +57,8 @@ interface Project {
 }
 
 export default function MyWork() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -66,6 +70,7 @@ export default function MyWork() {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [monthAvatars, setMonthAvatars] = useState<Record<string, string[]>>({});
+  const [viewMode, setViewMode] = useState<"calendar" | "kanban">("calendar");
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -373,13 +378,26 @@ export default function MyWork() {
     <div className="p-8 space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-4xl font-bold">งานของฉัน</h1>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                เพิ่มงาน
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "calendar" | "kanban")} className="w-auto">
+              <TabsList>
+                <TabsTrigger value="calendar" className="flex items-center gap-2">
+                  <CalendarIcon className="w-4 h-4" />
+                  ปฏิทิน
+                </TabsTrigger>
+                <TabsTrigger value="kanban" className="flex items-center gap-2">
+                  <LayoutGrid className="w-4 h-4" />
+                  Kanban
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  เพิ่มงาน
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>เพิ่มงานใหม่</DialogTitle>
@@ -511,88 +529,99 @@ export default function MyWork() {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle>ปฏิทิน</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={setSelectedDate}
-                onMonthChange={setCurrentMonth}
-                locale={th}
-                className="rounded-md border"
-                components={{
-                  DayContent: ({ date }) => renderDayContent(date)
-                }}
-              />
-            </CardContent>
-          </Card>
+        {viewMode === "calendar" ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card className="lg:col-span-1">
+              <CardHeader>
+                <CardTitle>ปฏิทิน</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  onMonthChange={setCurrentMonth}
+                  locale={th}
+                  className="rounded-md border"
+                  components={{
+                    DayContent: ({ date }) => renderDayContent(date)
+                  }}
+                />
+              </CardContent>
+            </Card>
 
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>
-                งานวันที่ {selectedDate && format(selectedDate, "d MMMM yyyy", { locale: th })}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {tasks.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">ไม่มีงานในวันนี้</p>
-              ) : (
-                tasks.map((task) => (
-                  <Card 
-                    key={task.id} 
-                    className={`${getPriorityColor(task.priority)} cursor-pointer hover:shadow-md transition-shadow`}
-                    onClick={() => {
-                      setSelectedTaskId(task.id);
-                      setIsDetailDialogOpen(true);
-                    }}
-                  >
-                    <CardContent className="pt-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            {getStatusIcon(task.status)}
-                            <h3 className="font-semibold">{task.title}</h3>
-                            {task.due_time && (
-                              <span className="text-xs text-muted-foreground">
-                                {task.due_time.substring(0, 5)}
-                              </span>
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle>
+                  งานวันที่ {selectedDate && format(selectedDate, "d MMMM yyyy", { locale: th })}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {tasks.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">ไม่มีงานในวันนี้</p>
+                ) : (
+                  tasks.map((task) => (
+                    <Card 
+                      key={task.id} 
+                      className={`${getPriorityColor(task.priority)} cursor-pointer hover:shadow-md transition-shadow`}
+                      onClick={() => {
+                        setSelectedTaskId(task.id);
+                        setIsDetailDialogOpen(true);
+                      }}
+                    >
+                      <CardContent className="pt-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              {getStatusIcon(task.status)}
+                              <h3 className="font-semibold">{task.title}</h3>
+                              {task.due_time && (
+                                <span className="text-xs text-muted-foreground">
+                                  {task.due_time.substring(0, 5)}
+                                </span>
+                              )}
+                            </div>
+                            {task.description && (
+                              <p className="text-sm text-muted-foreground mb-2">{task.description}</p>
                             )}
-                          </div>
-                          {task.description && (
-                            <p className="text-sm text-muted-foreground mb-2">{task.description}</p>
-                          )}
-                          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                            {task.projects && (
-                              <span className="bg-muted px-2 py-1 rounded">
-                                โครงการ: {task.projects.name}
-                              </span>
-                            )}
-                            {task.created_by_profile && (
-                              <span className="bg-muted px-2 py-1 rounded">
-                                มอบหมายโดย: {task.created_by_profile.full_name}
-                              </span>
-                            )}
-                            {task.task_assignees && task.task_assignees.length > 0 && (
-                              <span className="bg-muted px-2 py-1 rounded">
-                                ผู้รับผิดชอบ: {task.task_assignees.map(a => a.profiles.full_name).join(", ")}
-                              </span>
-                            )}
+                            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                              {task.projects && (
+                                <span className="bg-muted px-2 py-1 rounded">
+                                  โครงการ: {task.projects.name}
+                                </span>
+                              )}
+                              {task.created_by_profile && (
+                                <span className="bg-muted px-2 py-1 rounded">
+                                  มอบหมายโดย: {task.created_by_profile.full_name}
+                                </span>
+                              )}
+                              {task.task_assignees && task.task_assignees.length > 0 && (
+                                <span className="bg-muted px-2 py-1 rounded">
+                                  ผู้รับผิดชอบ: {task.task_assignees.map(a => a.profiles.full_name).join(", ")}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <div className="h-[calc(100vh-12rem)]">
+            <iframe 
+              src="/kanban" 
+              className="w-full h-full border rounded-lg"
+              title="Kanban Board"
+            />
+          </div>
+        )}
         
         <TaskDetailDialog
           taskId={selectedTaskId}
@@ -601,7 +630,6 @@ export default function MyWork() {
           onTaskUpdated={fetchTasks}
           canEdit={canAssignToOthers}
         />
-      </div>
-    
+    </div>
   );
 }
