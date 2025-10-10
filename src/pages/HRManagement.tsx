@@ -56,6 +56,28 @@ const HRManagement = () => {
 
       if (employeesError) throw employeesError;
 
+      // Fetch user roles
+      const { data: userRolesData, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id, role");
+
+      if (rolesError) {
+        console.error("Roles fetch error:", rolesError);
+      }
+
+      // Create a map of user_id to primary role
+      const userRolesMap: Record<string, string> = {};
+      (userRolesData || []).forEach((ur: any) => {
+        if (!userRolesMap[ur.user_id]) {
+          // First role found becomes primary, prioritize admin/manager
+          userRolesMap[ur.user_id] = ur.role;
+        } else if (ur.role === "admin") {
+          userRolesMap[ur.user_id] = "admin";
+        } else if (ur.role === "manager" && userRolesMap[ur.user_id] !== "admin") {
+          userRolesMap[ur.user_id] = "manager";
+        }
+      });
+
       // Fetch companies
       const { data: companiesData, error: companiesError } = await supabase
         .from("companies")
@@ -87,6 +109,7 @@ const HRManagement = () => {
       const processedEmployees = (employeesData || []).map((emp: any) => ({
         ...emp,
         current_salary: latestSalaryByUser[emp.id] ?? null,
+        role: userRolesMap[emp.id] || "worker", // Add role from user_roles table
       }));
 
       setEmployees(processedEmployees);
