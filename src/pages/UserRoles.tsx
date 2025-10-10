@@ -13,6 +13,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { usePermissions } from "@/hooks/usePermissions";
+import { useNavigate } from "react-router-dom";
 
 interface UserProfile {
   id: string;
@@ -60,6 +62,8 @@ interface Role {
 }
 
 export default function UserRoles() {
+  const navigate = useNavigate();
+  const { role, loading: permLoading } = usePermissions();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [inactiveUsers, setInactiveUsers] = useState<UserProfile[]>([]);
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
@@ -89,8 +93,16 @@ export default function UserRoles() {
   const [creatingUser, setCreatingUser] = useState(false);
 
   useEffect(() => {
+    if (permLoading) return;
+    
+    if (role !== "admin") {
+      toast.error("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
+      navigate("/");
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [permLoading, role, navigate]);
 
   const fetchData = async () => {
     try {
@@ -424,7 +436,7 @@ export default function UserRoles() {
   }, {} as Record<string, Feature[]>);
 
 
-  if (loading) {
+  if (loading || permLoading) {
     return (
       <div className="flex items-center justify-center h-96">
         <Loader2 className="h-8 w-8 animate-spin" />
