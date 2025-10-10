@@ -46,7 +46,8 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
   const [imagePreview, setImagePreview] = useState<string>("");
   const [selectedCompany, setSelectedCompany] = useState("");
   const [selectedProject, setSelectedProject] = useState("");
-
+  const [selectedWorker, setSelectedWorker] = useState("");
+  const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   useEffect(() => {
     if (open) {
       fetchData();
@@ -63,14 +64,17 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
   const loadExpenseData = async () => {
     if (!expense) return;
 
-    setSelectedCompany(expense.company_id);
-    setSelectedProject(expense.project_id);
-    setHasWithholdingTax(expense.withholding_tax_amount > 0);
+    setSelectedCompany(expense.company_id || "");
+    setSelectedProject(expense.project_id || "");
+    setSelectedWorker(expense.worker_id || "");
+    setInvoiceDate(expense.invoice_date || new Date().toISOString().split('T')[0]);
+    setHasWithholdingTax((expense.withholding_tax_amount || 0) > 0);
     setWithholdingTaxRate(expense.withholding_tax_rate || 3);
 
-    // Load items
-    if (expense.items && expense.items.length > 0) {
-      setItems(expense.items.map((item: any) => ({
+    // Load items (support both keys: items and labor_expense_items)
+    const srcItems = expense.items || expense.labor_expense_items;
+    if (srcItems && srcItems.length > 0) {
+      setItems(srcItems.map((item: any) => ({
         category_id: item.category_id,
         description: item.description,
         amount: item.amount || 0,
@@ -78,9 +82,10 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
       })));
     }
 
-    // Load deductions
-    if (expense.deductions && expense.deductions.length > 0) {
-      setDeductions(expense.deductions.map((d: any) => ({
+    // Load deductions (support both keys: deductions and labor_expense_deductions)
+    const srcDeductions = expense.deductions || expense.labor_expense_deductions;
+    if (srcDeductions && srcDeductions.length > 0) {
+      setDeductions(srcDeductions.map((d: any) => ({
         description: d.description,
         amount: d.amount
       })));
@@ -95,6 +100,8 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
   const resetForm = () => {
     setSelectedCompany("");
     setSelectedProject("");
+    setSelectedWorker("");
+    setInvoiceDate(new Date().toISOString().split('T')[0]);
     setItems([{ category_id: "", description: "", amount: 0, notes: "" }]);
     setDeductions([]);
     setHasWithholdingTax(false);
@@ -211,12 +218,11 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
     
     setLoading(true);
 
-    const formData = new FormData(e.currentTarget);
-    const workerId = formData.get("worker_id") as string;
+    const workerId = selectedWorker;
     const projectId = selectedProject;
     const companyId = selectedCompany;
-    const invoiceDate = formData.get("invoice_date") as string;
-    const notes = formData.get("notes") as string;
+    const invDateStr = invoiceDate;
+    const notes = (new FormData(e.currentTarget).get("notes") as string) || "";
 
     if (!projectId || !companyId || items.some(i => !i.category_id || !i.description)) {
       toast.error("กรุณากรอกข้อมูลให้ครบถ้วน");
@@ -245,7 +251,7 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
           worker_id: workerId || null,
           project_id: projectId,
           company_id: companyId,
-          invoice_date: invoiceDate,
+          invoice_date: invDateStr,
           subtotal,
           withholding_tax_rate: withholdingTaxRate,
           withholding_tax_amount: withholdingTaxAmount,
@@ -316,7 +322,7 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
 
       let receiptUrl = "";
       if (imageFile) {
-        const invDate = new Date(invoiceDate);
+        const invDate = new Date(invDateStr);
         const year = invDate.getFullYear();
         const month = String(invDate.getMonth() + 1).padStart(2, '0');
         const fileExt = imageFile.name.split(".").pop();
@@ -348,7 +354,7 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
           worker_id: workerId || null,
           project_id: projectId,
           company_id: companyId,
-          invoice_date: invoiceDate,
+          invoice_date: invDateStr,
           subtotal,
           withholding_tax_rate: withholdingTaxRate,
           withholding_tax_amount: withholdingTaxAmount,
@@ -443,7 +449,8 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
                 id="invoice_date" 
                 name="invoice_date" 
                 type="date" 
-                defaultValue={expense?.invoice_date || new Date().toISOString().split("T")[0]} 
+                value={invoiceDate}
+                onChange={(e) => setInvoiceDate(e.target.value)}
               />
             </div>
           </div>
@@ -536,7 +543,7 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
                 </DialogContent>
               </Dialog>
             </div>
-            <Select name="worker_id" defaultValue={expense?.worker_id}>
+            <Select value={selectedWorker} onValueChange={setSelectedWorker}>
               <SelectTrigger>
                 <SelectValue placeholder="เลือกช่าง" />
               </SelectTrigger>
