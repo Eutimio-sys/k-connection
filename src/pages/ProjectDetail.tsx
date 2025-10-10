@@ -9,10 +9,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, MapPin, Calendar, TrendingUp, Building2, User, ShoppingCart, Package, Wrench, DollarSign, Info, RefreshCcw, MessageCircle } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, TrendingUp, Building2, User, ShoppingCart, Package, Wrench, DollarSign, Info, RefreshCcw, MessageCircle, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import IncomeHistoryDialog from "@/components/IncomeHistoryDialog";
 import ProjectChat from "@/components/ProjectChat";
+import ProjectDialog from "@/components/ProjectDialog";
 
 const ProjectDetail = () => {
   const { id } = useParams();
@@ -30,6 +31,8 @@ const ProjectDetail = () => {
   const [materialDetailOpen, setMaterialDetailOpen] = useState(false);
   const [laborDetailOpen, setLaborDetailOpen] = useState(false);
   const [budgetBreakdownOpen, setBudgetBreakdownOpen] = useState(false);
+  const [editProjectOpen, setEditProjectOpen] = useState(false);
+  const [companies, setCompanies] = useState<any[]>([]);
   
   // Filter states
   const [materialStartDate, setMaterialStartDate] = useState(new Date().toISOString().split('T')[0]);
@@ -102,6 +105,15 @@ const ProjectDetail = () => {
     } else {
       setProject(projectData);
     }
+
+    // Fetch companies
+    const { data: companiesData } = await supabase
+      .from("companies")
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
+    
+    setCompanies(companiesData || []);
 
     const { data: purchasesData } = await supabase
       .from("purchase_requests")
@@ -322,18 +334,43 @@ const ProjectDetail = () => {
             <CardTitle>สรุปการเงิน</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div 
-              className="p-4 bg-primary/5 rounded-lg cursor-pointer hover:shadow-md transition-shadow border-2 border-primary/20"
-              onClick={() => setBudgetBreakdownOpen(true)}
-            >
+            <div className="p-4 bg-primary/5 rounded-lg border-2 border-primary/20">
               <div className="flex justify-between items-start mb-2">
                 <p className="text-sm text-muted-foreground font-medium">ประมาณการรวมทั้งหมด</p>
-                <Info size={16} className="text-primary" />
+                <div className="flex gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setBudgetBreakdownOpen(true)}
+                    className="h-6 px-2"
+                  >
+                    <Info size={14} className="text-primary" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setEditProjectOpen(true)}
+                    className="h-6 px-2"
+                  >
+                    <Pencil size={14} className="text-primary" />
+                  </Button>
+                </div>
               </div>
-              <p className="text-2xl font-bold text-primary mb-1">{project.budget ? formatCurrency(project.budget) : "-"}</p>
-              {project.budget_breakdown && Object.keys(project.budget_breakdown).length > 0 && (
-                <p className="text-xs text-muted-foreground">คลิกเพื่อดูรายละเอียดแยกหมวดหมู่</p>
-              )}
+              <p className="text-2xl font-bold text-primary mb-1">{project.budget ? formatCurrency(project.budget) : formatCurrency(0)}</p>
+              <div className="space-y-1 mt-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">ค่าใช้จ่ายปัจจุบัน</span>
+                  <span className="font-semibold">{formatCurrency(totalExpenses)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">ยอดคงเหลือ</span>
+                  <span className={`font-semibold ${
+                    ((project.budget || 0) - totalExpenses) >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {formatCurrency((project.budget || 0) - totalExpenses)}
+                  </span>
+                </div>
+              </div>
             </div>
             
             <div 
@@ -454,6 +491,18 @@ const ProjectDetail = () => {
           onSuccess={fetchData}
         />
       )}
+
+      {/* Edit Project Dialog */}
+      <ProjectDialog
+        open={editProjectOpen}
+        onOpenChange={setEditProjectOpen}
+        companies={companies}
+        editData={project}
+        onSuccess={() => {
+          fetchData();
+          setEditProjectOpen(false);
+        }}
+      />
 
       {/* Material Detail Dialog */}
       <Dialog open={materialDetailOpen} onOpenChange={setMaterialDetailOpen}>
