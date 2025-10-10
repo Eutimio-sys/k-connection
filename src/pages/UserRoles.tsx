@@ -168,27 +168,32 @@ export default function UserRoles() {
     try {
       setSaving(userToDelete.id);
 
-      // ลบ user_roles
-      const { error: rolesError } = await supabase
-        .from("user_roles")
-        .delete()
-        .eq("user_id", userToDelete.id);
+      // Get current session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error("กรุณาเข้าสู่ระบบก่อน");
+        return;
+      }
 
-      if (rolesError) throw rolesError;
+      // Call edge function to delete user from auth
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: { userId: userToDelete.id }
+      });
 
-      // Soft delete profiles (set is_active = false)
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({ is_active: false })
-        .eq("id", userToDelete.id);
+      if (error) {
+        throw new Error(error.message);
+      }
 
-      if (profileError) throw profileError;
-
-      toast.success("ลบผู้ใช้สำเร็จ");
+      toast.success("ลบผู้ใช้ออกจากระบบสำเร็จ");
       setDeleteDialogOpen(false);
       setUserToDelete(null);
-      await fetchData();
+      
+      // Update local state immediately
+      setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
+      setUserRoles(prev => prev.filter(ur => ur.user_id !== userToDelete.id));
     } catch (error: any) {
+      console.error('Delete user error:', error);
       toast.error("เกิดข้อผิดพลาด: " + error.message);
     } finally {
       setSaving(null);
