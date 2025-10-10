@@ -150,9 +150,10 @@ const HRManagement = () => {
       toast.error("เกิดข้อผิดพลาด: " + error.message);
     } else {
       toast.success("ลบพนักงานสำเร็จ");
+      // Update employees state immediately
+      setEmployees(prev => prev.filter(emp => emp.id !== employeeToDelete.id));
       setDeleteDialogOpen(false);
       setEmployeeToDelete(null);
-      fetchData();
     }
   };
 
