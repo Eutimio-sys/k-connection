@@ -37,6 +37,9 @@ import { Badge } from "@/components/ui/badge";
 const menuItems = [
   { title: "หน้าแรก", url: "/", icon: Home, featureCode: null },
   { title: "แดชบอร์ด", url: "/dashboard", icon: LayoutDashboard, featureCode: "dashboard" },
+  { title: "งานของฉัน", url: "/mywork", icon: CheckCircle, featureCode: null },
+  { title: "เช็คอิน/เอาท์", url: "/attendance", icon: Clock, featureCode: "attendance" },
+  { title: "แชทรวม", url: "/chat", icon: MessageCircle, featureCode: null },
   { title: "โครงการ", url: "/projects", icon: FolderKanban, featureCode: "projects" },
   { title: "อนุมัติรายการ", url: "/approvals", icon: CheckCircle, featureCode: "approvals" },
   { title: "บัญชีวัสดุ", url: "/accounting", icon: FileText, featureCode: "accounting" },
@@ -44,10 +47,7 @@ const menuItems = [
   { title: "บัญชีเงินเดือน", url: "/payroll", icon: Wallet, featureCode: "payroll" },
   { title: "รายการโอนเงิน", url: "/daily-payments", icon: Wallet, featureCode: "daily_payments" },
   { title: "วางแผนภาษี", url: "/tax-planning", icon: TrendingUp, featureCode: "tax_planning" },
-  { title: "เช็คอิน/เอาท์", url: "/attendance", icon: Clock, featureCode: "attendance" },
   { title: "ระบบลา", url: "/leave", icon: Calendar, featureCode: "leave_management" },
-  { title: "งานของฉัน", url: "/mywork", icon: CheckCircle, featureCode: null },
-  { title: "แชทรวม", url: "/chat", icon: MessageCircle, featureCode: null },
   { title: "จัดการสิทธิ์ผู้ใช้", url: "/user-roles", icon: Shield, featureCode: null },
   { title: "จัดการพนักงาน", url: "/hr-management", icon: UserCog, featureCode: "hr_management" },
   { title: "จัดการคนงานต่างด้าว", url: "/foreign-workers", icon: Globe, featureCode: "foreign_workers" },
@@ -92,8 +92,8 @@ export function AppSidebar() {
       fetchPendingCount();
     };
 
-    window.addEventListener('chat-read', onChatRead);
-    window.addEventListener('approvals-updated', onApprovalsUpdated);
+    window.addEventListener("chat-read", onChatRead);
+    window.addEventListener("approvals-updated", onApprovalsUpdated);
 
     // Subscribe to real-time updates
     const channel = supabase
@@ -110,8 +110,8 @@ export function AppSidebar() {
       .subscribe();
 
     return () => {
-      window.removeEventListener('chat-read', onChatRead);
-      window.removeEventListener('approvals-updated', onApprovalsUpdated);
+      window.removeEventListener("chat-read", onChatRead);
+      window.removeEventListener("approvals-updated", onApprovalsUpdated);
       supabase.removeChannel(channel);
     };
   }, [currentUserId]);
@@ -142,9 +142,7 @@ export function AppSidebar() {
       .gt("created_at", lastReadGeneralTime.toISOString());
 
     // Count unread project messages across all projects
-    const { data: projects } = await supabase
-      .from("projects")
-      .select("id");
+    const { data: projects } = await supabase.from("projects").select("id");
 
     let projectMessagesCount = 0;
     if (projects) {
