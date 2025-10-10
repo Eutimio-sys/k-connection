@@ -29,9 +29,58 @@ const LaborAccounting = () => {
   const [workers, setWorkers] = useState<any[]>([]);
 
   useEffect(() => {
-    fetchExpenses();
+    fetchInitialData();
     fetchFilterData();
   }, []);
+
+  const fetchInitialData = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("labor_expenses")
+      .select(`
+        *,
+        worker:workers(full_name, bank_name, bank_account),
+        project:projects(name),
+        company:companies(name),
+        items:labor_expense_items(*, category:expense_categories(name)),
+        deductions:labor_expense_deductions(*)
+      `)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    if (error) {
+      toast.error("เกิดข้อผิดพลาด");
+      console.error(error);
+    } else {
+      const expensesWithProfiles = await Promise.all(
+        (data || []).map(async (expense) => {
+          const profiles: any = {};
+          
+          if (expense.created_by) {
+            const { data: creator } = await supabase
+              .from('profiles')
+              .select('id, full_name, nickname, avatar_url, email')
+              .eq('id', expense.created_by)
+              .maybeSingle();
+            profiles.created_by_profile = creator;
+          }
+          
+          if (expense.updated_by) {
+            const { data: updater } = await supabase
+              .from('profiles')
+              .select('id, full_name, nickname, avatar_url, email')
+              .eq('id', expense.updated_by)
+              .maybeSingle();
+            profiles.updated_by_profile = updater;
+          }
+          
+          return { ...expense, ...profiles };
+        })
+      );
+      setExpenses(expensesWithProfiles);
+    }
+    setLoading(false);
+  };
 
   const fetchFilterData = async () => {
     const [projectsRes, workersRes] = await Promise.all([

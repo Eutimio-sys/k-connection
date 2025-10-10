@@ -30,9 +30,60 @@ const Accounting = () => {
   const [vendors, setVendors] = useState<any[]>([]);
 
   useEffect(() => {
-    fetchExpenses();
+    fetchInitialData();
     fetchFilterData();
   }, []);
+
+  const fetchInitialData = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("expenses")
+      .select(`
+        *,
+        vendor:vendors(name),
+        project:projects(name),
+        company:companies(name),
+        expense_items(
+          *,
+          category:expense_categories(name)
+        )
+      `)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    if (error) {
+      toast.error("เกิดข้อผิดพลาดในการโหลดข้อมูล");
+      console.error(error);
+    } else {
+      const expensesWithProfiles = await Promise.all(
+        (data || []).map(async (expense) => {
+          const profiles: any = {};
+          
+          if (expense.created_by) {
+            const { data: creator } = await supabase
+              .from('profiles')
+              .select('id, full_name, nickname, avatar_url, email')
+              .eq('id', expense.created_by)
+              .maybeSingle();
+            profiles.created_by_profile = creator;
+          }
+          
+          if (expense.updated_by) {
+            const { data: updater } = await supabase
+              .from('profiles')
+              .select('id, full_name, nickname, avatar_url, email')
+              .eq('id', expense.updated_by)
+              .maybeSingle();
+            profiles.updated_by_profile = updater;
+          }
+          
+          return { ...expense, ...profiles };
+        })
+      );
+      setExpenses(expensesWithProfiles);
+    }
+    setLoading(false);
+  };
 
   const fetchFilterData = async () => {
     const [projectsRes, vendorsRes] = await Promise.all([

@@ -59,6 +59,14 @@ const ProjectDetail = () => {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [id]);
 
+  // Refresh data every 5 seconds to keep totals updated
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchData();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [id]);
+
   const fetchData = async () => {
     setLoading(true);
     

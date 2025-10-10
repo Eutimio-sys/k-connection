@@ -483,12 +483,19 @@ const Approvals = () => {
                     {laborExpenses.map((expense) => (
                       <TableRow key={expense.id}>
                         <TableCell className="font-medium">
-                          <button
-                            onClick={() => handleLaborClick(expense)}
-                            className="text-primary hover:underline cursor-pointer"
-                          >
-                            {expense.invoice_number}
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleLaborClick(expense)}
+                              className="text-primary hover:underline cursor-pointer"
+                            >
+                              {expense.invoice_number}
+                            </button>
+                            {expense.edit_count > 0 && (
+                              <Badge variant="outline" className="text-xs bg-yellow-100 dark:bg-yellow-900/30">
+                                แก้ไข {expense.edit_count}x
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>{expense.worker?.full_name || "-"}</TableCell>
                         <TableCell>{expense.project?.name}</TableCell>
@@ -558,12 +565,19 @@ const Approvals = () => {
                     {materialExpenses.map((expense) => (
                       <TableRow key={expense.id}>
                         <TableCell className="font-medium">
-                          <button
-                            onClick={() => handleMaterialClick(expense)}
-                            className="text-primary hover:underline cursor-pointer"
-                          >
-                            {expense.invoice_number}
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleMaterialClick(expense)}
+                              className="text-primary hover:underline cursor-pointer"
+                            >
+                              {expense.invoice_number}
+                            </button>
+                            {expense.edit_count > 0 && (
+                              <Badge variant="outline" className="text-xs bg-yellow-100 dark:bg-yellow-900/30">
+                                แก้ไข {expense.edit_count}x
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>{expense.vendor?.name || "-"}</TableCell>
                         <TableCell>{expense.project?.name}</TableCell>

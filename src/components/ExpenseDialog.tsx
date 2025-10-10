@@ -44,6 +44,9 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
   const [vendorId, setVendorId] = useState("");
   const [projectId, setProjectId] = useState("");
   const [companyId, setCompanyId] = useState("");
+  const [selectedVendor, setSelectedVendor] = useState("");
+  const [selectedProject, setSelectedProject] = useState("");
+  const [selectedCompany, setSelectedCompany] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [hasVat, setHasVat] = useState(false);
   const [vatRate, setVatRate] = useState("7");
@@ -67,6 +70,9 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
         setVendorId(expense.vendor_id || "");
         setProjectId(expense.project_id || "");
         setCompanyId(expense.company_id || "");
+        setSelectedVendor(expense.vendor_id || "");
+        setSelectedProject(expense.project_id || "");
+        setSelectedCompany(expense.company_id || "");
         setInvoiceDate(expense.invoice_date || new Date().toISOString().split('T')[0]);
         setHasVat(expense.vat_amount > 0);
         setVatRate(expense.vat_rate?.toString() || "7");
@@ -87,6 +93,8 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
             notes: item.notes || ""
           })));
         }
+      } else {
+        resetForm();
       }
     }
   }, [open, expense]);
@@ -428,6 +436,9 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
     setVendorId("");
     setProjectId("");
     setCompanyId("");
+    setSelectedVendor("");
+    setSelectedProject("");
+    setSelectedCompany("");
     setInvoiceDate(new Date().toISOString().split('T')[0]);
     setHasVat(false);
     setVatRate("7");
@@ -476,7 +487,14 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
             </div>
             <div className="space-y-2">
               <Label>บริษัท *</Label>
-              <Select value={companyId} onValueChange={setCompanyId} required>
+              <Select 
+                value={selectedCompany} 
+                onValueChange={(value) => {
+                  setSelectedCompany(value);
+                  setCompanyId(value);
+                }} 
+                required
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="เลือกบริษัท" />
                 </SelectTrigger>
@@ -491,7 +509,14 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
             </div>
             <div className="space-y-2">
               <Label>โครงการ *</Label>
-              <Select value={projectId} onValueChange={setProjectId} required>
+              <Select 
+                value={selectedProject} 
+                onValueChange={(value) => {
+                  setSelectedProject(value);
+                  setProjectId(value);
+                }} 
+                required
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="เลือกโครงการ" />
                 </SelectTrigger>
@@ -554,7 +579,13 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
                   </DialogContent>
                 </Dialog>
               </div>
-              <Select value={vendorId} onValueChange={setVendorId}>
+              <Select 
+                value={selectedVendor} 
+                onValueChange={(value) => {
+                  setSelectedVendor(value);
+                  setVendorId(value);
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="เลือกร้านค้า (ถ้ามี)" />
                 </SelectTrigger>
