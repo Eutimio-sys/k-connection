@@ -9,13 +9,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, MapPin, Calendar, TrendingUp, Building2, User, ShoppingCart, Package, Wrench, DollarSign, Info, RefreshCcw, MessageCircle, Pencil, StickyNote } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, TrendingUp, Building2, User, ShoppingCart, Package, Wrench, DollarSign, Info, RefreshCcw, MessageCircle, Pencil, StickyNote, Trash2, Edit } from "lucide-react";
 import { toast } from "sonner";
 import IncomeHistoryDialog from "@/components/IncomeHistoryDialog";
 import ProjectChat from "@/components/ProjectChat";
 import ProjectDialog from "@/components/ProjectDialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const ProjectDetail = () => {
   const { id } = useParams();
@@ -25,6 +26,11 @@ const ProjectDetail = () => {
   const [materialExpenses, setMaterialExpenses] = useState<any[]>([]);
   const [laborExpenses, setLaborExpenses] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [projectNotes, setProjectNotes] = useState<any[]>([]);
+  const [newNoteText, setNewNoteText] = useState("");
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editNoteText, setEditNoteText] = useState("");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [projectIncome, setProjectIncome] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -35,8 +41,7 @@ const ProjectDetail = () => {
   const [budgetBreakdownOpen, setBudgetBreakdownOpen] = useState(false);
   const [editProjectOpen, setEditProjectOpen] = useState(false);
   const [companies, setCompanies] = useState<any[]>([]);
-  const [projectNotes, setProjectNotes] = useState("");
-  const [savingNotes, setSavingNotes] = useState(false);
+  
   
   // Filter states
   const [materialStartDate, setMaterialStartDate] = useState(new Date().toISOString().split('T')[0]);
@@ -54,6 +59,10 @@ const ProjectDetail = () => {
 
   useEffect(() => {
     fetchData();
+    // Get current user
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setCurrentUserId(user.id);
+    });
   }, [id]);
 
   // Refresh data when page becomes visible (user returns to this tab/page)
@@ -86,6 +95,7 @@ const ProjectDetail = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'labor_expenses', filter: `project_id=eq.${id}` }, handleChange)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'project_income', filter: `project_id=eq.${id}` }, handleChange)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'purchase_requests', filter: `project_id=eq.${id}` }, handleChange)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'project_notes', filter: `project_id=eq.${id}` }, handleChange)
       .subscribe();
 
     return () => {
@@ -108,7 +118,6 @@ const ProjectDetail = () => {
       navigate("/projects");
     } else {
       setProject(projectData);
-      setProjectNotes(projectData.notes || "");
     }
 
     // Fetch companies
@@ -180,6 +189,15 @@ const ProjectDetail = () => {
       .order("income_date", { ascending: false });
 
     setProjectIncome(incomeData || []);
+
+    // Fetch project notes
+    const { data: notesData } = await supabase
+      .from("project_notes")
+      .select("*, author:profiles!created_by(full_name)")
+      .eq("project_id", id)
+      .order("created_at", { ascending: false });
+
+    setProjectNotes(notesData || []);
     
     if (showLoading) setLoading(false);
   };
@@ -265,22 +283,72 @@ const ProjectDetail = () => {
     return dateMatch && categoryMatch && workerMatch;
   });
 
-  const handleSaveNotes = async () => {
-    setSavingNotes(true);
+  const handleAddNote = async () => {
+    if (!newNoteText.trim()) {
+      toast.error("กรุณาใส่ข้อความโน้ต");
+      return;
+    }
+
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("ไม่พบข้อมูลผู้ใช้");
+
       const { error } = await supabase
-        .from("projects")
-        .update({ notes: projectNotes })
-        .eq("id", id);
+        .from("project_notes")
+        .insert({
+          project_id: id,
+          note_text: newNoteText,
+          created_by: user.id
+        });
 
       if (error) throw error;
 
-      toast.success("บันทึกโน้ตสำเร็จ");
+      toast.success("เพิ่มโน้ตสำเร็จ");
+      setNewNoteText("");
       fetchData(false);
     } catch (error: any) {
       toast.error("เกิดข้อผิดพลาด: " + error.message);
-    } finally {
-      setSavingNotes(false);
+    }
+  };
+
+  const handleUpdateNote = async (noteId: string) => {
+    if (!editNoteText.trim()) {
+      toast.error("กรุณาใส่ข้อความโน้ต");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("project_notes")
+        .update({ note_text: editNoteText })
+        .eq("id", noteId);
+
+      if (error) throw error;
+
+      toast.success("แก้ไขโน้ตสำเร็จ");
+      setEditingNoteId(null);
+      setEditNoteText("");
+      fetchData(false);
+    } catch (error: any) {
+      toast.error("เกิดข้อผิดพลาด: " + error.message);
+    }
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (!confirm("คุณแน่ใจหรือไม่ว่าต้องการลบโน้ตนี้?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("project_notes")
+        .delete()
+        .eq("id", noteId);
+
+      if (error) throw error;
+
+      toast.success("ลบโน้ตสำเร็จ");
+      fetchData(false);
+    } catch (error: any) {
+      toast.error("เกิดข้อผิดพลาด: " + error.message);
     }
   };
 
@@ -373,20 +441,103 @@ const ProjectDetail = () => {
             </div>
 
             <div className="border-t pt-4 mt-4">
-              <Label className="flex items-center gap-2 mb-2">
-                <StickyNote className="w-4 h-4" />
-                โน้ตโครงการ
-              </Label>
-              <Textarea
-                value={projectNotes}
-                onChange={(e) => setProjectNotes(e.target.value)}
-                placeholder="บันทึกข้อมูลเพิ่มเติมเกี่ยวกับโครงการ..."
-                rows={3}
-                className="mb-2"
-              />
-              <Button onClick={handleSaveNotes} disabled={savingNotes} size="sm">
-                {savingNotes ? "กำลังบันทึก..." : "บันทึกโน้ต"}
-              </Button>
+              <div className="flex items-center gap-2 mb-3">
+                <StickyNote className="w-5 h-5 text-primary" />
+                <Label className="text-base font-semibold">โน้ตโครงการ</Label>
+              </div>
+              
+              {/* Add new note */}
+              <div className="mb-4 p-4 border rounded-lg bg-accent/5">
+                <Textarea
+                  value={newNoteText}
+                  onChange={(e) => setNewNoteText(e.target.value)}
+                  placeholder="เขียนโน้ตใหม่..."
+                  rows={3}
+                  className="mb-2"
+                />
+                <Button onClick={handleAddNote} size="sm">
+                  เพิ่มโน้ต
+                </Button>
+              </div>
+
+              {/* List of notes */}
+              <div className="space-y-3">
+                {projectNotes.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">ยังไม่มีโน้ต</p>
+                ) : (
+                  projectNotes.map((note) => (
+                    <div key={note.id} className="p-3 border rounded-lg bg-background">
+                      {editingNoteId === note.id ? (
+                        <div className="space-y-2">
+                          <Textarea
+                            value={editNoteText}
+                            onChange={(e) => setEditNoteText(e.target.value)}
+                            rows={3}
+                          />
+                          <div className="flex gap-2">
+                            <Button onClick={() => handleUpdateNote(note.id)} size="sm">
+                              บันทึก
+                            </Button>
+                            <Button 
+                              onClick={() => {
+                                setEditingNoteId(null);
+                                setEditNoteText("");
+                              }} 
+                              size="sm" 
+                              variant="outline"
+                            >
+                              ยกเลิก
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <Avatar className="w-6 h-6">
+                                <AvatarFallback className="text-xs bg-primary/10">
+                                  {note.author?.full_name?.charAt(0) || '?'}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm font-medium">{note.author?.full_name || 'ไม่ทราบชื่อ'}</span>
+                            </div>
+                            {currentUserId === note.created_by && (
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditingNoteId(note.id);
+                                    setEditNoteText(note.note_text);
+                                  }}
+                                  className="h-7 px-2"
+                                >
+                                  <Edit className="w-3 h-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteNote(note.id)}
+                                  className="h-7 px-2 text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-sm whitespace-pre-wrap">{note.note_text}</p>
+                          <div className="flex gap-3 mt-2 text-xs text-muted-foreground">
+                            <span>สร้าง: {new Date(note.created_at).toLocaleString('th-TH')}</span>
+                            {note.edited_at && (
+                              <span>แก้ไข: {new Date(note.edited_at).toLocaleString('th-TH')}</span>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>

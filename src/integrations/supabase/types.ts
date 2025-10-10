@@ -1365,6 +1365,44 @@ export type Database = {
           },
         ]
       }
+      project_notes: {
+        Row: {
+          created_at: string
+          created_by: string
+          edited_at: string | null
+          id: string
+          note_text: string
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          edited_at?: string | null
+          id?: string
+          note_text: string
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          edited_at?: string | null
+          id?: string
+          note_text?: string
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_notes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           budget: number | null
@@ -1382,7 +1420,6 @@ export type Database = {
           id: string
           location: string | null
           name: string
-          notes: string | null
           start_date: string | null
           status: string
           updated_at: string
@@ -1403,7 +1440,6 @@ export type Database = {
           id?: string
           location?: string | null
           name: string
-          notes?: string | null
           start_date?: string | null
           status?: string
           updated_at?: string
@@ -1424,7 +1460,6 @@ export type Database = {
           id?: string
           location?: string | null
           name?: string
-          notes?: string | null
           start_date?: string | null
           status?: string
           updated_at?: string
