@@ -51,8 +51,8 @@ const menuItems = [
   { title: "ติดตามเอกสารภาษี", url: "/tax-documents", icon: Receipt, featureCode: "accounting" },
   { title: "วางแผนภาษี", url: "/tax-planning", icon: TrendingUp, featureCode: "tax_planning" },
   { title: "ระบบลา", url: "/leave", icon: Calendar, featureCode: "leave_management" },
-  { title: "จัดการสิทธิ์ผู้ใช้", url: "/user-roles", icon: Shield, featureCode: null },
-  { title: "จัดการสิทธิ์โครงการ", url: "/project-access", icon: UserCheck, featureCode: null },
+  { title: "จัดการสิทธิ์ผู้ใช้", url: "/user-roles", icon: Shield, featureCode: null, requiredRoles: ["admin"] },
+  { title: "จัดการสิทธิ์โครงการ", url: "/project-access", icon: UserCheck, featureCode: null, requiredRoles: ["admin"] },
   { title: "จัดการพนักงาน", url: "/hr-management", icon: UserCog, featureCode: "hr_management" },
   { title: "จัดการคนงานต่างด้าว", url: "/foreign-workers", icon: Globe, featureCode: "foreign_workers" },
   { title: "โปรไฟล์", url: "/profile", icon: User, featureCode: null },
@@ -69,6 +69,10 @@ export function AppSidebar() {
   // Filter menu items based on permissions
   const visibleMenuItems = menuItems.filter((item) => {
     if (role === "admin") return true; // Admin sees all
+    // Hide items restricted to specific roles
+    if ((item as any).requiredRoles && !(item as any).requiredRoles.includes(role)) {
+      return false;
+    }
     if (!item.featureCode) return true; // Always show items without feature code
     if (loading) return false; // Hide during loading
     return hasFeatureAccess(permissions, item.featureCode);
