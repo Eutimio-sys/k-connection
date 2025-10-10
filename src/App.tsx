@@ -64,7 +64,7 @@ const App = () => (
             <Route path="/mywork" element={<MyWork />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/settings" element={<ProtectedRoute featureCode="settings"><Settings /></ProtectedRoute>} />
-            <Route path="/project-access" element={<ProtectedRoute requiredRoles={["admin", "manager"]}><ProjectAccessManagement /></ProtectedRoute>} />
+            <Route path="/project-access" element={<ProtectedRoute requiredRoles={["admin"]}><ProjectAccessManagement /></ProtectedRoute>} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

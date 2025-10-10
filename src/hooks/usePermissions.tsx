@@ -34,6 +34,25 @@ export const usePermissions = (): UserPermissions => {
         .eq("user_id", user.id);
 
       if (!userRoles || userRoles.length === 0) {
+        // Default to worker role if none assigned
+        setRole("worker");
+        const { data: rolePermissions } = await supabase
+          .from("role_permissions")
+          .select("feature_code, can_access")
+          .in("role", ["worker"]);
+        const { data: userPermissions } = await supabase
+          .from("user_permissions")
+          .select("feature_code, can_access")
+          .eq("user_id", user.id);
+        const permissionsMap: Record<string, boolean> = {};
+        rolePermissions?.forEach((perm) => {
+          permissionsMap[perm.feature_code] =
+            permissionsMap[perm.feature_code] === true || perm.can_access === true;
+        });
+        userPermissions?.forEach((perm) => {
+          permissionsMap[perm.feature_code] = perm.can_access;
+        });
+        setPermissions(permissionsMap);
         setLoading(false);
         return;
       }
