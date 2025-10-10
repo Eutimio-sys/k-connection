@@ -14,7 +14,7 @@ export const ProtectedRoute = ({
   requiredRoles,
 }: ProtectedRouteProps) => {
   const { role, permissions, loading } = usePermissions();
-  const [hasAccess, setHasAccess] = useState<boolean>(false);
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -65,7 +65,16 @@ export const ProtectedRoute = ({
     return <>{children}</>;
   }
 
-  if (!hasAccess) {
+  // Wait until access is determined
+  if (hasAccess === null) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-muted-foreground">กำลังตรวจสอบสิทธิ์...</p>
+      </div>
+    );
+  }
+
+  if (hasAccess === false) {
     return <Navigate to="/" replace />;
   }
 
