@@ -32,6 +32,27 @@ const DailyPayments = () => {
   useEffect(() => {
     fetchData();
     fetchFilterData();
+
+    // Subscribe to real-time changes
+    const channel = supabase
+      .channel('daily-payments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'daily_payments'
+        },
+        () => {
+          // Refetch data when any change occurs
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [selectedDate, startDate, endDate, selectedCompany, selectedProject, selectedStatus]);
 
   const fetchFilterData = async () => {
