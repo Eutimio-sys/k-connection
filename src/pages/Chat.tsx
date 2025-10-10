@@ -27,6 +27,7 @@ interface Message {
 interface Profile {
   id: string;
   full_name: string;
+  nickname?: string;
   avatar_url: string | null;
 }
 
@@ -106,6 +107,15 @@ export default function Chat() {
     }, 100);
   }, [messages]);
 
+  // Scroll to bottom immediately when entering chat
+  useEffect(() => {
+    if (messages.length > 0) {
+      setTimeout(() => {
+        scrollToBottom();
+      }, 200);
+    }
+  }, [selectedProjectId]);
+
   useEffect(() => {
     // Clear message and focus input when switching rooms
     setNewMessage('');
@@ -183,7 +193,7 @@ export default function Chat() {
     if (userIds.length) {
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, full_name, avatar_url')
+        .select('id, full_name, nickname, avatar_url')
         .in('id', userIds);
       if (!profilesError && profilesData) {
         const map: Record<string, Profile> = {};
@@ -191,6 +201,7 @@ export default function Chat() {
           map[p.id] = {
             id: p.id,
             full_name: p.full_name,
+            nickname: p.nickname,
             avatar_url: p.avatar_url
           };
         });
@@ -333,7 +344,8 @@ export default function Chat() {
     const lastAtIndex = textBeforeCursor.lastIndexOf('@');
     
     const beforeMention = newMessage.substring(0, lastAtIndex);
-    const mention = `@[${profile.full_name}](${profile.id})`;
+    const displayName = profile.nickname || profile.full_name;
+    const mention = `@[${displayName}](${profile.id})`;
     const newText = beforeMention + mention + ' ' + textAfterCursor;
     
     setNewMessage(newText);
@@ -343,7 +355,7 @@ export default function Chat() {
 
   const renderMessage = (text: string): React.ReactNode => {
     const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
-    const parts: React.ReactNode[] = [];
+    const parts: (string | JSX.Element)[] = [];
     let lastIndex = 0;
     let match;
 
@@ -357,8 +369,8 @@ export default function Chat() {
       
       parts.push(
         <span
-          key={match.index}
-          className={`font-semibold ${isCurrentUser ? 'bg-primary/20 text-primary' : 'text-blue-500'} px-1 rounded`}
+          key={`mention-${match.index}`}
+          className={`font-semibold ${isCurrentUser ? 'bg-primary/20 text-primary' : 'bg-blue-500/20 text-blue-600'} px-1.5 py-0.5 rounded`}
         >
           @{name}
         </span>
@@ -371,7 +383,7 @@ export default function Chat() {
       parts.push(text.substring(lastIndex));
     }
 
-    return parts.length > 0 ? parts : text;
+    return <>{parts}</>;
   };
 
   const isImageFile = (fileName: string | null, fileType: string | null) => {
@@ -381,9 +393,11 @@ export default function Chat() {
     return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext || '');
   };
 
-  const filteredProfiles = Object.values(profileMap).filter(profile =>
-    profile.full_name.toLowerCase().includes(mentionSearch.toLowerCase())
-  );
+  const filteredProfiles = Object.values(profileMap).filter(profile => {
+    const searchTerm = mentionSearch.toLowerCase();
+    return (profile.nickname?.toLowerCase().includes(searchTerm) || 
+            profile.full_name.toLowerCase().includes(searchTerm));
+  });
 
   return (
     <div className="h-screen flex flex-col">
@@ -431,7 +445,7 @@ export default function Chat() {
                       <div className="flex-1 space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-sm">
-                            {profile?.full_name || 'ไม่ทราบผู้ส่ง'}
+                            {profile?.nickname || profile?.full_name || 'ไม่ทราบผู้ส่ง'}
                           </span>
                           <span className="text-xs text-muted-foreground">
                             {format(new Date(msg.created_at), 'dd/MM/yyyy HH:mm', { locale: th })}
@@ -527,11 +541,11 @@ export default function Chat() {
                                 <AvatarImage src={profile.avatar_url} />
                               ) : (
                                 <AvatarFallback className={getUserColor(profile.id)}>
-                                  {profile.full_name.charAt(0).toUpperCase()}
+                                  {(profile.nickname || profile.full_name).charAt(0).toUpperCase()}
                                 </AvatarFallback>
                               )}
                             </Avatar>
-                            <span>{profile.full_name}</span>
+                            <span>{profile.nickname || profile.full_name}</span>
                           </CommandItem>
                         ))}
                       </CommandGroup>

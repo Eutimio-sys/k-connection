@@ -122,7 +122,7 @@ const Approvals = () => {
         if (expense.created_by) {
           const { data: creator } = await supabase
             .from('profiles')
-            .select('id, full_name, email')
+            .select('id, full_name, nickname, avatar_url, email')
             .eq('id', expense.created_by)
             .maybeSingle();
           profiles.created_by_profile = creator;
@@ -131,7 +131,7 @@ const Approvals = () => {
         if (expense.updated_by) {
           const { data: updater } = await supabase
             .from('profiles')
-            .select('id, full_name, email')
+            .select('id, full_name, nickname, avatar_url, email')
             .eq('id', expense.updated_by)
             .maybeSingle();
           profiles.updated_by_profile = updater;
@@ -149,7 +149,7 @@ const Approvals = () => {
         if (expense.created_by) {
           const { data: creator } = await supabase
             .from('profiles')
-            .select('id, full_name, email')
+            .select('id, full_name, nickname, avatar_url, email')
             .eq('id', expense.created_by)
             .maybeSingle();
           profiles.created_by_profile = creator;
@@ -158,7 +158,7 @@ const Approvals = () => {
         if (expense.updated_by) {
           const { data: updater } = await supabase
             .from('profiles')
-            .select('id, full_name, email')
+            .select('id, full_name, nickname, avatar_url, email')
             .eq('id', expense.updated_by)
             .maybeSingle();
           profiles.updated_by_profile = updater;
@@ -176,7 +176,7 @@ const Approvals = () => {
         if (request.updated_by) {
           const { data: updater } = await supabase
             .from('profiles')
-            .select('id, full_name, email')
+            .select('id, full_name, nickname, avatar_url, email')
             .eq('id', request.updated_by)
             .maybeSingle();
           profiles.updated_by_profile = updater;
