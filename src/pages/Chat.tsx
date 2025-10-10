@@ -267,14 +267,16 @@ export default function Chat() {
     if (selectedProjectId === "general") {
       const { error } = await supabase.from('general_chat').insert(messageData);
       if (error) {
-        toast({ title: 'ไม่สามารถส่งข้อความได้', variant: 'destructive' });
+        console.error('Send message failed (general)', { error });
+        toast({ title: 'ไม่สามารถส่งข้อความได้', description: error.message, variant: 'destructive' });
         return;
       }
     } else {
       messageData.project_id = selectedProjectId;
       const { error } = await supabase.from('project_messages').insert(messageData);
       if (error) {
-        toast({ title: 'ไม่สามารถส่งข้อความได้', variant: 'destructive' });
+        console.error('Send message failed (project)', { selectedProjectId, error });
+        toast({ title: 'ไม่สามารถส่งข้อความได้', description: error.message, variant: 'destructive' });
         return;
       }
     }
