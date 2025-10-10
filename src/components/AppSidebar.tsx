@@ -89,18 +89,23 @@ export function AppSidebar() {
   const { role, permissions, loading } = usePermissions();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  // Filter menu items based on permissions
-  const visibleMenuItems = menuItems.filter((item) => {
-    if (role === "admin") return true; // Admin sees all
-    // Hide items restricted to specific roles
-    if ((item as any).requiredRoles && !(item as any).requiredRoles.includes(role)) {
-      return false;
-    }
-    if (!item.featureCode) return true; // Always show items without feature code
-    if (loading) return false; // Hide during loading
-    const roleAllowed = ROLE_FEATURES[role]?.includes("*") || ROLE_FEATURES[role]?.includes(item.featureCode);
-    return hasFeatureAccess(permissions, item.featureCode) || !!roleAllowed;
-  });
+  // Temporary global bypass: show all menu items to all users
+  const ACCESS_BYPASS = true;
+
+  // Filter menu items based on permissions (skipped when bypassing)
+  const visibleMenuItems = ACCESS_BYPASS
+    ? menuItems
+    : menuItems.filter((item) => {
+        if (role === "admin") return true; // Admin sees all
+        // Hide items restricted to specific roles
+        if ((item as any).requiredRoles && !(item as any).requiredRoles.includes(role)) {
+          return false;
+        }
+        if (!item.featureCode) return true; // Always show items without feature code
+        if (loading) return false; // Hide during loading
+        const roleAllowed = ROLE_FEATURES[role]?.includes("*") || ROLE_FEATURES[role]?.includes(item.featureCode);
+        return hasFeatureAccess(permissions, item.featureCode) || !!roleAllowed;
+      });
 
   useEffect(() => {
     // Get current user

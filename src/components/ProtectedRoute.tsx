@@ -39,6 +39,12 @@ export const ProtectedRoute = ({
   const { role, permissions, loading } = usePermissions();
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
 
+  // Temporary global bypass: allow all users to access all routes
+  const ACCESS_BYPASS = true;
+  if (ACCESS_BYPASS) {
+    return <>{children}</>;
+  }
+
   useEffect(() => {
     if (loading) return;
 
