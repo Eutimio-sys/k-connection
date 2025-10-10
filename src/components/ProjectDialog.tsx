@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -12,10 +12,15 @@ import { Plus } from "lucide-react";
 interface ProjectDialogProps {
   onSuccess?: () => void;
   companies: any[];
+  editData?: any;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-const ProjectDialog = ({ onSuccess, companies }: ProjectDialogProps) => {
-  const [open, setOpen] = useState(false);
+const ProjectDialog = ({ onSuccess, companies, editData, open: controlledOpen, onOpenChange }: ProjectDialogProps) => {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     code: "",
@@ -29,6 +34,34 @@ const ProjectDialog = ({ onSuccess, companies }: ProjectDialogProps) => {
     status: "planning",
   });
 
+  useEffect(() => {
+    if (open && editData) {
+      setFormData({
+        code: editData.code || "",
+        name: editData.name || "",
+        company_id: editData.company_id || "",
+        location: editData.location || "",
+        description: editData.description || "",
+        start_date: editData.start_date || "",
+        end_date: editData.end_date || "",
+        budget: editData.budget?.toString() || "",
+        status: editData.status || "planning",
+      });
+    } else if (!open) {
+      setFormData({ 
+        code: "", 
+        name: "", 
+        company_id: "", 
+        location: "", 
+        description: "", 
+        start_date: "", 
+        end_date: "", 
+        budget: "", 
+        status: "planning" 
+      });
+    }
+  }, [open, editData]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -40,18 +73,30 @@ const ProjectDialog = ({ onSuccess, companies }: ProjectDialogProps) => {
       return;
     }
 
-    const { error } = await supabase.from("projects").insert({
-      ...formData,
-      budget: formData.budget ? parseFloat(formData.budget) : null,
-      created_by: user.id,
-    });
+    let error;
+    if (editData) {
+      const result = await supabase.from("projects").update({
+        ...formData,
+        budget: formData.budget ? parseFloat(formData.budget) : null,
+      }).eq("id", editData.id);
+      error = result.error;
+    } else {
+      const result = await supabase.from("projects").insert({
+        ...formData,
+        budget: formData.budget ? parseFloat(formData.budget) : null,
+        created_by: user.id,
+      });
+      error = result.error;
+    }
 
     if (error) {
       toast.error("เกิดข้อผิดพลาด: " + error.message);
     } else {
-      toast.success("สร้างโครงการสำเร็จ");
+      toast.success(editData ? "แก้ไขโครงการสำเร็จ" : "สร้างโครงการสำเร็จ");
       setOpen(false);
-      setFormData({ code: "", name: "", company_id: "", location: "", description: "", start_date: "", end_date: "", budget: "", status: "planning" });
+      if (!editData) {
+        setFormData({ code: "", name: "", company_id: "", location: "", description: "", start_date: "", end_date: "", budget: "", status: "planning" });
+      }
       onSuccess?.();
     }
     setLoading(false);
@@ -67,7 +112,7 @@ const ProjectDialog = ({ onSuccess, companies }: ProjectDialogProps) => {
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>สร้างโครงการใหม่</DialogTitle>
+          <DialogTitle>{editData ? 'แก้ไขโครงการ' : 'สร้างโครงการใหม่'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">

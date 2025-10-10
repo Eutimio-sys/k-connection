@@ -48,8 +48,60 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
   const [selectedProject, setSelectedProject] = useState("");
 
   useEffect(() => {
-    if (open) fetchData();
-  }, [open]);
+    if (open) {
+      fetchData();
+      // Load existing expense data when editing
+      if (expense) {
+        loadExpenseData();
+      } else {
+        // Reset form for new expense
+        resetForm();
+      }
+    }
+  }, [open, expense]);
+
+  const loadExpenseData = async () => {
+    if (!expense) return;
+
+    setSelectedCompany(expense.company_id);
+    setSelectedProject(expense.project_id);
+    setHasWithholdingTax(expense.withholding_tax_amount > 0);
+    setWithholdingTaxRate(expense.withholding_tax_rate || 3);
+
+    // Load items
+    if (expense.items && expense.items.length > 0) {
+      setItems(expense.items.map((item: any) => ({
+        category_id: item.category_id,
+        description: item.description,
+        amount: item.amount || 0,
+        notes: item.notes || ""
+      })));
+    }
+
+    // Load deductions
+    if (expense.deductions && expense.deductions.length > 0) {
+      setDeductions(expense.deductions.map((d: any) => ({
+        description: d.description,
+        amount: d.amount
+      })));
+    }
+
+    // Load image if exists
+    if (expense.receipt_image_url) {
+      setImagePreview(expense.receipt_image_url);
+    }
+  };
+
+  const resetForm = () => {
+    setSelectedCompany("");
+    setSelectedProject("");
+    setItems([{ category_id: "", description: "", amount: 0, notes: "" }]);
+    setDeductions([]);
+    setHasWithholdingTax(false);
+    setWithholdingTaxRate(3);
+    setImageFile(null);
+    setImagePreview("");
+  };
 
   const fetchData = async () => {
     const [workersRes, projectsRes, companiesRes, categoriesRes] = await Promise.all([
@@ -280,16 +332,6 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
     setLoading(false);
   };
 
-  const resetForm = () => {
-    setItems([{ category_id: "", description: "", amount: 0, notes: "" }]);
-    setDeductions([]);
-    setHasWithholdingTax(false);
-    setWithholdingTaxRate(3);
-    setImageFile(null);
-    setImagePreview("");
-    setSelectedCompany("");
-    setSelectedProject("");
-  };
 
   const subtotal = calculateSubtotal();
   const withholdingTax = calculateWithholdingTax(subtotal);
@@ -306,17 +348,22 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
       </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>เพิ่มรายการค่าแรงงาน</DialogTitle>
+          <DialogTitle>{expense ? 'แก้ไขรายการค่าแรงงาน' : 'เพิ่มรายการค่าแรงงาน'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>เลขที่ใบเสร็จ (สร้างอัตโนมัติ)</Label>
-              <Input value="สร้างอัตโนมัติเมื่อบันทึก" disabled className="bg-muted" />
+              <Label>เลขที่ใบเสร็จ</Label>
+              <Input value={expense?.invoice_number || "สร้างอัตโนมัติเมื่อบันทึก"} disabled className="bg-muted" />
             </div>
             <div>
               <Label htmlFor="invoice_date">วันที่</Label>
-              <Input id="invoice_date" name="invoice_date" type="date" defaultValue={new Date().toISOString().split("T")[0]} />
+              <Input 
+                id="invoice_date" 
+                name="invoice_date" 
+                type="date" 
+                defaultValue={expense?.invoice_date || new Date().toISOString().split("T")[0]} 
+              />
             </div>
           </div>
 
@@ -408,7 +455,7 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
                 </DialogContent>
               </Dialog>
             </div>
-            <Select name="worker_id">
+            <Select name="worker_id" defaultValue={expense?.worker_id}>
               <SelectTrigger>
                 <SelectValue placeholder="เลือกช่าง" />
               </SelectTrigger>
@@ -580,7 +627,7 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
 
           <div>
             <Label htmlFor="notes">หมายเหตุ</Label>
-            <Textarea id="notes" name="notes" rows={3} />
+            <Textarea id="notes" name="notes" rows={3} defaultValue={expense?.notes || ""} />
           </div>
 
           <div className="flex gap-2 justify-end">
