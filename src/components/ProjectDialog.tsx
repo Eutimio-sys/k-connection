@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 
 interface ProjectDialogProps {
   onSuccess?: () => void;
@@ -22,6 +22,8 @@ const ProjectDialog = ({ onSuccess, companies, editData, open: controlledOpen, o
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setOpen = onOpenChange || setInternalOpen;
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [budgetBreakdown, setBudgetBreakdown] = useState<Record<string, number>>({});
   const [formData, setFormData] = useState({
     code: "",
     name: "",
@@ -33,6 +35,20 @@ const ProjectDialog = ({ onSuccess, companies, editData, open: controlledOpen, o
     budget: "",
     status: "planning",
   });
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+
+  const fetchCategories = async () => {
+    const { data } = await supabase
+      .from("expense_categories")
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
+    if (data) setCategories(data);
+  };
 
   useEffect(() => {
     if (open && editData) {
@@ -47,6 +63,7 @@ const ProjectDialog = ({ onSuccess, companies, editData, open: controlledOpen, o
         budget: editData.budget?.toString() || "",
         status: editData.status || "planning",
       });
+      setBudgetBreakdown(editData.budget_breakdown || {});
     } else if (!open) {
       setFormData({ 
         code: "", 
@@ -59,6 +76,7 @@ const ProjectDialog = ({ onSuccess, companies, editData, open: controlledOpen, o
         budget: "", 
         status: "planning" 
       });
+      setBudgetBreakdown({});
     }
   }, [open, editData]);
 
@@ -73,17 +91,19 @@ const ProjectDialog = ({ onSuccess, companies, editData, open: controlledOpen, o
       return;
     }
 
+    const projectData = {
+      ...formData,
+      budget: formData.budget ? parseFloat(formData.budget) : null,
+      budget_breakdown: budgetBreakdown,
+    };
+
     let error;
     if (editData) {
-      const result = await supabase.from("projects").update({
-        ...formData,
-        budget: formData.budget ? parseFloat(formData.budget) : null,
-      }).eq("id", editData.id);
+      const result = await supabase.from("projects").update(projectData).eq("id", editData.id);
       error = result.error;
     } else {
       const result = await supabase.from("projects").insert({
-        ...formData,
-        budget: formData.budget ? parseFloat(formData.budget) : null,
+        ...projectData,
         created_by: user.id,
       });
       error = result.error;
@@ -96,11 +116,31 @@ const ProjectDialog = ({ onSuccess, companies, editData, open: controlledOpen, o
       setOpen(false);
       if (!editData) {
         setFormData({ code: "", name: "", company_id: "", location: "", description: "", start_date: "", end_date: "", budget: "", status: "planning" });
+        setBudgetBreakdown({});
       }
       onSuccess?.();
     }
     setLoading(false);
   };
+
+  const addCategoryBudget = () => {
+    const firstCategory = categories[0];
+    if (firstCategory && !budgetBreakdown[firstCategory.id]) {
+      setBudgetBreakdown({ ...budgetBreakdown, [firstCategory.id]: 0 });
+    }
+  };
+
+  const updateCategoryBudget = (categoryId: string, amount: number) => {
+    setBudgetBreakdown({ ...budgetBreakdown, [categoryId]: amount });
+  };
+
+  const removeCategoryBudget = (categoryId: string) => {
+    const newBreakdown = { ...budgetBreakdown };
+    delete newBreakdown[categoryId];
+    setBudgetBreakdown(newBreakdown);
+  };
+
+  const totalCategoryBudget = Object.values(budgetBreakdown).reduce((sum, val) => sum + Number(val || 0), 0);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -170,8 +210,67 @@ const ProjectDialog = ({ onSuccess, companies, editData, open: controlledOpen, o
             </div>
 
             <div className="col-span-2">
-              <Label>งบประมาณ (บาท)</Label>
+              <Label>งบประมาณรวม (บาท)</Label>
               <Input type="number" step="0.01" value={formData.budget} onChange={e => setFormData({...formData, budget: e.target.value})} />
+            </div>
+
+            <div className="col-span-2">
+              <div className="flex justify-between items-center mb-2">
+                <Label>งบประมาณแยกหมวดหมู่</Label>
+                <Button type="button" size="sm" variant="outline" onClick={addCategoryBudget} className="gap-1">
+                  <Plus size={16} />
+                  เพิ่มหมวดหมู่
+                </Button>
+              </div>
+              <div className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-3">
+                {Object.entries(budgetBreakdown).map(([catId, amount]) => {
+                  const category = categories.find(c => c.id === catId);
+                  return (
+                    <div key={catId} className="flex gap-2 items-center">
+                      <Select 
+                        value={catId} 
+                        onValueChange={(newCatId) => {
+                          const newBreakdown = { ...budgetBreakdown };
+                          delete newBreakdown[catId];
+                          newBreakdown[newCatId] = amount;
+                          setBudgetBreakdown(newBreakdown);
+                        }}
+                      >
+                        <SelectTrigger className="flex-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          {categories.map(cat => (
+                            <SelectItem key={cat.id} value={cat.id} disabled={budgetBreakdown[cat.id] !== undefined && cat.id !== catId}>
+                              {cat.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={amount || 0}
+                        onChange={e => updateCategoryBudget(catId, parseFloat(e.target.value) || 0)}
+                        className="w-40"
+                        placeholder="งบประมาณ"
+                      />
+                      <Button type="button" size="icon" variant="ghost" onClick={() => removeCategoryBudget(catId)}>
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
+                  );
+                })}
+                {Object.keys(budgetBreakdown).length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">ยังไม่มีการกำหนดงบประมาณแยกหมวดหมู่</p>
+                )}
+                {Object.keys(budgetBreakdown).length > 0 && (
+                  <div className="border-t pt-2 mt-2 flex justify-between font-semibold">
+                    <span>รวมงบประมาณแยกหมวดหมู่:</span>
+                    <span className="text-primary">{new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(totalCategoryBudget)}</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="col-span-2">

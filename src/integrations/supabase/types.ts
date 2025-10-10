@@ -1279,6 +1279,7 @@ export type Database = {
       projects: {
         Row: {
           budget: number | null
+          budget_breakdown: Json | null
           code: string | null
           company_id: string
           created_at: string
@@ -1294,6 +1295,7 @@ export type Database = {
         }
         Insert: {
           budget?: number | null
+          budget_breakdown?: Json | null
           code?: string | null
           company_id: string
           created_at?: string
@@ -1309,6 +1311,7 @@ export type Database = {
         }
         Update: {
           budget?: number | null
+          budget_breakdown?: Json | null
           code?: string | null
           company_id?: string
           created_at?: string
