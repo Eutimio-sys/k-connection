@@ -6,9 +6,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Shield, UserCog, Settings } from "lucide-react";
+import { Loader2, Shield, UserCog, Settings, Trash2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface UserProfile {
   id: string;
@@ -59,6 +60,8 @@ export default function UserRoles() {
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [newRoleData, setNewRoleData] = useState({ code: '', name: '', description: '' });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -68,10 +71,11 @@ export default function UserRoles() {
     try {
       setLoading(true);
       
-      // Fetch all users
+      // Fetch all users (only active users)
       const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
         .select("id, full_name, email, position, department")
+        .eq("is_active", true)
         .order("full_name");
 
       if (profilesError) throw profilesError;
@@ -150,6 +154,39 @@ export default function UserRoles() {
       if (insertError) throw insertError;
 
       toast.success("เปลี่ยนบทบาทสำเร็จ");
+      await fetchData();
+    } catch (error: any) {
+      toast.error("เกิดข้อผิดพลาด: " + error.message);
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+
+    try {
+      setSaving(userToDelete.id);
+
+      // ลบ user_roles
+      const { error: rolesError } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userToDelete.id);
+
+      if (rolesError) throw rolesError;
+
+      // Soft delete profiles (set is_active = false)
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ is_active: false })
+        .eq("id", userToDelete.id);
+
+      if (profileError) throw profileError;
+
+      toast.success("ลบผู้ใช้สำเร็จ");
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
       await fetchData();
     } catch (error: any) {
       toast.error("เกิดข้อผิดพลาด: " + error.message);
@@ -288,6 +325,7 @@ export default function UserRoles() {
                     <TableHead>ตำแหน่ง</TableHead>
                     <TableHead>แผนก</TableHead>
                     <TableHead>เลือกบทบาท</TableHead>
+                    <TableHead className="text-right">จัดการ</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -321,6 +359,20 @@ export default function UserRoles() {
                               ))}
                             </SelectContent>
                           </Select>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setUserToDelete(user);
+                              setDeleteDialogOpen(true);
+                            }}
+                            className="gap-1 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 size={14} />
+                            ลบ
+                          </Button>
                         </TableCell>
                       </TableRow>
                     );
@@ -408,6 +460,29 @@ export default function UserRoles() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Delete User Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>ยืนยันการลบผู้ใช้</AlertDialogTitle>
+            <AlertDialogDescription>
+              คุณแน่ใจหรือไม่ที่จะลบผู้ใช้ <strong>{userToDelete?.full_name}</strong> ออกจากระบบ?
+              <br />
+              การดำเนินการนี้จะลบข้อมูลทั้งหมดของผู้ใช้และไม่สามารถย้อนกลับได้
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              ลบผู้ใช้
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
