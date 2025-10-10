@@ -6,10 +6,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Shield, UserCog, Settings, Trash2 } from "lucide-react";
+import { Loader2, Shield, UserCog, Settings, Trash2, UserPlus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface UserProfile {
   id: string;
@@ -63,6 +66,17 @@ export default function UserRoles() {
   const [newRoleData, setNewRoleData] = useState({ code: '', name: '', description: '' });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
+  const [addUserDialogOpen, setAddUserDialogOpen] = useState(false);
+  const [newUserData, setNewUserData] = useState({
+    email: '',
+    password: '',
+    full_name: '',
+    position: '',
+    department: '',
+    phone: '',
+    id_card: ''
+  });
+  const [creatingUser, setCreatingUser] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -213,6 +227,45 @@ export default function UserRoles() {
     }
   };
 
+  const handleCreateUser = async () => {
+    if (!newUserData.email || !newUserData.password || !newUserData.full_name) {
+      toast.error("กรุณากรอกอีเมล รหัสผ่าน และชื่อ-นามสกุล");
+      return;
+    }
+
+    if (newUserData.password.length < 6) {
+      toast.error("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร");
+      return;
+    }
+
+    setCreatingUser(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: newUserData
+      });
+
+      if (error) throw error;
+
+      toast.success("เพิ่มผู้ใช้สำเร็จ");
+      setAddUserDialogOpen(false);
+      setNewUserData({
+        email: '',
+        password: '',
+        full_name: '',
+        position: '',
+        department: '',
+        phone: '',
+        id_card: ''
+      });
+      await fetchData();
+    } catch (error: any) {
+      toast.error("เกิดข้อผิดพลาด: " + error.message);
+    } finally {
+      setCreatingUser(false);
+    }
+  };
+
+
 
   const getRoleBadgeVariant = (roleCode: string) => {
     switch (roleCode) {
@@ -330,13 +383,112 @@ export default function UserRoles() {
         <TabsContent value="users" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UserCog className="h-5 w-5" />
-                รายการผู้ใช้และบทบาท
-              </CardTitle>
-              <CardDescription>
-                ผู้ใช้แต่ละคนสามารถมีได้เพียง 1 บทบาทเท่านั้น
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserCog className="h-5 w-5" />
+                    รายการผู้ใช้และบทบาท
+                  </CardTitle>
+                  <CardDescription>
+                    ผู้ใช้แต่ละคนสามารถมีได้เพียง 1 บทบาทเท่านั้น
+                  </CardDescription>
+                </div>
+                <Dialog open={addUserDialogOpen} onOpenChange={setAddUserDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="gap-2">
+                      <UserPlus className="h-4 w-4" />
+                      เพิ่มผู้ใช้
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>เพิ่มผู้ใช้ใหม่</DialogTitle>
+                      <DialogDescription>
+                        กรอกข้อมูลผู้ใช้ใหม่ ระบบจะสร้างบัญชีและกำหนดบทบาทเป็น "พนักงาน" โดยอัตโนมัติ
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="email">อีเมล *</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={newUserData.email}
+                          onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
+                          placeholder="example@email.com"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="password">รหัสผ่าน *</Label>
+                        <Input
+                          id="password"
+                          type="password"
+                          value={newUserData.password}
+                          onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
+                          placeholder="อย่างน้อย 6 ตัวอักษร"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="full_name">ชื่อ-นามสกุล *</Label>
+                        <Input
+                          id="full_name"
+                          value={newUserData.full_name}
+                          onChange={(e) => setNewUserData({ ...newUserData, full_name: e.target.value })}
+                          placeholder="นาย/นาง/นางสาว..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="position">ตำแหน่ง</Label>
+                        <Input
+                          id="position"
+                          value={newUserData.position}
+                          onChange={(e) => setNewUserData({ ...newUserData, position: e.target.value })}
+                          placeholder="เช่น พนักงาน, หัวหน้างาน"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="department">แผนก</Label>
+                        <Input
+                          id="department"
+                          value={newUserData.department}
+                          onChange={(e) => setNewUserData({ ...newUserData, department: e.target.value })}
+                          placeholder="เช่น ก่อสร้าง, บัญชี"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">เบอร์โทรศัพท์</Label>
+                        <Input
+                          id="phone"
+                          value={newUserData.phone}
+                          onChange={(e) => setNewUserData({ ...newUserData, phone: e.target.value })}
+                          placeholder="0xx-xxx-xxxx"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="id_card">เลขบัตรประชาชน</Label>
+                        <Input
+                          id="id_card"
+                          value={newUserData.id_card}
+                          onChange={(e) => setNewUserData({ ...newUserData, id_card: e.target.value })}
+                          placeholder="x-xxxx-xxxxx-xx-x"
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button
+                        variant="outline"
+                        onClick={() => setAddUserDialogOpen(false)}
+                        disabled={creatingUser}
+                      >
+                        ยกเลิก
+                      </Button>
+                      <Button onClick={handleCreateUser} disabled={creatingUser}>
+                        {creatingUser ? "กำลังสร้าง..." : "สร้างผู้ใช้"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
