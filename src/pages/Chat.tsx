@@ -103,6 +103,25 @@ export default function Chat() {
     scrollToBottom();
   }, [messages]);
 
+  useEffect(() => {
+    // Focus input when switching rooms
+    inputRef.current?.focus();
+  }, [selectedProjectId]);
+
+  useEffect(() => {
+    // Mark current room as read to clear unread badges
+    const markRead = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const key = selectedProjectId === 'general'
+        ? `lastReadChat_general_${user.id}`
+        : `lastReadChat_project_${selectedProjectId}_${user.id}`;
+      localStorage.setItem(key, new Date().toISOString());
+      window.dispatchEvent(new Event('chat-read'));
+    };
+    markRead();
+  }, [selectedProjectId, messages]);
+
   const getCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) setCurrentUserId(user.id);
@@ -350,7 +369,7 @@ export default function Chat() {
     <div className="p-8 space-y-6">
       <header className="flex items-center justify-between">
         <h1 className="text-4xl font-bold">แชทรวม</h1>
-        <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+        <Select value={selectedProjectId} onValueChange={(v) => { setSelectedProjectId(v); setNewMessage(""); }}>
           <SelectTrigger className="bg-background w-[300px]">
             <SelectValue />
           </SelectTrigger>
@@ -504,11 +523,11 @@ export default function Chat() {
                 placeholder="พิมพ์ข้อความ... (ใช้ @ เพื่อแท็กผู้ใช้)"
                 value={newMessage}
                 onChange={handleInputChange}
-                onKeyPress={(e) => e.key === 'Enter' && !showMentionPopover && handleSendMessage()}
+                onKeyDown={(e) => e.key === 'Enter' && !showMentionPopover && handleSendMessage()}
                 className="flex-1"
               />
               
-              <Button onClick={handleSendMessage}>
+              <Button onClick={handleSendMessage} disabled={!newMessage.trim() && !file}>
                 <Send className="w-4 h-4" />
               </Button>
             </div>

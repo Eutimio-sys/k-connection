@@ -108,14 +108,6 @@ const Index = () => {
       featureCode: "leave_management",
     },
     {
-      title: "พนักงาน",
-      description: "จัดการข้อมูลพนักงานทั้งหมด",
-      url: "/employees",
-      icon: Users,
-      gradient: "from-indigo-500 to-indigo-600",
-      featureCode: "employees",
-    },
-    {
       title: "จัดการ HR",
       description: "ระบบจัดการทรัพยากรบุคคล",
       url: "/hr-management",
