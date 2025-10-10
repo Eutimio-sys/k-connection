@@ -104,8 +104,16 @@ export default function Chat() {
   }, [messages]);
 
   useEffect(() => {
-    // Focus input when switching rooms
-    inputRef.current?.focus();
+    // Clear message and focus input when switching rooms
+    setNewMessage('');
+    setFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    // Small delay to ensure input is ready
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
   }, [selectedProjectId]);
 
   useEffect(() => {
