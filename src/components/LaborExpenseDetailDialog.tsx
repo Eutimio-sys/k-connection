@@ -121,6 +121,7 @@ const LaborExpenseDetailDialog = ({
   const handleEditSuccess = () => {
     setShowEditDialog(false);
     onSuccess();
+    onOpenChange(false);
   };
 
   if (!expense) return null;
@@ -315,25 +316,23 @@ const LaborExpenseDetailDialog = ({
 
             {/* Action History */}
             <div className="pt-4 border-t">
-              <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground">
+              <div className="flex flex-col gap-y-2 text-xs text-muted-foreground">
                 {expense.created_by_profile && (
                   <div>
                     <span className="font-medium">สร้างโดย:</span>{" "}
                     {expense.created_by_profile.full_name}
                     {expense.created_at && (
-                      <span className="ml-1">
-                        ({format(new Date(expense.created_at), "dd/MM/yyyy HH:mm")})
-                      </span>
+                      <span className="ml-1">({format(new Date(expense.created_at), "dd/MM/yyyy HH:mm")})</span>
                     )}
                   </div>
                 )}
-                {expense.updated_by_profile && expense.updated_at && expense.updated_by !== expense.created_by && (
+                {expense.edit_count > 0 && expense.updated_by_profile && (
                   <div>
-                    <span className="font-medium">แก้ไขโดย:</span>{" "}
+                    <span className="font-medium">แก้ไขครั้งที่ {expense.edit_count}:</span>{" "}
                     {expense.updated_by_profile.full_name}
-                    <span className="ml-1">
-                      ({format(new Date(expense.updated_at), "dd/MM/yyyy HH:mm")})
-                    </span>
+                    {expense.updated_at && (
+                      <span className="ml-1">({format(new Date(expense.updated_at), "dd/MM/yyyy HH:mm")})</span>
+                    )}
                   </div>
                 )}
               </div>

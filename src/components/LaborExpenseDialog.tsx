@@ -258,6 +258,12 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
           total_amount: totalAmount,
           net_amount: netAmount,
           notes,
+          // Re-approval required after any edit
+          status: "pending",
+          approved_by: null,
+          approved_at: null,
+          modified_after_approval: expense.approved_at ? true : expense.modified_after_approval,
+          edit_count: (expense.edit_count || 0) + 1,
           updated_by: user.id,
         })
         .eq("id", expense.id);

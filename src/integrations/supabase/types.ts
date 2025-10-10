@@ -422,6 +422,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           credit_days: number | null
+          edit_count: number
           id: string
           invoice_date: string
           invoice_number: string
@@ -448,6 +449,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           credit_days?: number | null
+          edit_count?: number
           id?: string
           invoice_date?: string
           invoice_number: string
@@ -474,6 +476,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           credit_days?: number | null
+          edit_count?: number
           id?: string
           invoice_date?: string
           invoice_number?: string
@@ -774,6 +777,7 @@ export type Database = {
           company_id: string
           created_at: string
           created_by: string | null
+          edit_count: number
           id: string
           invoice_date: string
           invoice_number: string
@@ -798,6 +802,7 @@ export type Database = {
           company_id: string
           created_at?: string
           created_by?: string | null
+          edit_count?: number
           id?: string
           invoice_date?: string
           invoice_number: string
@@ -822,6 +827,7 @@ export type Database = {
           company_id?: string
           created_at?: string
           created_by?: string | null
+          edit_count?: number
           id?: string
           invoice_date?: string
           invoice_number?: string

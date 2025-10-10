@@ -280,6 +280,12 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
             notes: notes || null,
             payment_terms: paymentTerms,
             credit_days: paymentTerms === "credit" ? parseInt(creditDays) || null : null,
+            // Re-approval required after any edit
+            status: "pending",
+            approved_by: null,
+            approved_at: null,
+            modified_after_approval: expense.approved_at ? true : expense.modified_after_approval,
+            edit_count: (expense.edit_count || 0) + 1,
             updated_by: user.id,
           })
           .eq("id", expense.id);
