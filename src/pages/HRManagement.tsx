@@ -52,6 +52,7 @@ const HRManagement = () => {
           *,
           company:companies(name)
         `)
+        .eq("is_active", true)
         .order("full_name");
 
       if (employeesError) throw employeesError;
@@ -140,16 +141,16 @@ const HRManagement = () => {
   const handleDeleteEmployee = async () => {
     if (!employeeToDelete) return;
 
-    // We can't actually delete from auth.users, so we'll just mark as inactive or remove from profiles
+    // Soft delete - mark as inactive instead of deleting
     const { error } = await supabase
       .from("profiles")
-      .delete()
+      .update({ is_active: false })
       .eq("id", employeeToDelete.id);
 
     if (error) {
       toast.error("เกิดข้อผิดพลาด: " + error.message);
     } else {
-      toast.success("ลบพนักงานสำเร็จ");
+      toast.success("ปิดการใช้งานพนักงานสำเร็จ");
       // Update employees state immediately
       setEmployees(prev => prev.filter(emp => emp.id !== employeeToDelete.id));
       setDeleteDialogOpen(false);
