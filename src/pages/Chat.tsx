@@ -256,24 +256,28 @@ export default function Chat() {
     }
 
     const mentionedUsers = extractMentions(newMessage);
-    const messageData: any = {
+    const baseMessage = {
       user_id: user.id,
       message: newMessage.trim() || '(ส่งไฟล์)',
       file_url: fileUrl,
       file_name: fileName,
-      file_type: fileType,
-    };
+    } as const;
 
     if (selectedProjectId === "general") {
-      const { error } = await supabase.from('general_chat').insert(messageData);
+      const { error } = await supabase.from('general_chat').insert({
+        ...baseMessage,
+        file_type: fileType, // only general_chat has file_type
+      });
       if (error) {
         console.error('Send message failed (general)', { error });
         toast({ title: 'ไม่สามารถส่งข้อความได้', description: error.message, variant: 'destructive' });
         return;
       }
     } else {
-      messageData.project_id = selectedProjectId;
-      const { error } = await supabase.from('project_messages').insert(messageData);
+      const { error } = await supabase.from('project_messages').insert({
+        ...baseMessage,
+        project_id: selectedProjectId,
+      });
       if (error) {
         console.error('Send message failed (project)', { selectedProjectId, error });
         toast({ title: 'ไม่สามารถส่งข้อความได้', description: error.message, variant: 'destructive' });
