@@ -22,6 +22,8 @@ const IncomeHistoryDialog = ({ open, onOpenChange, projectId, onSuccess }: Incom
   const [incomes, setIncomes] = useState<any[]>([]);
   const [paymentAccounts, setPaymentAccounts] = useState<any[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [hasVat, setHasVat] = useState(false);
+  const [hasWithholdingTax, setHasWithholdingTax] = useState(false);
   const [formData, setFormData] = useState({
     amount: "",
     income_date: new Date().toISOString().split('T')[0],
@@ -81,15 +83,20 @@ const IncomeHistoryDialog = ({ open, onOpenChange, projectId, onSuccess }: Incom
     e.preventDefault();
     const { data: { user } } = await supabase.auth.getUser();
     
+    // Calculate VAT and withholding tax based on checkboxes
+    const baseAmount = parseFloat(formData.amount);
+    const vatAmount = hasVat ? baseAmount * 0.07 : 0;
+    const withholdingTaxAmount = hasWithholdingTax ? baseAmount * 0.03 : 0;
+    
     const { error } = await supabase.from("project_income").insert({
       project_id: projectId,
-      amount: parseFloat(formData.amount),
+      amount: baseAmount,
       income_date: formData.income_date,
       payment_account_id: formData.payment_account_id || null,
       description: formData.description,
       notes: formData.notes,
-      vat_amount: parseFloat(formData.vat_amount) || 0,
-      withholding_tax_amount: parseFloat(formData.withholding_tax_amount) || 0,
+      vat_amount: vatAmount,
+      withholding_tax_amount: withholdingTaxAmount,
       is_outside_company: formData.is_outside_company,
       created_by: user?.id,
     });
@@ -109,6 +116,8 @@ const IncomeHistoryDialog = ({ open, onOpenChange, projectId, onSuccess }: Incom
         withholding_tax_amount: "",
         is_outside_company: false,
       });
+      setHasVat(false);
+      setHasWithholdingTax(false);
       setShowAddForm(false);
       fetchIncomes();
       if (onSuccess) onSuccess();
@@ -178,27 +187,44 @@ const IncomeHistoryDialog = ({ open, onOpenChange, projectId, onSuccess }: Incom
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>VAT</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.vat_amount}
-                    onChange={(e) => setFormData({ ...formData, vat_amount: e.target.value })}
-                    placeholder="0.00"
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="hasVat"
+                    checked={hasVat}
+                    onCheckedChange={(checked) => setHasVat(checked === true)}
                   />
+                  <Label htmlFor="hasVat" className="text-sm font-normal cursor-pointer">
+                    มี VAT 7%
+                  </Label>
                 </div>
-                <div>
-                  <Label>หักณที่จ่าย</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.withholding_tax_amount}
-                    onChange={(e) => setFormData({ ...formData, withholding_tax_amount: e.target.value })}
-                    placeholder="0.00"
+                
+                {hasVat && (
+                  <div className="ml-6 p-3 bg-muted rounded-lg">
+                    <p className="text-sm text-muted-foreground">
+                      VAT 7%: {formData.amount ? new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(parseFloat(formData.amount) * 0.07) : "฿0.00"}
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="hasWithholding"
+                    checked={hasWithholdingTax}
+                    onCheckedChange={(checked) => setHasWithholdingTax(checked === true)}
                   />
+                  <Label htmlFor="hasWithholding" className="text-sm font-normal cursor-pointer">
+                    มีหักณที่จ่าย 3%
+                  </Label>
                 </div>
+                
+                {hasWithholdingTax && (
+                  <div className="ml-6 p-3 bg-muted rounded-lg">
+                    <p className="text-sm text-muted-foreground">
+                      หักณที่จ่าย 3%: {formData.amount ? new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(parseFloat(formData.amount) * 0.03) : "฿0.00"}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div>

@@ -669,12 +669,8 @@ const ProjectDetail = () => {
         </DialogContent>
       </Dialog>
 
-      <Tabs defaultValue="purchases" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="purchases" className="gap-2">
-            <ShoppingCart size={16} />
-            ใบขอซื้อ
-          </TabsTrigger>
+      <Tabs defaultValue="material" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="material" className="gap-2">
             <Package size={16} />
             บัญชีวัสดุ
@@ -689,38 +685,6 @@ const ProjectDetail = () => {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="purchases" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ShoppingCart size={20} />
-                ใบขอซื้อ ({purchases.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {purchases.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">ยังไม่มีใบขอซื้อ</p>
-              ) : (
-                <div className="space-y-3">
-                  {purchases.map(p => (
-                    <div key={p.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50">
-                      <div className="flex-1">
-                        <p className="font-medium">{p.item_name}</p>
-                        <p className="text-sm text-muted-foreground">{p.quantity} {p.unit} • {p.category?.name}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-accent">{formatCurrency(p.estimated_price)}</p>
-                        <Badge variant={p.status === "approved" ? "default" : p.status === "pending" ? "secondary" : "destructive"} className="text-xs">
-                          {p.status === "approved" ? "อนุมัติ" : p.status === "pending" ? "รออนุมัติ" : "ปฏิเสธ"}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         <TabsContent value="material" className="mt-6">
           <Card>

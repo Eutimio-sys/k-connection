@@ -1302,6 +1302,10 @@ export type Database = {
           company_id: string
           created_at: string
           created_by: string
+          customer_address: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          customer_tax_id: string | null
           description: string | null
           end_date: string | null
           id: string
@@ -1318,6 +1322,10 @@ export type Database = {
           company_id: string
           created_at?: string
           created_by: string
+          customer_address?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          customer_tax_id?: string | null
           description?: string | null
           end_date?: string | null
           id?: string
@@ -1334,6 +1342,10 @@ export type Database = {
           company_id?: string
           created_at?: string
           created_by?: string
+          customer_address?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          customer_tax_id?: string | null
           description?: string | null
           end_date?: string | null
           id?: string

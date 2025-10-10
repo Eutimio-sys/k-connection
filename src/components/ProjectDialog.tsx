@@ -34,6 +34,10 @@ const ProjectDialog = ({ onSuccess, companies, editData, open: controlledOpen, o
     end_date: "",
     budget: "",
     status: "planning",
+    customer_name: "",
+    customer_address: "",
+    customer_phone: "",
+    customer_tax_id: "",
   });
 
   useEffect(() => {
@@ -72,6 +76,10 @@ const ProjectDialog = ({ onSuccess, companies, editData, open: controlledOpen, o
         end_date: editData.end_date || "",
         budget: editData.budget?.toString() || "",
         status: editData.status || "planning",
+        customer_name: editData.customer_name || "",
+        customer_address: editData.customer_address || "",
+        customer_phone: editData.customer_phone || "",
+        customer_tax_id: editData.customer_tax_id || "",
       });
       setBudgetBreakdown(editData.budget_breakdown || {});
     } else if (!open) {
@@ -84,7 +92,11 @@ const ProjectDialog = ({ onSuccess, companies, editData, open: controlledOpen, o
         start_date: "", 
         end_date: "", 
         budget: "", 
-        status: "planning" 
+        status: "planning",
+        customer_name: "",
+        customer_address: "",
+        customer_phone: "",
+        customer_tax_id: "",
       });
       // Reset to all categories when closing
       const initialBreakdown: Record<string, number> = {};
@@ -130,7 +142,21 @@ const ProjectDialog = ({ onSuccess, companies, editData, open: controlledOpen, o
       toast.success(editData ? "แก้ไขโครงการสำเร็จ" : "สร้างโครงการสำเร็จ");
       setOpen(false);
       if (!editData) {
-        setFormData({ code: "", name: "", company_id: "", location: "", description: "", start_date: "", end_date: "", budget: "", status: "planning" });
+        setFormData({ 
+          code: "", 
+          name: "", 
+          company_id: "", 
+          location: "", 
+          description: "", 
+          start_date: "", 
+          end_date: "", 
+          budget: "", 
+          status: "planning",
+          customer_name: "",
+          customer_address: "",
+          customer_phone: "",
+          customer_tax_id: "",
+        });
         setBudgetBreakdown({});
       }
       onSuccess?.();
@@ -260,6 +286,45 @@ const ProjectDialog = ({ onSuccess, companies, editData, open: controlledOpen, o
                     <span className="text-primary">{new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(totalCategoryBudget)}</span>
                   </div>
                 )}
+              </div>
+            </div>
+
+            <div className="col-span-2 border-t pt-4 mt-4">
+              <h3 className="text-lg font-semibold mb-4">ข้อมูลลูกค้า</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>ชื่อลูกค้า</Label>
+                  <Input 
+                    value={formData.customer_name} 
+                    onChange={e => setFormData({...formData, customer_name: e.target.value})} 
+                    placeholder="ชื่อบริษัทหรือบุคคล"
+                  />
+                </div>
+                <div>
+                  <Label>เลขประจำตัวผู้เสียภาษี</Label>
+                  <Input 
+                    value={formData.customer_tax_id} 
+                    onChange={e => setFormData({...formData, customer_tax_id: e.target.value})} 
+                    placeholder="เลขทะเบียนนิติบุคคล 13 หลัก"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label>ที่อยู่</Label>
+                  <Textarea 
+                    value={formData.customer_address} 
+                    onChange={e => setFormData({...formData, customer_address: e.target.value})} 
+                    placeholder="ที่อยู่ลูกค้า"
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <Label>เบอร์ติดต่อ</Label>
+                  <Input 
+                    value={formData.customer_phone} 
+                    onChange={e => setFormData({...formData, customer_phone: e.target.value})} 
+                    placeholder="เบอร์โทรศัพท์"
+                  />
+                </div>
               </div>
             </div>
 
