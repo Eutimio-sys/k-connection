@@ -5,8 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { FileText, Receipt, CheckCircle2 } from "lucide-react";
+import { FileText, Receipt, CheckCircle2, Filter } from "lucide-react";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
 
@@ -15,50 +18,135 @@ export default function TaxDocuments() {
   const [withholdingDocuments, setWithholdingDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     document.title = "ติดตามเอกสารภาษี | ระบบบริหารงาน";
     fetchCurrentUser();
-    fetchDocuments();
+    fetchCompanies();
   }, []);
+
+  useEffect(() => {
+    if (currentUserId) {
+      fetchDocuments();
+    }
+  }, [currentUserId, selectedCompany, startDate, endDate]);
 
   const fetchCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) setCurrentUserId(user.id);
   };
 
+  const fetchCompanies = async () => {
+    const { data } = await supabase
+      .from("companies")
+      .select("id, name")
+      .eq("is_active", true)
+      .order("name");
+    setCompanies(data || []);
+  };
+
   const fetchDocuments = async () => {
     setLoading(true);
 
-    // Fetch expenses with VAT
-    const { data: expensesData } = await supabase
+    // Build base queries with filters
+    let expensesQuery = supabase
       .from("expenses")
       .select(`
         *,
         vendor:vendors(name),
-        project:projects(name),
+        project:projects(name, company_id),
         company:companies(name),
         receiver:profiles!tax_invoice_received_by(full_name)
       `)
-      .gt("vat_amount", 0)
-      .order("invoice_date", { ascending: false });
+      .gt("vat_amount", 0);
 
-    setVatDocuments(expensesData || []);
-
-    // Fetch labor expenses with withholding tax
-    const { data: laborData } = await supabase
+    let laborQuery = supabase
       .from("labor_expenses")
       .select(`
         *,
         worker:workers(full_name),
-        project:projects(name),
+        project:projects(name, company_id),
         company:companies(name),
         receiver:profiles!withholding_tax_receipt_received_by(full_name)
       `)
-      .gt("withholding_tax_amount", 0)
-      .order("invoice_date", { ascending: false });
+      .gt("withholding_tax_amount", 0);
 
-    setWithholdingDocuments(laborData || []);
+    let incomeQuery = supabase
+      .from("project_income")
+      .select(`
+        *,
+        project:projects(name, company_id),
+        payment_account:payment_accounts(name)
+      `)
+      .or("vat_amount.gt.0,withholding_tax_amount.gt.0");
+
+    // Apply company filter
+    if (selectedCompany !== "all") {
+      expensesQuery = expensesQuery.eq("company_id", selectedCompany);
+      laborQuery = laborQuery.eq("project.company_id", selectedCompany);
+      incomeQuery = incomeQuery.eq("project.company_id", selectedCompany);
+    }
+
+    // Apply date range filter
+    if (startDate) {
+      expensesQuery = expensesQuery.gte("invoice_date", startDate);
+      laborQuery = laborQuery.gte("invoice_date", startDate);
+      incomeQuery = incomeQuery.gte("income_date", startDate);
+    }
+    if (endDate) {
+      expensesQuery = expensesQuery.lte("invoice_date", endDate);
+      laborQuery = laborQuery.lte("invoice_date", endDate);
+      incomeQuery = incomeQuery.lte("income_date", endDate);
+    }
+
+    const [expensesData, laborData, incomeData] = await Promise.all([
+      expensesQuery.order("invoice_date", { ascending: false }),
+      laborQuery.order("invoice_date", { ascending: false }),
+      incomeQuery.order("income_date", { ascending: false })
+    ]);
+
+    // Combine VAT documents from expenses and project income
+    const vatDocs = [
+      ...(expensesData.data || []).map(doc => ({
+        ...doc,
+        source: 'expense',
+        date: doc.invoice_date
+      })),
+      ...(incomeData.data || []).filter(doc => doc.vat_amount > 0).map(doc => ({
+        ...doc,
+        source: 'income',
+        date: doc.income_date,
+        invoice_number: doc.description || `INCOME-${doc.id.substring(0, 8)}`,
+        subtotal: doc.amount,
+        total_amount: doc.amount + (doc.vat_amount || 0)
+      }))
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    setVatDocuments(vatDocs);
+
+    // Combine withholding documents from labor and project income
+    const withholdingDocs = [
+      ...(laborData.data || []).map(doc => ({
+        ...doc,
+        source: 'labor',
+        date: doc.invoice_date
+      })),
+      ...(incomeData.data || []).filter(doc => doc.withholding_tax_amount > 0).map(doc => ({
+        ...doc,
+        source: 'income',
+        date: doc.income_date,
+        invoice_number: doc.description || `INCOME-${doc.id.substring(0, 8)}`,
+        total_amount: doc.amount,
+        net_amount: doc.amount - (doc.withholding_tax_amount || 0)
+      }))
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    setWithholdingDocuments(withholdingDocs);
     setLoading(false);
   };
 
@@ -153,10 +241,63 @@ export default function TaxDocuments() {
 
   return (
     <div className="p-8 space-y-6">
-      <div>
-        <h1 className="text-4xl font-bold mb-2">ติดตามเอกสารภาษี</h1>
-        <p className="text-muted-foreground">จัดการใบกำกับภาษีและใบหักณที่จ่าย</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-4xl font-bold mb-2">ติดตามเอกสารภาษี</h1>
+          <p className="text-muted-foreground">จัดการใบกำกับภาษีและใบหักณที่จ่าย</p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowFilters(!showFilters)}
+          className="gap-2"
+        >
+          <Filter size={16} />
+          {showFilters ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+        </Button>
       </div>
+
+      {/* Filters */}
+      {showFilters && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label>บริษัท</Label>
+                <Select value={selectedCompany} onValueChange={setSelectedCompany}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="เลือกบริษัท" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">ทั้งหมด</SelectItem>
+                    {companies.map((company) => (
+                      <SelectItem key={company.id} value={company.id}>
+                        {company.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>ตั้งแต่วันที่</Label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>ถึงวันที่</Label>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="vat" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
@@ -264,10 +405,12 @@ export default function TaxDocuments() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>เลขที่ใบแจ้งหนี้</TableHead>
+                      <TableHead>ประเภท</TableHead>
+                      <TableHead>เลขที่</TableHead>
                       <TableHead>วันที่</TableHead>
+                      <TableHead>บริษัท</TableHead>
                       <TableHead>โครงการ</TableHead>
-                      <TableHead>ร้านค้า</TableHead>
+                      <TableHead>ผู้ขาย/ผู้จ่าย</TableHead>
                       <TableHead className="text-right">ยอดบิล</TableHead>
                       <TableHead className="text-right">VAT</TableHead>
                       <TableHead className="text-right">รวม</TableHead>
@@ -277,13 +420,24 @@ export default function TaxDocuments() {
                   </TableHeader>
                   <TableBody>
                     {vatDocuments.map((doc) => (
-                      <TableRow key={doc.id}>
+                      <TableRow key={`${doc.source}-${doc.id}`}>
+                        <TableCell>
+                          <Badge variant={doc.source === 'expense' ? 'default' : 'secondary'}>
+                            {doc.source === 'expense' ? 'ค่าวัสดุ' : 'เบิกเงิน'}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="font-medium">{doc.invoice_number}</TableCell>
                         <TableCell>
-                          {format(new Date(doc.invoice_date), "dd/MM/yyyy", { locale: th })}
+                          {format(new Date(doc.date), "dd/MM/yyyy", { locale: th })}
                         </TableCell>
+                        <TableCell>{doc.company?.name || "-"}</TableCell>
                         <TableCell>{doc.project?.name || "-"}</TableCell>
-                        <TableCell>{doc.vendor?.name || "-"}</TableCell>
+                        <TableCell>
+                          {doc.source === 'expense' 
+                            ? (doc.vendor?.name || "-")
+                            : (doc.payment_account?.name || "-")
+                          }
+                        </TableCell>
                         <TableCell className="text-right">{formatCurrency(doc.subtotal || 0)}</TableCell>
                         <TableCell className="text-right font-semibold text-blue-600">
                           {formatCurrency(doc.vat_amount || 0)}
@@ -292,38 +446,46 @@ export default function TaxDocuments() {
                           {formatCurrency(doc.total_amount || 0)}
                         </TableCell>
                         <TableCell className="text-center">
-                          {doc.tax_invoice_received ? (
-                            <div className="flex flex-col items-center gap-1">
-                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                <CheckCircle2 size={14} className="mr-1" />
-                                รับแล้ว
-                              </Badge>
-                              {doc.tax_invoice_received_at && (
-                                <span className="text-xs text-muted-foreground">
-                                  {format(new Date(doc.tax_invoice_received_at), "dd/MM/yyyy HH:mm", { locale: th })}
-                                </span>
-                              )}
-                            </div>
+                          {doc.source === 'expense' ? (
+                            doc.tax_invoice_received ? (
+                              <div className="flex flex-col items-center gap-1">
+                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                  <CheckCircle2 size={14} className="mr-1" />
+                                  รับแล้ว
+                                </Badge>
+                                {doc.tax_invoice_received_at && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {format(new Date(doc.tax_invoice_received_at), "dd/MM/yyyy HH:mm", { locale: th })}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <Badge variant="secondary">รอรับ</Badge>
+                            )
                           ) : (
-                            <Badge variant="secondary">รอรับ</Badge>
+                            <Badge variant="outline">N/A</Badge>
                           )}
                         </TableCell>
                         <TableCell className="text-center">
-                          {doc.tax_invoice_received ? (
-                            <Button variant="ghost" size="sm" disabled className="gap-1">
-                              <CheckCircle2 size={16} />
-                              รับแล้ว
-                            </Button>
+                          {doc.source === 'expense' ? (
+                            doc.tax_invoice_received ? (
+                              <Button variant="ghost" size="sm" disabled className="gap-1">
+                                <CheckCircle2 size={16} />
+                                รับแล้ว
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => markVatReceived(doc.id)}
+                                className="gap-1"
+                              >
+                                <CheckCircle2 size={16} />
+                                รับเอกสาร
+                              </Button>
+                            )
                           ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => markVatReceived(doc.id)}
-                              className="gap-1"
-                            >
-                              <CheckCircle2 size={16} />
-                              รับเอกสาร
-                            </Button>
+                            <span className="text-xs text-muted-foreground">-</span>
                           )}
                         </TableCell>
                       </TableRow>
@@ -433,10 +595,12 @@ export default function TaxDocuments() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>เลขที่ใบเสร็จ</TableHead>
+                      <TableHead>ประเภท</TableHead>
+                      <TableHead>เลขที่</TableHead>
                       <TableHead>วันที่</TableHead>
+                      <TableHead>บริษัท</TableHead>
                       <TableHead>โครงการ</TableHead>
-                      <TableHead>ช่าง</TableHead>
+                      <TableHead>ช่าง/ผู้รับ</TableHead>
                       <TableHead className="text-right">ยอดรวม</TableHead>
                       <TableHead className="text-right">หัก ณ ที่จ่าย</TableHead>
                       <TableHead className="text-right">สุทธิ</TableHead>
@@ -446,13 +610,24 @@ export default function TaxDocuments() {
                   </TableHeader>
                   <TableBody>
                     {withholdingDocuments.map((doc) => (
-                      <TableRow key={doc.id}>
+                      <TableRow key={`${doc.source}-${doc.id}`}>
+                        <TableCell>
+                          <Badge variant={doc.source === 'labor' ? 'default' : 'secondary'}>
+                            {doc.source === 'labor' ? 'ค่าแรง' : 'เบิกเงิน'}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="font-medium">{doc.invoice_number}</TableCell>
                         <TableCell>
-                          {format(new Date(doc.invoice_date), "dd/MM/yyyy", { locale: th })}
+                          {format(new Date(doc.date), "dd/MM/yyyy", { locale: th })}
                         </TableCell>
+                        <TableCell>{doc.company?.name || "-"}</TableCell>
                         <TableCell>{doc.project?.name || "-"}</TableCell>
-                        <TableCell>{doc.worker?.full_name || "-"}</TableCell>
+                        <TableCell>
+                          {doc.source === 'labor' 
+                            ? (doc.worker?.full_name || "-")
+                            : (doc.payment_account?.name || "-")
+                          }
+                        </TableCell>
                         <TableCell className="text-right">{formatCurrency(doc.total_amount || 0)}</TableCell>
                         <TableCell className="text-right font-semibold text-orange-600">
                           {formatCurrency(doc.withholding_tax_amount || 0)}
@@ -461,38 +636,46 @@ export default function TaxDocuments() {
                           {formatCurrency(doc.net_amount || 0)}
                         </TableCell>
                         <TableCell className="text-center">
-                          {doc.withholding_tax_receipt_received ? (
-                            <div className="flex flex-col items-center gap-1">
-                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                <CheckCircle2 size={14} className="mr-1" />
-                                รับแล้ว
-                              </Badge>
-                              {doc.withholding_tax_receipt_received_at && (
-                                <span className="text-xs text-muted-foreground">
-                                  {format(new Date(doc.withholding_tax_receipt_received_at), "dd/MM/yyyy HH:mm", { locale: th })}
-                                </span>
-                              )}
-                            </div>
+                          {doc.source === 'labor' ? (
+                            doc.withholding_tax_receipt_received ? (
+                              <div className="flex flex-col items-center gap-1">
+                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                  <CheckCircle2 size={14} className="mr-1" />
+                                  รับแล้ว
+                                </Badge>
+                                {doc.withholding_tax_receipt_received_at && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {format(new Date(doc.withholding_tax_receipt_received_at), "dd/MM/yyyy HH:mm", { locale: th })}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <Badge variant="secondary">รอรับ</Badge>
+                            )
                           ) : (
-                            <Badge variant="secondary">รอรับ</Badge>
+                            <Badge variant="outline">N/A</Badge>
                           )}
                         </TableCell>
                         <TableCell className="text-center">
-                          {doc.withholding_tax_receipt_received ? (
-                            <Button variant="ghost" size="sm" disabled className="gap-1">
-                              <CheckCircle2 size={16} />
-                              รับแล้ว
-                            </Button>
+                          {doc.source === 'labor' ? (
+                            doc.withholding_tax_receipt_received ? (
+                              <Button variant="ghost" size="sm" disabled className="gap-1">
+                                <CheckCircle2 size={16} />
+                                รับแล้ว
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => markWithholdingReceived(doc.id)}
+                                className="gap-1"
+                              >
+                                <CheckCircle2 size={16} />
+                                รับเอกสาร
+                              </Button>
+                            )
                           ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => markWithholdingReceived(doc.id)}
-                              className="gap-1"
-                            >
-                              <CheckCircle2 size={16} />
-                              รับเอกสาร
-                            </Button>
+                            <span className="text-xs text-muted-foreground">-</span>
                           )}
                         </TableCell>
                       </TableRow>
