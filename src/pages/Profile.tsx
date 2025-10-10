@@ -8,10 +8,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Mail, Calendar, Briefcase, FileText, ArrowLeft, Camera, Lock } from "lucide-react";
+import { Mail, Calendar, Briefcase, FileText, ArrowLeft, Camera, Lock, History } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import ChangePasswordDialog from "@/components/ChangePasswordDialog";
+import SalaryHistoryDialog from "@/components/SalaryHistoryDialog";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -30,6 +31,8 @@ const Profile = () => {
   const [savingNickname, setSavingNickname] = useState(false);
   const [roles, setRoles] = useState<string[]>([]);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [salaryHistoryOpen, setSalaryHistoryOpen] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState("");
 
   useEffect(() => {
     fetchProfile();
@@ -96,6 +99,7 @@ const Profile = () => {
     const { data: { user } } = await supabase.auth.getUser();
     
     if (user) {
+      setCurrentUserId(user.id);
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -528,18 +532,29 @@ const Profile = () => {
           <Card className="lg:col-span-3">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>สรุปประจำปี</CardTitle>
-              <Select value={selectedYear.toString()} onValueChange={(val) => setSelectedYear(parseInt(val))}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((year) => (
-                    <SelectItem key={year} value={year.toString()}>
-                      {year + 543}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setSalaryHistoryOpen(true)}
+                  className="gap-2"
+                >
+                  <History size={16} />
+                  ดูประวัติ
+                </Button>
+                <Select value={selectedYear.toString()} onValueChange={(val) => setSelectedYear(parseInt(val))}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year + 543}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -590,6 +605,13 @@ const Profile = () => {
       <ChangePasswordDialog 
         open={passwordDialogOpen} 
         onOpenChange={setPasswordDialogOpen}
+      />
+      
+      <SalaryHistoryDialog
+        open={salaryHistoryOpen}
+        onOpenChange={setSalaryHistoryOpen}
+        userId={currentUserId}
+        year={selectedYear}
       />
     </div>
   );
