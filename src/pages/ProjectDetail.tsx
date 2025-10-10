@@ -186,26 +186,26 @@ const ProjectDetail = () => {
   const totalExpenses = totalPurchases + totalMaterialExpenses + totalLaborExpenses;
   const totalIncome = projectIncome.reduce((sum, i) => sum + parseFloat(i.amount || 0), 0);
 
-  // Calculate totals by category type
-  const totalMaterialByCategory = materialExpenses.reduce((acc, expense) => {
-    if (expense.status !== "cancelled" && expense.items) {
+  // Calculate totals by category using proportional allocation to match expense totals
+  const aggregateByCategory = (expensesArr: any[], getExpenseTotal: (e: any) => number) => {
+    const acc: Record<string, number> = {};
+    expensesArr.forEach((expense) => {
+      if (expense.status === "cancelled" || !expense.items?.length) return;
+      const itemsTotal = expense.items.reduce((s: number, it: any) => s + Number(it.amount || 0), 0);
+      const expenseTotal = getExpenseTotal(expense);
+      if (itemsTotal <= 0 || expenseTotal <= 0) return;
+      const ratio = expenseTotal / itemsTotal;
       expense.items.forEach((item: any) => {
         const categoryName = item.category?.name || "อื่นๆ";
-        acc[categoryName] = (acc[categoryName] || 0) + (item.amount || 0);
+        const allocated = Number(item.amount || 0) * ratio;
+        acc[categoryName] = (acc[categoryName] || 0) + allocated;
       });
-    }
+    });
     return acc;
-  }, {} as Record<string, number>);
+  };
 
-  const totalLaborByCategory = laborExpenses.reduce((acc, expense) => {
-    if (expense.status !== "cancelled" && expense.items) {
-      expense.items.forEach((item: any) => {
-        const categoryName = item.category?.name || "อื่นๆ";
-        acc[categoryName] = (acc[categoryName] || 0) + (item.amount || 0);
-      });
-    }
-    return acc;
-  }, {} as Record<string, number>);
+  const totalMaterialByCategory = aggregateByCategory(materialExpenses, (e) => Number(e.total_amount || 0));
+  const totalLaborByCategory = aggregateByCategory(laborExpenses, (e) => Number(e.net_amount || e.total_amount || 0));
 
   // Filter functions
   const filteredMaterialExpenses = materialExpenses.filter(expense => {
