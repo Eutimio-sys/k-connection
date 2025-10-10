@@ -583,10 +583,12 @@ export type Database = {
           driver_license_url: string | null
           first_name: string
           id: string
+          id_card_number: string | null
           is_active: boolean
           job_type: string | null
           last_name: string
           notes: string | null
+          passport_number: string | null
           passport_url: string | null
           remaining_debt: number | null
           team_name: string | null
@@ -603,10 +605,12 @@ export type Database = {
           driver_license_url?: string | null
           first_name: string
           id?: string
+          id_card_number?: string | null
           is_active?: boolean
           job_type?: string | null
           last_name: string
           notes?: string | null
+          passport_number?: string | null
           passport_url?: string | null
           remaining_debt?: number | null
           team_name?: string | null
@@ -623,10 +627,12 @@ export type Database = {
           driver_license_url?: string | null
           first_name?: string
           id?: string
+          id_card_number?: string | null
           is_active?: boolean
           job_type?: string | null
           last_name?: string
           notes?: string | null
+          passport_number?: string | null
           passport_url?: string | null
           remaining_debt?: number | null
           team_name?: string | null

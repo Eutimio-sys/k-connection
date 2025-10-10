@@ -28,6 +28,8 @@ interface ForeignWorker {
   passport_url: string | null;
   work_permit_url: string | null;
   driver_license_url: string | null;
+  passport_number: string | null;
+  id_card_number: string | null;
   total_debt: number;
   remaining_debt: number;
   is_active: boolean;
@@ -64,6 +66,8 @@ const ForeignWorkers = () => {
     team_name: "",
     work_permit_issue_date: "",
     work_permit_expiry_date: "",
+    passport_number: "",
+    id_card_number: "",
     total_debt: "",
     notes: "",
   });
@@ -120,6 +124,8 @@ const ForeignWorkers = () => {
       team_name: formData.team_name || null,
       work_permit_issue_date: formData.work_permit_issue_date || null,
       work_permit_expiry_date: formData.work_permit_expiry_date || null,
+      passport_number: formData.passport_number || null,
+      id_card_number: formData.id_card_number || null,
       total_debt: formData.total_debt ? parseFloat(formData.total_debt) : 0,
       remaining_debt: selectedWorker ? selectedWorker.remaining_debt : (formData.total_debt ? parseFloat(formData.total_debt) : 0),
       notes: formData.notes || null,
@@ -165,6 +171,8 @@ const ForeignWorkers = () => {
       team_name: worker.team_name || "",
       work_permit_issue_date: worker.work_permit_issue_date || "",
       work_permit_expiry_date: worker.work_permit_expiry_date || "",
+      passport_number: worker.passport_number || "",
+      id_card_number: worker.id_card_number || "",
       total_debt: worker.total_debt.toString(),
       notes: worker.notes || "",
     });
@@ -248,6 +256,8 @@ const ForeignWorkers = () => {
       team_name: "",
       work_permit_issue_date: "",
       work_permit_expiry_date: "",
+      passport_number: "",
+      id_card_number: "",
       total_debt: "",
       notes: "",
     });
@@ -443,6 +453,25 @@ const ForeignWorkers = () => {
                           </div>
                         </div>
 
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>เลขพาสปอร์ต</Label>
+                            <Input 
+                              value={formData.passport_number} 
+                              onChange={(e) => setFormData({ ...formData, passport_number: e.target.value })} 
+                              placeholder="เช่น AB1234567"
+                            />
+                          </div>
+                          <div>
+                            <Label>เลขบัตรประชาชน</Label>
+                            <Input 
+                              value={formData.id_card_number} 
+                              onChange={(e) => setFormData({ ...formData, id_card_number: e.target.value })} 
+                              placeholder="เช่น 1234567890123"
+                            />
+                          </div>
+                        </div>
+
                         <div>
                           <Label>ยอดหนี้ทั้งหมด (บาท)</Label>
                           <Input 
@@ -586,16 +615,26 @@ const ForeignWorkers = () => {
                                 {worker.team_name || "ไม่ระบุทีม"} • {worker.job_type || "ไม่ระบุประเภทงาน"}
                               </p>
                             </div>
-                            <Button
-                              onClick={() => {
-                                setSelectedWorker(worker);
-                                setDebtDialogOpen(true);
-                              }}
-                              size="sm"
-                            >
-                              <Plus size={14} className="mr-2" />
-                              บันทึกการชำระ
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                onClick={() => handleEdit(worker)}
+                                size="sm"
+                              >
+                                <Pencil size={14} className="mr-2" />
+                                แก้ไข
+                              </Button>
+                              <Button
+                                onClick={() => {
+                                  setSelectedWorker(worker);
+                                  setDebtDialogOpen(true);
+                                }}
+                                size="sm"
+                              >
+                                <Plus size={14} className="mr-2" />
+                                บันทึกการชำระ
+                              </Button>
+                            </div>
                           </div>
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -689,6 +728,14 @@ const ForeignWorkers = () => {
                 <div>
                   <Label className="text-muted-foreground">ค่าแรงรายวัน</Label>
                   <p className="font-medium">{selectedWorker.daily_rate ? formatCurrency(selectedWorker.daily_rate) : "-"}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">เลขพาสปอร์ต</Label>
+                  <p className="font-medium">{selectedWorker.passport_number || "-"}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">เลขบัตรประชาชน</Label>
+                  <p className="font-medium">{selectedWorker.id_card_number || "-"}</p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">วันที่ทำบัตร</Label>
