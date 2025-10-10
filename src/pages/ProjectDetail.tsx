@@ -194,6 +194,27 @@ const ProjectDetail = () => {
   const formatCurrency = (amount: number) => new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(amount);
 
   const totalPurchases = purchases.reduce((sum, p) => sum + (p.status === "approved" ? p.estimated_price : 0), 0);
+  
+  // คำนวณค่าใช้จ่ายที่จ่ายแล้วเท่านั้น (paid_at ไม่เป็น null)
+  const totalMaterialExpensesPaid = materialExpenses.reduce((sum, e) => {
+    return sum + (e.status !== "cancelled" && e.paid_at ? e.total_amount : 0);
+  }, 0);
+  const totalLaborExpensesPaid = laborExpenses.reduce((sum, e) => {
+    return sum + (e.status !== "cancelled" && e.paid_at ? (e.net_amount || e.total_amount) : 0);
+  }, 0);
+  
+  // คำนวณเครดิตค้างจ่าย (approved แต่ยังไม่จ่าย และเป็น credit)
+  const totalMaterialCredit = materialExpenses.reduce((sum, e) => {
+    return sum + (e.status === "approved" && !e.paid_at && e.payment_terms === "credit" ? e.total_amount : 0);
+  }, 0);
+  const totalLaborCredit = laborExpenses.reduce((sum, e) => {
+    return sum + (e.status === "approved" && !e.paid_at ? (e.net_amount || e.total_amount) : 0);
+  }, 0);
+  
+  const totalExpensesPaid = totalPurchases + totalMaterialExpensesPaid + totalLaborExpensesPaid;
+  const totalCreditPending = totalMaterialCredit + totalLaborCredit;
+  
+  // รวมทั้งหมด (รวมเครดิตค้างจ่ายด้วย)
   const totalMaterialExpenses = materialExpenses.reduce((sum, e) => sum + (e.status !== "cancelled" ? e.total_amount : 0), 0);
   const totalLaborExpenses = laborExpenses.reduce((sum, e) => sum + (e.status !== "cancelled" ? e.total_amount : 0), 0);
   const totalExpenses = totalPurchases + totalMaterialExpenses + totalLaborExpenses;
@@ -359,7 +380,17 @@ const ProjectDetail = () => {
               <p className="text-2xl font-bold text-primary mb-1">{project.budget ? formatCurrency(project.budget) : formatCurrency(0)}</p>
               <div className="space-y-1 mt-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">ค่าใช้จ่ายปัจจุบัน</span>
+                  <span className="text-muted-foreground">ค่าใช้จ่ายที่จ่ายแล้ว</span>
+                  <span className="font-semibold text-blue-600">{formatCurrency(totalExpensesPaid)}</span>
+                </div>
+                {totalCreditPending > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">เครดิตค้างจ่าย</span>
+                    <span className="font-semibold text-orange-600">{formatCurrency(totalCreditPending)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm border-t pt-1">
+                  <span className="text-muted-foreground font-medium">รวมค่าใช้จ่ายทั้งหมด</span>
                   <span className="font-semibold">{formatCurrency(totalExpenses)}</span>
                 </div>
                 <div className="flex justify-between text-sm">

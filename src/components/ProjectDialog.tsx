@@ -108,7 +108,7 @@ const ProjectDialog = ({ onSuccess, companies, editData, open: controlledOpen, o
 
     const projectData = {
       ...formData,
-      budget: formData.budget ? parseFloat(formData.budget) : null,
+      budget: totalCategoryBudget || null,
       budget_breakdown: budgetBreakdown,
     };
 
@@ -139,7 +139,11 @@ const ProjectDialog = ({ onSuccess, companies, editData, open: controlledOpen, o
   };
 
   const updateCategoryBudget = (categoryId: string, amount: number) => {
-    setBudgetBreakdown({ ...budgetBreakdown, [categoryId]: amount });
+    const newBreakdown = { ...budgetBreakdown, [categoryId]: amount };
+    setBudgetBreakdown(newBreakdown);
+    // Auto-update budget from category breakdown total
+    const total = Object.values(newBreakdown).reduce((sum, val) => sum + Number(val || 0), 0);
+    setFormData({ ...formData, budget: total.toString() });
   };
 
   const totalCategoryBudget = Object.values(budgetBreakdown).reduce((sum, val) => sum + Number(val || 0), 0);
@@ -213,7 +217,16 @@ const ProjectDialog = ({ onSuccess, companies, editData, open: controlledOpen, o
 
             <div className="col-span-2">
               <Label>งบประมาณรวม (บาท)</Label>
-              <Input type="number" step="0.01" value={formData.budget} onChange={e => setFormData({...formData, budget: e.target.value})} />
+              <Input 
+                type="number" 
+                step="0.01" 
+                value={totalCategoryBudget || 0} 
+                disabled 
+                className="bg-muted cursor-not-allowed"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                *งบประมาณรวมจะถูกคำนวณอัตโนมัติจากงบประมาณแยกหมวดหมู่
+              </p>
             </div>
 
             <div className="col-span-2">
