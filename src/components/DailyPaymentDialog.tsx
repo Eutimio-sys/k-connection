@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Edit } from "lucide-react";
 import { toast } from "sonner";
+import { dailyPaymentSchema, validateData } from "@/lib/validationSchemas";
 
 interface DailyPaymentDialogProps {
   payment?: any;
@@ -80,6 +81,27 @@ const DailyPaymentDialog = ({ payment, onSuccess, open: controlledOpen, onOpenCh
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate form data
+    const validation = validateData(dailyPaymentSchema, {
+      project_id: formData.project_id,
+      payment_date: formData.payment_date,
+      amount: parseFloat(formData.amount as string),
+      worker_id: formData.worker_id || undefined,
+      category_id: formData.category_id || undefined,
+      payment_account_id: formData.payment_account_id || undefined,
+      payment_type_id: formData.payment_type_id || undefined,
+      description: formData.description || undefined,
+      notes: formData.notes || undefined,
+    });
+
+    if (!validation.success) {
+      if ('errors' in validation) {
+        toast.error(validation.errors[0]);
+      }
+      return;
+    }
+
     setLoading(true);
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -122,8 +144,11 @@ const DailyPaymentDialog = ({ payment, onSuccess, open: controlledOpen, onOpenCh
     }
 
     if (error) {
-      toast.error("เกิดข้อผิดพลาด: " + error.message);
-      console.error(error);
+      console.error("Daily payment save error:", error);
+      const userMessage = error.message?.includes("RLS") 
+        ? "คุณไม่มีสิทธิ์ทำรายการนี้" 
+        : "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง";
+      toast.error(userMessage);
     } else {
       toast.success(payment ? "แก้ไขรายการสำเร็จ" : "เพิ่มรายการสำเร็จ");
       setOpen(false);

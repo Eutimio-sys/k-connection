@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Plus, Trash2, Upload, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { expenseSchema, expenseItemSchema, validateData } from "@/lib/validationSchemas";
 
 interface ExpenseItem {
   category_id: string;
@@ -199,16 +200,50 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validation
-    if (!projectId || !companyId) {
-      toast.error("กรุณากรอกข้อมูลให้ครบถ้วน");
+    // Validate main form data
+    const formValidation = validateData(expenseSchema, {
+      invoiceNumber: invoiceNumber || "AUTO",
+      taxInvoiceNumber: taxInvoiceNumber || undefined,
+      projectId,
+      companyId,
+      vendorId: vendorId || undefined,
+      invoiceDate,
+      vatRate: parseFloat(vatRate),
+      creditDays: paymentTerms === "credit" && creditDays ? parseInt(creditDays) : undefined,
+      notes: notes || undefined,
+    });
+
+    if (!formValidation.success) {
+      if ('errors' in formValidation) {
+        toast.error(formValidation.errors[0]);
+      }
       return;
     }
 
+    // Validate items
     const validItems = items.filter(item => item.category_id && item.description && item.unit_price && item.quantity);
     if (validItems.length === 0) {
       toast.error("กรุณาเพิ่มรายการค่าใช้จ่ายอย่างน้อย 1 รายการ");
       return;
+    }
+
+    // Validate each item
+    for (const item of validItems) {
+      const itemValidation = validateData(expenseItemSchema, {
+        category_id: item.category_id,
+        description: item.description,
+        unit_price: parseFloat(item.unit_price),
+        quantity: parseFloat(item.quantity),
+        amount: item.amount,
+        notes: item.notes || undefined,
+      });
+
+      if (!itemValidation.success) {
+        if ('errors' in itemValidation) {
+          toast.error(itemValidation.errors[0]);
+        }
+        return;
+      }
     }
 
     setLoading(true);
@@ -317,7 +352,11 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
       resetForm();
       onSuccess();
     } catch (error: any) {
-      toast.error("เกิดข้อผิดพลาด: " + error.message);
+      console.error("Expense save error:", error);
+      const userMessage = error.message?.includes("RLS") 
+        ? "คุณไม่มีสิทธิ์ทำรายการนี้" 
+        : "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง";
+      toast.error(userMessage);
     } finally {
       setLoading(false);
     }
