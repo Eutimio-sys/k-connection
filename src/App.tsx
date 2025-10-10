@@ -29,6 +29,7 @@ import TaxDocuments from "./pages/TaxDocuments";
 import MyWork from "./pages/MyWork";
 import Chat from "./pages/Chat";
 import NotFound from "./pages/NotFound";
+import ProjectAccessManagement from "./pages/ProjectAccessManagement";
 
 const queryClient = new QueryClient();
 
@@ -63,6 +64,7 @@ const App = () => (
             <Route path="/mywork" element={<MyWork />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/settings" element={<ProtectedRoute featureCode="settings"><Settings /></ProtectedRoute>} />
+            <Route path="/project-access" element={<ProtectedRoute requiredRoles={["admin", "manager"]}><ProjectAccessManagement /></ProtectedRoute>} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

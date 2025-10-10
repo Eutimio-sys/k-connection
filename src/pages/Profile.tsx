@@ -8,9 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Mail, Calendar, Briefcase, FileText, ArrowLeft, Camera } from "lucide-react";
+import { Mail, Calendar, Briefcase, FileText, ArrowLeft, Camera, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import ChangePasswordDialog from "@/components/ChangePasswordDialog";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -28,6 +29,7 @@ const Profile = () => {
   const [nickname, setNickname] = useState("");
   const [savingNickname, setSavingNickname] = useState(false);
   const [roles, setRoles] = useState<string[]>([]);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -457,6 +459,22 @@ const Profile = () => {
             </CardContent>
           </Card>
 
+          <Card>
+            <CardHeader>
+              <CardTitle>ความปลอดภัย</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button 
+                onClick={() => setPasswordDialogOpen(true)}
+                className="w-full gap-2"
+                variant="outline"
+              >
+                <Lock size={16} />
+                เปลี่ยนรหัสผ่าน
+              </Button>
+            </CardContent>
+          </Card>
+
           {leaveBalance && (
             <Card>
               <CardHeader>
@@ -563,6 +581,11 @@ const Profile = () => {
           </Card>
         )}
       </div>
+
+      <ChangePasswordDialog 
+        open={passwordDialogOpen} 
+        onOpenChange={setPasswordDialogOpen}
+      />
     </div>
   );
 };

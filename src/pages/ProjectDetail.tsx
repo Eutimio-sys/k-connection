@@ -9,11 +9,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, MapPin, Calendar, TrendingUp, Building2, User, ShoppingCart, Package, Wrench, DollarSign, Info, RefreshCcw, MessageCircle, Pencil } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, TrendingUp, Building2, User, ShoppingCart, Package, Wrench, DollarSign, Info, RefreshCcw, MessageCircle, Pencil, StickyNote } from "lucide-react";
 import { toast } from "sonner";
 import IncomeHistoryDialog from "@/components/IncomeHistoryDialog";
 import ProjectChat from "@/components/ProjectChat";
 import ProjectDialog from "@/components/ProjectDialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 const ProjectDetail = () => {
   const { id } = useParams();
@@ -33,6 +35,8 @@ const ProjectDetail = () => {
   const [budgetBreakdownOpen, setBudgetBreakdownOpen] = useState(false);
   const [editProjectOpen, setEditProjectOpen] = useState(false);
   const [companies, setCompanies] = useState<any[]>([]);
+  const [projectNotes, setProjectNotes] = useState("");
+  const [savingNotes, setSavingNotes] = useState(false);
   
   // Filter states
   const [materialStartDate, setMaterialStartDate] = useState(new Date().toISOString().split('T')[0]);
@@ -104,6 +108,7 @@ const ProjectDetail = () => {
       navigate("/projects");
     } else {
       setProject(projectData);
+      setProjectNotes(projectData.notes || "");
     }
 
     // Fetch companies
@@ -260,6 +265,25 @@ const ProjectDetail = () => {
     return dateMatch && categoryMatch && workerMatch;
   });
 
+  const handleSaveNotes = async () => {
+    setSavingNotes(true);
+    try {
+      const { error } = await supabase
+        .from("projects")
+        .update({ notes: projectNotes })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("บันทึกโน้ตสำเร็จ");
+      fetchData(false);
+    } catch (error: any) {
+      toast.error("เกิดข้อผิดพลาด: " + error.message);
+    } finally {
+      setSavingNotes(false);
+    }
+  };
+
   if (loading) return <div className="p-8 text-center"><p>กำลังโหลด...</p></div>;
   if (!project) return null;
 
@@ -346,6 +370,23 @@ const ProjectDetail = () => {
                   <p className="font-semibold text-primary">{project.budget ? formatCurrency(project.budget) : "ไม่ระบุ"}</p>
                 </div>
               </div>
+            </div>
+
+            <div className="border-t pt-4 mt-4">
+              <Label className="flex items-center gap-2 mb-2">
+                <StickyNote className="w-4 h-4" />
+                โน้ตโครงการ
+              </Label>
+              <Textarea
+                value={projectNotes}
+                onChange={(e) => setProjectNotes(e.target.value)}
+                placeholder="บันทึกข้อมูลเพิ่มเติมเกี่ยวกับโครงการ..."
+                rows={3}
+                className="mb-2"
+              />
+              <Button onClick={handleSaveNotes} disabled={savingNotes} size="sm">
+                {savingNotes ? "กำลังบันทึก..." : "บันทึกโน้ต"}
+              </Button>
             </div>
           </CardContent>
         </Card>

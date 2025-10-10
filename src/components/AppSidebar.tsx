@@ -17,6 +17,7 @@ import {
   TrendingUp,
   MessageCircle,
   Receipt,
+  UserCheck,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -51,6 +52,7 @@ const menuItems = [
   { title: "วางแผนภาษี", url: "/tax-planning", icon: TrendingUp, featureCode: "tax_planning" },
   { title: "ระบบลา", url: "/leave", icon: Calendar, featureCode: "leave_management" },
   { title: "จัดการสิทธิ์ผู้ใช้", url: "/user-roles", icon: Shield, featureCode: null },
+  { title: "จัดการสิทธิ์โครงการ", url: "/project-access", icon: UserCheck, featureCode: null },
   { title: "จัดการพนักงาน", url: "/hr-management", icon: UserCog, featureCode: "hr_management" },
   { title: "จัดการคนงานต่างด้าว", url: "/foreign-workers", icon: Globe, featureCode: "foreign_workers" },
   { title: "โปรไฟล์", url: "/profile", icon: User, featureCode: null },

@@ -1195,6 +1195,38 @@ export type Database = {
           },
         ]
       }
+      project_access: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_access_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_income: {
         Row: {
           amount: number
@@ -1350,6 +1382,7 @@ export type Database = {
           id: string
           location: string | null
           name: string
+          notes: string | null
           start_date: string | null
           status: string
           updated_at: string
@@ -1370,6 +1403,7 @@ export type Database = {
           id?: string
           location?: string | null
           name: string
+          notes?: string | null
           start_date?: string | null
           status?: string
           updated_at?: string
@@ -1390,6 +1424,7 @@ export type Database = {
           id?: string
           location?: string | null
           name?: string
+          notes?: string | null
           start_date?: string | null
           status?: string
           updated_at?: string
