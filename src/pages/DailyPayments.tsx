@@ -113,20 +113,41 @@ const DailyPayments = () => {
 
   const handleMarkAsPaid = async (id: string) => {
     const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await supabase.from("daily_payments").update({
-      status: "paid",
-      paid_by: user?.id,
-      paid_at: new Date().toISOString(),
-    }).eq("id", id);
+    const { data, error } = await supabase
+      .from("daily_payments")
+      .update({
+        status: "paid",
+        paid_by: user?.id,
+        paid_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select()
+      .maybeSingle();
 
-    if (error) toast.error("เกิดข้อผิดพลาด");
-    else { toast.success("ทำรายการสำเร็จ"); fetchData(); }
+    if (error || !data) {
+      toast.error("อัปเดตไม่สำเร็จ (สิทธิ์ไม่เพียงพอหรือไม่มีรายการ)");
+      return;
+    }
+
+    toast.success("ทำรายการสำเร็จ");
+    fetchData();
   };
 
   const handleCancel = async (id: string) => {
-    const { error } = await supabase.from("daily_payments").update({ status: "cancelled" }).eq("id", id);
-    if (error) toast.error("เกิดข้อผิดพลาด");
-    else { toast.success("ยกเลิกสำเร็จ"); fetchData(); }
+    const { data, error } = await supabase
+      .from("daily_payments")
+      .update({ status: "cancelled" })
+      .eq("id", id)
+      .select()
+      .maybeSingle();
+
+    if (error || !data) {
+      toast.error("อัปเดตไม่สำเร็จ (สิทธิ์ไม่เพียงพอหรือไม่มีรายการ)");
+      return;
+    }
+
+    toast.success("ยกเลิกสำเร็จ");
+    fetchData();
   };
 
   const getStatusBadge = (status: string) => {
