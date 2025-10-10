@@ -33,6 +33,7 @@ export const EmployeeEditDialog = ({ open, onOpenChange, employee, onSuccess }: 
     hire_date: employee?.hire_date || "",
     bank_name: employee?.bank_name || "",
     bank_account_number: employee?.bank_account_number || "",
+    job_description: employee?.job_description || "",
     salary: "",
   });
 
@@ -83,6 +84,7 @@ export const EmployeeEditDialog = ({ open, onOpenChange, employee, onSuccess }: 
         hire_date: formData.hire_date || null,
         bank_name: formData.bank_name,
         bank_account_number: formData.bank_account_number,
+        job_description: formData.job_description,
       };
       
       const { error } = await supabase
@@ -238,6 +240,17 @@ export const EmployeeEditDialog = ({ open, onOpenChange, employee, onSuccess }: 
                 </p>
               )}
             </div>
+          </div>
+
+          <div>
+            <Label htmlFor="job_description">ลักษณะงาน (Job Description)</Label>
+            <Textarea
+              id="job_description"
+              value={formData.job_description}
+              onChange={(e) => setFormData({ ...formData, job_description: e.target.value })}
+              rows={3}
+              placeholder="อธิบายรายละเอียดลักษณะงาน หน้าที่ความรับผิดชอบ"
+            />
           </div>
 
           <div>

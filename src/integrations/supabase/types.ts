@@ -1136,6 +1136,7 @@ export type Database = {
           id: string
           id_card: string | null
           is_active: boolean
+          job_description: string | null
           nickname: string | null
           phone: string | null
           position: string | null
@@ -1158,6 +1159,7 @@ export type Database = {
           id: string
           id_card?: string | null
           is_active?: boolean
+          job_description?: string | null
           nickname?: string | null
           phone?: string | null
           position?: string | null
@@ -1180,6 +1182,7 @@ export type Database = {
           id?: string
           id_card?: string | null
           is_active?: boolean
+          job_description?: string | null
           nickname?: string | null
           phone?: string | null
           position?: string | null

@@ -401,6 +401,11 @@ const Profile = () => {
             </div>
 
             <div>
+              <Label>ลักษณะงาน (Job Description)</Label>
+              <Input value={profile?.job_description || "-"} disabled />
+            </div>
+
+            <div>
               <Label>ธนาคาร</Label>
               <Input value={profile?.bank_name || "-"} disabled />
             </div>
