@@ -20,7 +20,7 @@ export default function ProjectAccessManagement() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!permLoading && role !== "admin" && role !== "manager") {
+    if (!permLoading && role !== "admin") {
       toast.error("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
       navigate("/");
       return;
@@ -38,7 +38,7 @@ export default function ProjectAccessManagement() {
       .order("name");
     setProjects(projectsData || []);
 
-    // Fetch all users (profiles with worker role or other non-admin/manager roles)
+    // Fetch all users (profiles), filter out only admins
     const { data: profilesData } = await supabase
       .from("profiles")
       .select("id, full_name, email")
@@ -46,16 +46,16 @@ export default function ProjectAccessManagement() {
       .order("full_name");
 
     if (profilesData) {
-      // Filter out admins and managers since they have access to all projects
+      // Filter out only admins since they have access to all projects automatically
       const { data: allRoles } = await supabase
         .from("user_roles")
         .select("user_id, role");
 
-      const adminManagerIds = new Set(
-        allRoles?.filter(r => r.role === 'admin' || r.role === 'manager').map(r => r.user_id) || []
+      const adminIds = new Set(
+        allRoles?.filter(r => r.role === 'admin').map(r => r.user_id) || []
       );
 
-      const nonAdminUsers = profilesData.filter(u => !adminManagerIds.has(u.id));
+      const nonAdminUsers = profilesData.filter(u => !adminIds.has(u.id));
       setUsers(nonAdminUsers);
     }
 
@@ -181,7 +181,7 @@ export default function ProjectAccessManagement() {
           <CardContent>
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground mb-4">
-                หมายเหตุ: ผู้ดูแลระบบและผู้จัดการจะสามารถเห็นโครงการทั้งหมดโดยอัตโนมัติ
+                หมายเหตุ: เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถเห็นโครงการทั้งหมดโดยอัตโนมัติ ผู้จัดการและผู้ใช้อื่นๆ ต้องถูกเลือกเท่านั้น
               </p>
               {users.length === 0 ? (
                 <p className="text-muted-foreground">ไม่มีผู้ใช้ในระบบ</p>
