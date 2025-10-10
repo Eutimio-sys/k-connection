@@ -141,7 +141,8 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
       return null;
     }
     
-    return data;
+    // Add -Labor suffix
+    return data ? `${data}-Labor` : null;
   };
 
   const addItem = () => {
@@ -333,11 +334,18 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
         const month = String(invDate.getMonth() + 1).padStart(2, '0');
         const fileExt = imageFile.name.split(".").pop();
         
-        // Use the already generated invoice number
+        // Get company name for folder structure
+        const { data: companyData } = await supabase
+          .from('companies')
+          .select('name')
+          .eq('id', companyId)
+          .single();
+        
+        const companyName = companyData?.name || 'unknown';
         const safeInvoiceNumber = invoiceNumber.replace(/[\/\\]/g, '-');
         
-        // Structure: labor_expenses/YYYY/MM/invoice-number.ext
-        const fileName = `labor_expenses/${year}/${month}/${safeInvoiceNumber}.${fileExt}`;
+        // Structure: labor_expenses/CompanyName/YYYY-MM/invoice-number-Labor.ext
+        const fileName = `labor_expenses/${companyName}/${year}-${month}/${safeInvoiceNumber}-Labor.${fileExt}`;
         
         const { error: uploadError } = await supabase.storage
           .from("receipts")

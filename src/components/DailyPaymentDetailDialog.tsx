@@ -18,9 +18,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Edit, XCircle } from "lucide-react";
+import { Edit, XCircle, Upload } from "lucide-react";
 import DailyPaymentDialog from "./DailyPaymentDialog";
 
 interface DailyPaymentDetailDialogProps {
@@ -41,6 +43,8 @@ const DailyPaymentDetailDialog = ({
   const [showCancelAlert, setShowCancelAlert] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [slipFile, setSlipFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("th-TH", {
@@ -86,6 +90,56 @@ const DailyPaymentDetailDialog = ({
   const handleEditSuccess = () => {
     setShowEditDialog(false);
     onSuccess();
+  };
+
+  const handleSlipUpload = async () => {
+    if (!slipFile) {
+      toast.error("กรุณาเลือกไฟล์สลิป");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const invDate = new Date(payment.payment_date);
+      const year = invDate.getFullYear();
+      const month = String(invDate.getMonth() + 1).padStart(2, '0');
+      const fileExt = slipFile.name.split('.').pop();
+      
+      // Get company name for folder structure
+      const companyName = payment.project?.company?.name || 'unknown';
+      const slipNumber = payment.description || payment.id; // Use slip number from description
+      const safeSlipNumber = slipNumber.replace(/[\/\\]/g, '-');
+      
+      // Structure: slips/CompanyName/YYYY-MM/slip-number.ext
+      const fileName = `slips/${companyName}/${year}-${month}/${safeSlipNumber}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('receipts')
+        .upload(fileName, slipFile);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('receipts')
+        .getPublicUrl(fileName);
+
+      // Update payment with slip URL
+      const { error: updateError } = await supabase
+        .from('daily_payments')
+        .update({ slip_url: publicUrl })
+        .eq('id', payment.id);
+
+      if (updateError) throw updateError;
+
+      toast.success('อัพโหลดสลิปสำเร็จ');
+      setSlipFile(null);
+      onSuccess();
+    } catch (error: any) {
+      console.error('Slip upload error:', error);
+      toast.error('เกิดข้อผิดพลาดในการอัพโหลด');
+    } finally {
+      setUploading(false);
+    }
   };
 
   if (!payment) return null;
@@ -223,6 +277,46 @@ const DailyPaymentDetailDialog = ({
               <div className="p-4 bg-muted/50 rounded-lg">
                 <p className="text-sm text-muted-foreground mb-1">หมายเหตุ</p>
                 <p className="text-sm">{payment.notes}</p>
+              </div>
+            )}
+
+            {/* Slip Upload - Only show if paid */}
+            {payment.status === "paid" && (
+              <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+                <h4 className="font-semibold">อัพโหลดสลิปการจ่ายเงิน</h4>
+                {payment.slip_url ? (
+                  <div className="space-y-2">
+                    <p className="text-sm text-green-600">✓ อัพโหลดสลิปเรียบร้อยแล้ว</p>
+                    <a 
+                      href={payment.slip_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary hover:underline"
+                    >
+                      ดูสลิป
+                    </a>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="slip-upload">เลือกไฟล์สลิป</Label>
+                      <Input
+                        id="slip-upload"
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={(e) => setSlipFile(e.target.files?.[0] || null)}
+                      />
+                    </div>
+                    <Button 
+                      onClick={handleSlipUpload} 
+                      disabled={!slipFile || uploading}
+                      className="w-full gap-2"
+                    >
+                      <Upload className="h-4 w-4" />
+                      {uploading ? "กำลังอัพโหลด..." : "อัพโหลดสลิป"}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 

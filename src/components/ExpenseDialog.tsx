@@ -202,7 +202,8 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
       p_expense_type: 'material'
     });
     
-    return data;
+    // Add -Material suffix
+    return data ? `${data}-Material` : null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -344,19 +345,18 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
           const month = String(invDate.getMonth() + 1).padStart(2, '0');
           const fileExt = receiptImage.name.split('.').pop();
           
-          // Generate invoice number first to use in filename
-          const { data: invoiceData } = await supabase.rpc('generate_invoice_number', {
-            p_company_id: companyId,
-            p_project_id: projectId,
-            p_invoice_date: invoiceDate,
-            p_expense_type: 'expense'
-          });
+          // Get company name for folder structure
+          const { data: companyData } = await supabase
+            .from('companies')
+            .select('name')
+            .eq('id', companyId)
+            .single();
           
-          const invNumber = invoiceData || `TEMP-${Date.now()}`;
-          const safeInvoiceNumber = invNumber.replace(/[\/\\]/g, '-');
+          const companyName = companyData?.name || 'unknown';
+          const safeInvoiceNumber = finalInvoiceNumber.replace(/[\/\\]/g, '-');
           
-          // Structure: expenses/YYYY/MM/invoice-number.ext
-          const fileName = `expenses/${year}/${month}/${safeInvoiceNumber}.${fileExt}`;
+          // Structure: expenses/CompanyName/YYYY-MM/invoice-number-Material.ext
+          const fileName = `expenses/${companyName}/${year}-${month}/${safeInvoiceNumber}-Material.${fileExt}`;
           
           const { error: uploadError } = await supabase.storage
             .from('receipts')

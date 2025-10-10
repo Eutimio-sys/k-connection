@@ -18,8 +18,21 @@ interface IncomeHistoryDialogProps {
   onSuccess?: () => void;
 }
 
+interface Income {
+  id: string;
+  amount: number;
+  income_date: string;
+  description: string;
+  notes: string;
+  vat_amount: number;
+  withholding_tax_amount: number;
+  payment_account: any;
+  creator?: { full_name: string };
+  created_at: string;
+}
+
 const IncomeHistoryDialog = ({ open, onOpenChange, projectId, onSuccess }: IncomeHistoryDialogProps) => {
-  const [incomes, setIncomes] = useState<any[]>([]);
+  const [incomes, setIncomes] = useState<Income[]>([]);
   const [paymentAccounts, setPaymentAccounts] = useState<any[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [hasVat, setHasVat] = useState(false);
@@ -54,8 +67,7 @@ const IncomeHistoryDialog = ({ open, onOpenChange, projectId, onSuccess }: Incom
       .from("project_income")
       .select(`
         *,
-        payment_account:payment_accounts(name, bank_name, account_number),
-        creator:profiles!created_by(full_name)
+        payment_account:payment_accounts(name, bank_name, account_number)
       `)
       .eq("project_id", projectId)
       .order("income_date", { ascending: false });
@@ -64,6 +76,24 @@ const IncomeHistoryDialog = ({ open, onOpenChange, projectId, onSuccess }: Incom
       console.error("Error fetching incomes:", error);
     } else {
       console.log("Fetched incomes:", data);
+      
+      // Fetch creator names separately
+      const userIds = data?.map(income => income.created_by).filter(Boolean) || [];
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", userIds);
+        
+        const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+        const enrichedData: Income[] = data?.map(income => ({
+          ...income,
+          creator: profileMap.get(income.created_by)
+        })) || [];
+        
+        setIncomes(enrichedData);
+        return;
+      }
     }
     
     setIncomes(data || []);
@@ -140,7 +170,7 @@ const IncomeHistoryDialog = ({ open, onOpenChange, projectId, onSuccess }: Incom
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(amount);
 
-  const totalIncome = incomes.reduce((sum, income) => sum + parseFloat(income.amount || 0), 0);
+  const totalIncome = incomes.reduce((sum, income) => sum + (income.amount || 0), 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -202,7 +232,7 @@ const IncomeHistoryDialog = ({ open, onOpenChange, projectId, onSuccess }: Incom
                 {hasVat && (
                   <div className="ml-6 p-3 bg-muted rounded-lg">
                     <p className="text-sm text-muted-foreground">
-                      VAT 7%: {formData.amount ? new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(parseFloat(formData.amount) * 0.07) : "฿0.00"}
+                      VAT 7%: {formData.amount ? new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(parseFloat(formData.amount.toString()) * 0.07) : "฿0.00"}
                     </p>
                   </div>
                 )}
@@ -221,7 +251,7 @@ const IncomeHistoryDialog = ({ open, onOpenChange, projectId, onSuccess }: Incom
                 {hasWithholdingTax && (
                   <div className="ml-6 p-3 bg-muted rounded-lg">
                     <p className="text-sm text-muted-foreground">
-                      หักณที่จ่าย 3%: {formData.amount ? new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(parseFloat(formData.amount) * 0.03) : "฿0.00"}
+                      หักณที่จ่าย 3%: {formData.amount ? new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(parseFloat(formData.amount.toString()) * 0.03) : "฿0.00"}
                     </p>
                   </div>
                 )}

@@ -111,14 +111,33 @@ const DailyPayments = () => {
     setLoading(false);
   };
 
-  const handleMarkAsPaid = async (id: string) => {
+  const handleMarkAsPaid = async (id: string, currentPayment: any) => {
     const { data: { user } } = await supabase.auth.getUser();
+    
+    // Generate slip number for this payment
+    const invDate = new Date(currentPayment.payment_date);
+    const year = invDate.getFullYear();
+    const month = String(invDate.getMonth() + 1).padStart(2, '0');
+    const day = String(invDate.getDate()).padStart(2, '0');
+    const companyCode = currentPayment.project?.company?.name?.substring(0, 4).toUpperCase() || 'COMP';
+    const projectCode = currentPayment.project?.code || 'PROJ';
+    
+    // Count existing slips for this date to generate sequence
+    const { count } = await supabase
+      .from("daily_payments")
+      .select("*", { count: 'exact', head: true })
+      .eq("payment_date", currentPayment.payment_date)
+      .eq("status", "paid");
+    
+    const slipNumber = `${companyCode}-${projectCode}-${day}${month}${year}-Slip-${String((count || 0) + 1).padStart(3, '0')}`;
+    
     const { data, error } = await supabase
       .from("daily_payments")
       .update({
         status: "paid",
         paid_by: user?.id,
         paid_at: new Date().toISOString(),
+        description: slipNumber, // Store slip number in description
       })
       .eq("id", id)
       .select()
@@ -129,7 +148,7 @@ const DailyPayments = () => {
       return;
     }
 
-    toast.success("ทำรายการสำเร็จ");
+    toast.success("ทำรายการสำเร็จ - เลขที่สลิป: " + slipNumber);
     fetchData();
   };
 
@@ -392,7 +411,7 @@ const DailyPayments = () => {
                   
                   {canManage && payment.status === "pending" && (
                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                      <Button size="sm" onClick={() => handleMarkAsPaid(payment.id)} className="gap-1">
+                      <Button size="sm" onClick={() => handleMarkAsPaid(payment.id, payment)} className="gap-1">
                         <CheckCircle size={16} />
                         จ่ายแล้ว
                       </Button>

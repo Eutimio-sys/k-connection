@@ -122,14 +122,20 @@ const DailyPaymentDialog = ({ payment, onSuccess, open: controlledOpen, onOpenCh
 
     let error;
     if (payment) {
-      // Update existing payment
+      // Cancel old payment when editing
+      await supabase
+        .from("daily_payments")
+        .update({ status: "cancelled" })
+        .eq("id", payment.id);
+      
+      // Create new payment with edited data
       const result = await supabase
         .from("daily_payments")
-        .update({
+        .insert({
           ...dataToSave,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", payment.id);
+          created_by: user.id,
+          status: "pending",
+        });
       error = result.error;
     } else {
       // Create new payment
