@@ -70,8 +70,7 @@ export default function TaxDocuments() {
         *,
         vendor:vendors(name),
         project:projects(name, company_id),
-        company:companies(name),
-        receiver:profiles!tax_invoice_received_by(full_name)
+        company:companies(name)
       `)
       .gt("vat_amount", 0);
 
@@ -81,8 +80,7 @@ export default function TaxDocuments() {
         *,
         worker:workers(full_name),
         project:projects(name, company_id),
-        company:companies(name),
-        receiver:profiles!withholding_tax_receipt_received_by(full_name)
+        company:companies(name)
       `)
       .gt("withholding_tax_amount", 0);
 
