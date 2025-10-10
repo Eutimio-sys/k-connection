@@ -374,8 +374,8 @@ export default function Chat() {
   );
 
   return (
-    <div className="p-8 space-y-6">
-      <header className="flex items-center justify-between">
+    <div className="h-screen flex flex-col">
+      <header className="flex items-center justify-between p-8 pb-4">
         <h1 className="text-4xl font-bold">แชทรวม</h1>
         <Select value={selectedProjectId} onValueChange={(v) => { setSelectedProjectId(v); setNewMessage(""); }}>
           <SelectTrigger className="bg-background w-[300px]">
@@ -390,158 +390,160 @@ export default function Chat() {
         </Select>
       </header>
 
-      <Card className="h-[calc(100vh-200px)] flex flex-col">
-        <CardHeader>
-          <CardTitle>
-            {selectedProjectId === "general" ? "ห้องสนทนากลาง" : projects.find(p => p.id === selectedProjectId)?.name || "แชทโครงการ"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex-1 flex flex-col p-0">
-          <ScrollArea className="flex-1 px-4" ref={scrollRef}>
-            <div className="space-y-4 py-4">
-              {messages.map((msg) => {
-                const profile = profileMap[msg.user_id];
-                const userColor = getUserColor(msg.user_id);
-                
-                return (
-                  <div key={msg.id} className="flex gap-3">
-                    <Avatar className="w-10 h-10">
-                      {profile?.avatar_url ? (
-                        <AvatarImage src={profile.avatar_url} alt={profile.full_name} />
-                      ) : (
-                        <AvatarFallback className={userColor}>
-                          {profile?.full_name.charAt(0).toUpperCase() || '?'}
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
-                    
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-sm">
-                          {profile?.full_name || 'ไม่ทราบผู้ส่ง'}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {format(new Date(msg.created_at), 'dd/MM/yyyy HH:mm', { locale: th })}
-                        </span>
-                      </div>
+      <div className="flex-1 px-8 pb-8 overflow-hidden">
+        <Card className="h-full flex flex-col">
+          <CardHeader className="flex-shrink-0">
+            <CardTitle>
+              {selectedProjectId === "general" ? "ห้องสนทนากลาง" : projects.find(p => p.id === selectedProjectId)?.name || "แชทโครงการ"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
+            <ScrollArea className="flex-1 px-4" ref={scrollRef}>
+              <div className="space-y-4 py-4">
+                {messages.map((msg) => {
+                  const profile = profileMap[msg.user_id];
+                  const userColor = getUserColor(msg.user_id);
+                  
+                  return (
+                    <div key={msg.id} className="flex gap-3">
+                      <Avatar className="w-10 h-10">
+                        {profile?.avatar_url ? (
+                          <AvatarImage src={profile.avatar_url} alt={profile.full_name} />
+                        ) : (
+                          <AvatarFallback className={userColor}>
+                            {profile?.full_name.charAt(0).toUpperCase() || '?'}
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
                       
-                      <div className="bg-muted rounded-lg p-3 space-y-2">
-                        <p className="text-sm">{renderMessage(msg.message)}</p>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm">
+                            {profile?.full_name || 'ไม่ทราบผู้ส่ง'}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(msg.created_at), 'dd/MM/yyyy HH:mm', { locale: th })}
+                          </span>
+                        </div>
                         
-                        {msg.file_url && isImageFile(msg.file_name, msg.file_type) && (
-                          <div className="mt-2">
-                            <img 
-                              src={msg.file_url} 
-                              alt={msg.file_name || 'รูปภาพ'} 
-                              className="max-w-sm max-h-64 rounded-lg border object-cover cursor-pointer"
-                              onClick={() => window.open(msg.file_url!, '_blank')}
-                            />
-                          </div>
-                        )}
-                        
-                        {msg.file_url && !isImageFile(msg.file_name, msg.file_type) && (
-                          <div className="flex items-center gap-2 p-2 bg-background rounded border">
-                            <Paperclip className="w-4 h-4" />
-                            <span className="text-sm flex-1">{msg.file_name}</span>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => window.open(msg.file_url!, '_blank')}
-                            >
-                              เปิด
-                            </Button>
-                          </div>
-                        )}
+                        <div className="bg-muted rounded-lg p-3 space-y-2">
+                          <p className="text-sm">{renderMessage(msg.message)}</p>
+                          
+                          {msg.file_url && isImageFile(msg.file_name, msg.file_type) && (
+                            <div className="mt-2">
+                              <img 
+                                src={msg.file_url} 
+                                alt={msg.file_name || 'รูปภาพ'} 
+                                className="max-w-sm max-h-64 rounded-lg border object-cover cursor-pointer"
+                                onClick={() => window.open(msg.file_url!, '_blank')}
+                              />
+                            </div>
+                          )}
+                          
+                          {msg.file_url && !isImageFile(msg.file_name, msg.file_type) && (
+                            <div className="flex items-center gap-2 p-2 bg-background rounded border">
+                              <Paperclip className="w-4 h-4" />
+                              <span className="text-sm flex-1">{msg.file_name}</span>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => window.open(msg.file_url!, '_blank')}
+                              >
+                                เปิด
+                              </Button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          </ScrollArea>
+                  );
+                })}
+              </div>
+            </ScrollArea>
 
-          <div className="p-4 border-t space-y-2">
-            {file && (
-              <div className="flex items-center gap-2 p-2 bg-muted rounded">
-                <Paperclip className="w-4 h-4" />
-                <span className="text-sm flex-1">{file.name}</span>
-                <Button size="sm" variant="ghost" onClick={() => setFile(null)}>
-                  <X className="w-4 h-4" />
+            <div className="p-4 border-t flex-shrink-0 space-y-2">
+              {file && (
+                <div className="flex items-center gap-2 p-2 bg-muted rounded">
+                  <Paperclip className="w-4 h-4" />
+                  <span className="text-sm flex-1">{file.name}</span>
+                  <Button size="sm" variant="ghost" onClick={() => setFile(null)}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+              
+              <div className="flex gap-2 relative">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
+                />
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Paperclip className="w-4 h-4" />
+                </Button>
+
+                <Popover open={showMentionPopover} onOpenChange={setShowMentionPopover}>
+                  <PopoverTrigger asChild>
+                    <Button size="icon" variant="outline" type="button">
+                      <AtSign className="w-4 h-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent 
+                    className="w-[300px] p-0 bg-popover z-50" 
+                    align="start"
+                    side="top"
+                    sideOffset={5}
+                  >
+                    <Command className="bg-popover">
+                      <CommandInput placeholder="ค้นหาผู้ใช้..." className="bg-popover" />
+                      <CommandEmpty className="py-6 text-center text-sm">ไม่พบผู้ใช้</CommandEmpty>
+                      <CommandGroup className="max-h-[200px] overflow-auto">
+                        {filteredProfiles.map((profile) => (
+                          <CommandItem
+                            key={profile.id}
+                            onSelect={() => insertMention(profile)}
+                            className="flex items-center gap-2 cursor-pointer hover:bg-accent"
+                          >
+                            <Avatar className="w-6 h-6">
+                              {profile.avatar_url ? (
+                                <AvatarImage src={profile.avatar_url} />
+                              ) : (
+                                <AvatarFallback className={getUserColor(profile.id)}>
+                                  {profile.full_name.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              )}
+                            </Avatar>
+                            <span>{profile.full_name}</span>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+
+                <Input
+                  ref={inputRef}
+                  placeholder="พิมพ์ข้อความ... (ใช้ @ เพื่อแท็กผู้ใช้)"
+                  value={newMessage}
+                  onChange={handleInputChange}
+                  onKeyDown={(e) => e.key === 'Enter' && !showMentionPopover && handleSendMessage()}
+                  className="flex-1"
+                />
+                
+                <Button onClick={handleSendMessage} disabled={!newMessage.trim() && !file}>
+                  <Send className="w-4 h-4" />
                 </Button>
               </div>
-            )}
-            
-            <div className="flex gap-2 relative">
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileSelect}
-                className="hidden"
-                accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
-              />
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Paperclip className="w-4 h-4" />
-              </Button>
-
-              <Popover open={showMentionPopover} onOpenChange={setShowMentionPopover}>
-                <PopoverTrigger asChild>
-                  <Button size="icon" variant="outline" type="button">
-                    <AtSign className="w-4 h-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent 
-                  className="w-[300px] p-0 bg-popover z-50" 
-                  align="start"
-                  side="top"
-                  sideOffset={5}
-                >
-                  <Command className="bg-popover">
-                    <CommandInput placeholder="ค้นหาผู้ใช้..." className="bg-popover" />
-                    <CommandEmpty className="py-6 text-center text-sm">ไม่พบผู้ใช้</CommandEmpty>
-                    <CommandGroup className="max-h-[200px] overflow-auto">
-                      {filteredProfiles.map((profile) => (
-                        <CommandItem
-                          key={profile.id}
-                          onSelect={() => insertMention(profile)}
-                          className="flex items-center gap-2 cursor-pointer hover:bg-accent"
-                        >
-                          <Avatar className="w-6 h-6">
-                            {profile.avatar_url ? (
-                              <AvatarImage src={profile.avatar_url} />
-                            ) : (
-                              <AvatarFallback className={getUserColor(profile.id)}>
-                                {profile.full_name.charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            )}
-                          </Avatar>
-                          <span>{profile.full_name}</span>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-
-              <Input
-                ref={inputRef}
-                placeholder="พิมพ์ข้อความ... (ใช้ @ เพื่อแท็กผู้ใช้)"
-                value={newMessage}
-                onChange={handleInputChange}
-                onKeyDown={(e) => e.key === 'Enter' && !showMentionPopover && handleSendMessage()}
-                className="flex-1"
-              />
-              
-              <Button onClick={handleSendMessage} disabled={!newMessage.trim() && !file}>
-                <Send className="w-4 h-4" />
-              </Button>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
