@@ -203,6 +203,17 @@ const LaborExpenseDetailDialog = ({
                   {format(new Date(expense.invoice_date), "dd/MM/yyyy")}
                 </p>
               </div>
+              {expense.status === 'approved' && expense.updated_by_profile && (
+                <div className="col-span-2">
+                  <p className="text-sm text-muted-foreground">ผู้อนุมัติ</p>
+                  <p className="font-medium">{expense.updated_by_profile.full_name}</p>
+                  {expense.approved_at && (
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(expense.approved_at), "dd/MM/yyyy HH:mm")}
+                    </p>
+                  )}
+                </div>
+              )}
               {expense.receipt_image_url && (
                 <div className="col-span-2">
                   <p className="text-sm text-muted-foreground mb-1">รูปบิล</p>

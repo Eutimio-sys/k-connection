@@ -174,6 +174,11 @@ const ExpenseDetailDialog = ({ expense, open, onOpenChange, onSuccess }: Expense
                 <div className="col-span-2">
                   <p className="text-sm text-muted-foreground">ผู้อนุมัติ</p>
                   <p className="font-medium">{expense.updated_by_profile.full_name}</p>
+                  {expense.approved_at && (
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(expense.approved_at), "dd/MM/yyyy HH:mm")}
+                    </p>
+                  )}
                 </div>
               )}
               {expense.receipt_image_url && (

@@ -216,7 +216,9 @@ const Approvals = () => {
       .update({ 
         status: "approved", 
         updated_by: user.id,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        approved_by: user.id,
+        approved_at: new Date().toISOString()
       })
       .eq("id", expenseId);
 
@@ -225,6 +227,7 @@ const Approvals = () => {
       console.error(error);
     } else {
       toast.success("อนุมัติสำเร็จ");
+      setLaborDialogOpen(false);
       await fetchAllPendingItems();
       window.dispatchEvent(new Event('approvals-updated'));
     }
@@ -239,7 +242,9 @@ const Approvals = () => {
       .update({ 
         status: "rejected", 
         updated_by: user.id,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        approved_by: user.id,
+        approved_at: new Date().toISOString()
       })
       .eq("id", expenseId);
 
@@ -248,6 +253,7 @@ const Approvals = () => {
       console.error(error);
     } else {
       toast.success("ปฏิเสธสำเร็จ");
+      setLaborDialogOpen(false);
       await fetchAllPendingItems();
       window.dispatchEvent(new Event('approvals-updated'));
     }
@@ -262,7 +268,9 @@ const Approvals = () => {
       .update({ 
         status: "approved", 
         updated_by: user.id,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        approved_by: user.id,
+        approved_at: new Date().toISOString()
       })
       .eq("id", expenseId);
 
@@ -271,6 +279,7 @@ const Approvals = () => {
       console.error(error);
     } else {
       toast.success("อนุมัติสำเร็จ");
+      setMaterialDialogOpen(false);
       await fetchAllPendingItems();
       window.dispatchEvent(new Event('approvals-updated'));
     }
@@ -285,7 +294,9 @@ const Approvals = () => {
       .update({ 
         status: "rejected", 
         updated_by: user.id,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        approved_by: user.id,
+        approved_at: new Date().toISOString()
       })
       .eq("id", expenseId);
 
@@ -294,6 +305,7 @@ const Approvals = () => {
       console.error(error);
     } else {
       toast.success("ปฏิเสธสำเร็จ");
+      setMaterialDialogOpen(false);
       await fetchAllPendingItems();
       window.dispatchEvent(new Event('approvals-updated'));
     }
