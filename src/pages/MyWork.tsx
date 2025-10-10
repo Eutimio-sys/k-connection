@@ -100,18 +100,8 @@ export default function MyWork() {
   }, [currentUser, currentMonth]);
 
   const checkUserRoleAndFetchUsers = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data: userRoles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id);
-      
-      const hasAdminOrManager = userRoles?.some(r => r.role === 'admin' || r.role === 'manager');
-      if (hasAdminOrManager) {
-        fetchUsers();
-      }
-    }
+    // ให้ทุกระดับเห็นรายชื่อผู้ใช้ (จะถูกจำกัดโดย RLS ให้เห็นได้เท่าที่สิทธิ์อนุญาต)
+    await fetchUsers();
   };
 
   const fetchCurrentUser = async () => {
@@ -163,32 +153,8 @@ export default function MyWork() {
       .gte("due_date", startOfDay.toISOString())
       .lte("due_date", endOfDay.toISOString());
 
-    // Check if user has admin or manager role
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    const { data: userRoles } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", authUser!.id);
-    
-    const hasAdminOrManager = userRoles?.some(r => r.role === 'admin' || r.role === 'manager');
-    
-    // If not manager/admin, only show tasks assigned to them
-    if (!hasAdminOrManager) {
-      // Get tasks where user is in task_assignees
-      const { data: myTaskIds } = await supabase
-        .from("task_assignees")
-        .select("task_id")
-        .eq("user_id", currentUser.id);
-      
-      if (myTaskIds && myTaskIds.length > 0) {
-        const taskIds = myTaskIds.map(t => t.task_id);
-        query = query.in("id", taskIds);
-      } else {
-        // No tasks assigned
-        setTasks([]);
-        return;
-      }
-    }
+    // ให้ทุกคนเห็นงานทั้งหมดในวันนั้น โดยไม่จำกัดตามบทบาท
+    // หมายเหตุ: สิทธิ์การมองเห็นจริงจะเป็นไปตามนโยบาย RLS ของฐานข้อมูล
 
     const { data } = await query.order("due_time", { ascending: true });
     if (data) setTasks(data as any);

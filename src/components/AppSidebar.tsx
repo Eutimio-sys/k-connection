@@ -36,28 +36,6 @@ import {
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 
-const ROLE_FEATURES: Record<string, string[]> = {
-  admin: ["*"],
-  manager: [
-    "dashboard","projects","tasks","approvals","expenses","labor_expenses",
-    "daily_payments","accounting","payroll","attendance","leave_management",
-    "hr_management","foreign_workers","employees","settings"
-  ],
-  purchaser: [
-    "dashboard","projects","expenses","labor_expenses","daily_payments",
-    "accounting","attendance","leave_management","foreign_workers","settings"
-  ],
-  project_manager: [
-    "dashboard","projects","tasks","approvals","expenses","labor_expenses",
-    "daily_payments","attendance","leave_management"
-  ],
-  foreman: [
-    "dashboard","projects","tasks","daily_payments","attendance","leave_management"
-  ],
-  worker: [
-    "dashboard","projects","tasks","attendance","leave_management"
-  ],
-};
 
 const menuItems = [
   { title: "หน้าแรก", url: "/", icon: Home, featureCode: null },
@@ -98,8 +76,7 @@ export function AppSidebar() {
         }
         if (!item.featureCode) return true; // Always show items without feature code
         if (loading) return false; // Hide during loading
-        const roleAllowed = ROLE_FEATURES[role]?.includes("*") || ROLE_FEATURES[role]?.includes(item.featureCode);
-        return hasFeatureAccess(permissions, item.featureCode) || !!roleAllowed;
+        return hasFeatureAccess(permissions, item.featureCode);
       });
 
   useEffect(() => {

@@ -64,8 +64,7 @@ export const ProtectedRoute = ({
 
     // Check feature-based access
     if (featureCode) {
-      const roleAllowed = ROLE_FEATURES[role]?.includes("*") || ROLE_FEATURES[role]?.includes(featureCode);
-      const allowed = permissions[featureCode] === true || !!roleAllowed;
+      const allowed = permissions[featureCode] === true;
       setHasAccess(allowed);
       console.log("ProtectedRoute", {
         role,
@@ -73,7 +72,6 @@ export const ProtectedRoute = ({
         requiredRoles,
         permissionsKeys: Object.keys(permissions || {}),
         allowed,
-        roleAllowed,
       });
     } else {
       setHasAccess(true);
