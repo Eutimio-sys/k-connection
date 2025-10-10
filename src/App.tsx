@@ -43,28 +43,28 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route element={<DashboardLayout><Outlet /></DashboardLayout>}>
             <Route path="/" element={<Index />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/projects" element={<Projects />} />
-            <Route path="/projects/:id" element={<ProjectDetail />} />
-            <Route path="/kanban" element={<Kanban />} />
-            <Route path="/approvals" element={<Approvals />} />
-            <Route path="/accounting" element={<Accounting />} />
-            <Route path="/labor-accounting" element={<LaborAccounting />} />
-            <Route path="/daily-payments" element={<DailyPayments />} />
-            <Route path="/employees/:id" element={<EmployeeDetail />} />
-            <Route path="/user-roles" element={<UserRoles />} />
-            <Route path="/hr-management" element={<HRManagement />} />
-            <Route path="/payroll" element={<Payroll />} />
-            <Route path="/foreign-workers" element={<ForeignWorkers />} />
-            <Route path="/tax-planning" element={<TaxPlanning />} />
-            <Route path="/tax-documents" element={<TaxDocuments />} />
+            <Route path="/dashboard" element={<ProtectedRoute featureCode="dashboard"><Dashboard /></ProtectedRoute>} />
+            <Route path="/projects" element={<ProtectedRoute featureCode="projects"><Projects /></ProtectedRoute>} />
+            <Route path="/projects/:id" element={<ProtectedRoute featureCode="projects"><ProjectDetail /></ProtectedRoute>} />
+            <Route path="/kanban" element={<ProtectedRoute featureCode="projects"><Kanban /></ProtectedRoute>} />
+            <Route path="/approvals" element={<ProtectedRoute featureCode="approvals"><Approvals /></ProtectedRoute>} />
+            <Route path="/accounting" element={<ProtectedRoute featureCode="accounting"><Accounting /></ProtectedRoute>} />
+            <Route path="/labor-accounting" element={<ProtectedRoute featureCode="labor_expenses"><LaborAccounting /></ProtectedRoute>} />
+            <Route path="/daily-payments" element={<ProtectedRoute featureCode="daily_payments"><DailyPayments /></ProtectedRoute>} />
+            <Route path="/employees/:id" element={<ProtectedRoute featureCode="employees"><EmployeeDetail /></ProtectedRoute>} />
+            <Route path="/user-roles" element={<ProtectedRoute requiredRoles={["admin"]}><UserRoles /></ProtectedRoute>} />
+            <Route path="/hr-management" element={<ProtectedRoute featureCode="hr_management"><HRManagement /></ProtectedRoute>} />
+            <Route path="/payroll" element={<ProtectedRoute featureCode="payroll"><Payroll /></ProtectedRoute>} />
+            <Route path="/foreign-workers" element={<ProtectedRoute featureCode="foreign_workers"><ForeignWorkers /></ProtectedRoute>} />
+            <Route path="/tax-planning" element={<ProtectedRoute featureCode="tax_planning"><TaxPlanning /></ProtectedRoute>} />
+            <Route path="/tax-documents" element={<ProtectedRoute featureCode="accounting"><TaxDocuments /></ProtectedRoute>} />
             <Route path="/profile" element={<Profile />} />
-            <Route path="/attendance" element={<Attendance />} />
-            <Route path="/leave" element={<LeaveManagement />} />
+            <Route path="/attendance" element={<ProtectedRoute featureCode="attendance"><Attendance /></ProtectedRoute>} />
+            <Route path="/leave" element={<ProtectedRoute featureCode="leave_management"><LeaveManagement /></ProtectedRoute>} />
             <Route path="/mywork" element={<MyWork />} />
             <Route path="/chat" element={<Chat />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/project-access" element={<ProjectAccessManagement />} />
+            <Route path="/settings" element={<ProtectedRoute featureCode="settings"><Settings /></ProtectedRoute>} />
+            <Route path="/project-access" element={<ProtectedRoute requiredRoles={["admin"]}><ProjectAccessManagement /></ProtectedRoute>} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -21,9 +21,15 @@ export default function ProjectAccessManagement() {
 
   useEffect(() => {
     if (permLoading) return;
-    // Temporary bypass: allow all users to access this page
+    
+    if (role !== "admin") {
+      toast.error("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
+      navigate("/");
+      return;
+    }
+    
     fetchData();
-  }, [permLoading]);
+  }, [permLoading, role, navigate]);
 
   const fetchData = async () => {
     setLoading(true);
