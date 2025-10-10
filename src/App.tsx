@@ -13,7 +13,6 @@ import ProjectDetail from "./pages/ProjectDetail";
 import Kanban from "./pages/Kanban";
 import DailyPayments from "./pages/DailyPayments";
 import Approvals from "./pages/Approvals";
-import Employees from "./pages/Employees";
 import EmployeeDetail from "./pages/EmployeeDetail";
 import UserRoles from "./pages/UserRoles";
 import HRManagement from "./pages/HRManagement";
@@ -50,7 +49,6 @@ const App = () => (
             <Route path="/accounting" element={<ProtectedRoute featureCode="accounting"><Accounting /></ProtectedRoute>} />
             <Route path="/labor-accounting" element={<ProtectedRoute featureCode="labor_expenses"><LaborAccounting /></ProtectedRoute>} />
             <Route path="/daily-payments" element={<ProtectedRoute featureCode="daily_payments"><DailyPayments /></ProtectedRoute>} />
-            <Route path="/employees" element={<ProtectedRoute featureCode="employees"><Employees /></ProtectedRoute>} />
             <Route path="/employees/:id" element={<ProtectedRoute featureCode="employees"><EmployeeDetail /></ProtectedRoute>} />
             <Route path="/user-roles" element={<ProtectedRoute><UserRoles /></ProtectedRoute>} />
             <Route path="/hr-management" element={<ProtectedRoute featureCode="hr_management"><HRManagement /></ProtectedRoute>} />
