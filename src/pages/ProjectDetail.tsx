@@ -29,6 +29,7 @@ const ProjectDetail = () => {
   const [incomeDialogOpen, setIncomeDialogOpen] = useState(false);
   const [materialDetailOpen, setMaterialDetailOpen] = useState(false);
   const [laborDetailOpen, setLaborDetailOpen] = useState(false);
+  const [budgetBreakdownOpen, setBudgetBreakdownOpen] = useState(false);
   
   // Filter states
   const [materialStartDate, setMaterialStartDate] = useState(new Date().toISOString().split('T')[0]);
@@ -321,61 +322,18 @@ const ProjectDetail = () => {
             <CardTitle>สรุปการเงิน</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {project.budget_breakdown && Object.keys(project.budget_breakdown).length > 0 && (
-              <div className="p-4 bg-primary/5 rounded-lg border-2 border-primary/20">
-                <p className="text-sm text-muted-foreground mb-3 font-medium">ประมาณการค่าใช้จ่ายแยกหมวดหมู่</p>
-                <div className="space-y-2">
-                  {Object.entries(project.budget_breakdown as Record<string, number>).map(([catId, budgetAmount]) => {
-                    const category = categories.find(c => c.id === catId);
-                    const categoryName = category?.name || "ไม่ระบุ";
-                    
-                    // Get actual expenses for this category
-                    const materialActual = (totalMaterialByCategory[categoryName] || 0);
-                    const laborActual = (totalLaborByCategory[categoryName] || 0);
-                    const actualTotal = materialActual + laborActual;
-                    const remaining = Number(budgetAmount) - actualTotal;
-                    const percentUsed = Number(budgetAmount) > 0 ? (actualTotal / Number(budgetAmount)) * 100 : 0;
-                    
-                    return (
-                      <div key={catId} className="border rounded-lg p-3 space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="font-semibold text-sm">{categoryName}</span>
-                          <span className={`text-xs font-medium ${percentUsed > 100 ? 'text-red-600' : percentUsed > 80 ? 'text-orange-600' : 'text-green-600'}`}>
-                            {percentUsed.toFixed(1)}%
-                          </span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div>
-                            <p className="text-muted-foreground">ประมาณการ:</p>
-                            <p className="font-semibold text-primary">{formatCurrency(Number(budgetAmount))}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">ใช้จริง:</p>
-                            <p className="font-semibold">{formatCurrency(actualTotal)}</p>
-                          </div>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className={`h-2 rounded-full ${percentUsed > 100 ? 'bg-red-600' : percentUsed > 80 ? 'bg-orange-600' : 'bg-green-600'}`}
-                            style={{ width: `${Math.min(percentUsed, 100)}%` }}
-                          ></div>
-                        </div>
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-muted-foreground">คงเหลือ:</span>
-                          <span className={`font-semibold ${remaining >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatCurrency(remaining)}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+            <div 
+              className="p-4 bg-primary/5 rounded-lg cursor-pointer hover:shadow-md transition-shadow border-2 border-primary/20"
+              onClick={() => setBudgetBreakdownOpen(true)}
+            >
+              <div className="flex justify-between items-start mb-2">
+                <p className="text-sm text-muted-foreground font-medium">ประมาณการรวมทั้งหมด</p>
+                <Info size={16} className="text-primary" />
               </div>
-            )}
-            
-            <div className="p-4 bg-primary/5 rounded-lg">
-              <p className="text-sm text-muted-foreground mb-1">ประมาณการรวมทั้งหมด</p>
-              <p className="text-2xl font-bold text-primary">{project.budget ? formatCurrency(project.budget) : "-"}</p>
+              <p className="text-2xl font-bold text-primary mb-1">{project.budget ? formatCurrency(project.budget) : "-"}</p>
+              {project.budget_breakdown && Object.keys(project.budget_breakdown).length > 0 && (
+                <p className="text-xs text-muted-foreground">คลิกเพื่อดูรายละเอียดแยกหมวดหมู่</p>
+              )}
             </div>
             
             <div 
@@ -514,6 +472,98 @@ const ProjectDetail = () => {
                 <span className="text-lg font-semibold text-blue-600">{formatCurrency(Number(amount))}</span>
               </div>
             ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Budget Breakdown Detail Dialog */}
+      <Dialog open={budgetBreakdownOpen} onOpenChange={setBudgetBreakdownOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>รายละเอียดงบประมาณแยกหมวดหมู่</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-primary/5 rounded-lg">
+              <p className="text-sm text-muted-foreground mb-1">งบประมาณรวมทั้งหมด</p>
+              <p className="text-2xl font-bold text-primary">{project.budget ? formatCurrency(project.budget) : "-"}</p>
+            </div>
+            
+            {project.budget_breakdown && Object.keys(project.budget_breakdown).length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>หมวดหมู่</TableHead>
+                    <TableHead className="text-right">ประมาณการ</TableHead>
+                    <TableHead className="text-right">ใช้จริง</TableHead>
+                    <TableHead className="text-right">คงเหลือ</TableHead>
+                    <TableHead className="text-center">%ที่ใช้</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Object.entries(project.budget_breakdown as Record<string, number>).map(([catId, budgetAmount]) => {
+                    const category = categories.find(c => c.id === catId);
+                    const categoryName = category?.name || "ไม่ระบุ";
+                    
+                    const materialActual = (totalMaterialByCategory[categoryName] || 0);
+                    const laborActual = (totalLaborByCategory[categoryName] || 0);
+                    const actualTotal = materialActual + laborActual;
+                    const remaining = Number(budgetAmount) - actualTotal;
+                    const percentUsed = Number(budgetAmount) > 0 ? (actualTotal / Number(budgetAmount)) * 100 : 0;
+                    
+                    return (
+                      <TableRow key={catId}>
+                        <TableCell className="font-medium">{categoryName}</TableCell>
+                        <TableCell className="text-right font-semibold text-primary">
+                          {formatCurrency(Number(budgetAmount))}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {formatCurrency(actualTotal)}
+                        </TableCell>
+                        <TableCell className={`text-right font-semibold ${remaining >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {formatCurrency(remaining)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex flex-col items-center gap-1">
+                            <span className={`text-sm font-semibold ${percentUsed > 100 ? 'text-red-600' : percentUsed > 80 ? 'text-orange-600' : 'text-green-600'}`}>
+                              {percentUsed.toFixed(1)}%
+                            </span>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className={`h-2 rounded-full ${percentUsed > 100 ? 'bg-red-600' : percentUsed > 80 ? 'bg-orange-600' : 'bg-green-600'}`}
+                                style={{ width: `${Math.min(percentUsed, 100)}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  <TableRow className="bg-muted/50 font-bold">
+                    <TableCell>รวมทั้งหมด</TableCell>
+                    <TableCell className="text-right text-primary">
+                      {formatCurrency(Object.values(project.budget_breakdown as Record<string, number>).reduce((sum, val) => sum + Number(val || 0), 0))}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatCurrency(totalMaterialExpenses + totalLaborExpenses)}
+                    </TableCell>
+                    <TableCell className={`text-right ${
+                      (Object.values(project.budget_breakdown as Record<string, number>).reduce((sum, val) => sum + Number(val || 0), 0) - totalMaterialExpenses - totalLaborExpenses) >= 0 
+                        ? 'text-green-600' 
+                        : 'text-red-600'
+                    }`}>
+                      {formatCurrency(
+                        Object.values(project.budget_breakdown as Record<string, number>).reduce((sum, val) => sum + Number(val || 0), 0) - 
+                        totalMaterialExpenses - 
+                        totalLaborExpenses
+                      )}
+                    </TableCell>
+                    <TableCell></TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-center text-muted-foreground py-8">ไม่มีข้อมูลงบประมาณแยกหมวดหมู่</p>
+            )}
           </div>
         </DialogContent>
       </Dialog>

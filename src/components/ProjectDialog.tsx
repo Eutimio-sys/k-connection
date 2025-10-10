@@ -47,7 +47,17 @@ const ProjectDialog = ({ onSuccess, companies, editData, open: controlledOpen, o
       .select("*")
       .eq("is_active", true)
       .order("name");
-    if (data) setCategories(data);
+    if (data) {
+      setCategories(data);
+      // Initialize budget breakdown with all categories set to 0
+      if (!editData) {
+        const initialBreakdown: Record<string, number> = {};
+        data.forEach(cat => {
+          initialBreakdown[cat.id] = 0;
+        });
+        setBudgetBreakdown(initialBreakdown);
+      }
+    }
   };
 
   useEffect(() => {
@@ -76,7 +86,12 @@ const ProjectDialog = ({ onSuccess, companies, editData, open: controlledOpen, o
         budget: "", 
         status: "planning" 
       });
-      setBudgetBreakdown({});
+      // Reset to all categories when closing
+      const initialBreakdown: Record<string, number> = {};
+      categories.forEach(cat => {
+        initialBreakdown[cat.id] = 0;
+      });
+      setBudgetBreakdown(initialBreakdown);
     }
   }, [open, editData]);
 
@@ -123,21 +138,8 @@ const ProjectDialog = ({ onSuccess, companies, editData, open: controlledOpen, o
     setLoading(false);
   };
 
-  const addCategoryBudget = () => {
-    const firstCategory = categories[0];
-    if (firstCategory && !budgetBreakdown[firstCategory.id]) {
-      setBudgetBreakdown({ ...budgetBreakdown, [firstCategory.id]: 0 });
-    }
-  };
-
   const updateCategoryBudget = (categoryId: string, amount: number) => {
     setBudgetBreakdown({ ...budgetBreakdown, [categoryId]: amount });
-  };
-
-  const removeCategoryBudget = (categoryId: string) => {
-    const newBreakdown = { ...budgetBreakdown };
-    delete newBreakdown[categoryId];
-    setBudgetBreakdown(newBreakdown);
   };
 
   const totalCategoryBudget = Object.values(budgetBreakdown).reduce((sum, val) => sum + Number(val || 0), 0);
@@ -215,56 +217,31 @@ const ProjectDialog = ({ onSuccess, companies, editData, open: controlledOpen, o
             </div>
 
             <div className="col-span-2">
-              <div className="flex justify-between items-center mb-2">
-                <Label>งบประมาณแยกหมวดหมู่</Label>
-                <Button type="button" size="sm" variant="outline" onClick={addCategoryBudget} className="gap-1">
-                  <Plus size={16} />
-                  เพิ่มหมวดหมู่
-                </Button>
-              </div>
-              <div className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-3">
-                {Object.entries(budgetBreakdown).map(([catId, amount]) => {
-                  const category = categories.find(c => c.id === catId);
+              <Label>งบประมาณแยกหมวดหมู่</Label>
+              <div className="space-y-2 max-h-80 overflow-y-auto border rounded-lg p-3 mt-2">
+                {categories.map(cat => {
+                  const amount = budgetBreakdown[cat.id] || 0;
                   return (
-                    <div key={catId} className="flex gap-2 items-center">
-                      <Select 
-                        value={catId} 
-                        onValueChange={(newCatId) => {
-                          const newBreakdown = { ...budgetBreakdown };
-                          delete newBreakdown[catId];
-                          newBreakdown[newCatId] = amount;
-                          setBudgetBreakdown(newBreakdown);
-                        }}
-                      >
-                        <SelectTrigger className="flex-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-background z-50">
-                          {categories.map(cat => (
-                            <SelectItem key={cat.id} value={cat.id} disabled={budgetBreakdown[cat.id] !== undefined && cat.id !== catId}>
-                              {cat.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <div key={cat.id} className="flex gap-2 items-center">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{cat.name}</p>
+                        <p className="text-xs text-muted-foreground">{cat.category_type === 'material' ? 'วัสดุ' : cat.category_type === 'labor' ? 'ค่าแรง' : cat.category_type === 'labor_contractor' ? 'ช่างรับเหมา' : 'อื่นๆ'}</p>
+                      </div>
                       <Input 
                         type="number" 
                         step="0.01" 
                         value={amount || 0}
-                        onChange={e => updateCategoryBudget(catId, parseFloat(e.target.value) || 0)}
+                        onChange={e => updateCategoryBudget(cat.id, parseFloat(e.target.value) || 0)}
                         className="w-40"
                         placeholder="งบประมาณ"
                       />
-                      <Button type="button" size="icon" variant="ghost" onClick={() => removeCategoryBudget(catId)}>
-                        <Trash2 size={16} />
-                      </Button>
                     </div>
                   );
                 })}
-                {Object.keys(budgetBreakdown).length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4">ยังไม่มีการกำหนดงบประมาณแยกหมวดหมู่</p>
+                {categories.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">ไม่พบหมวดหมู่</p>
                 )}
-                {Object.keys(budgetBreakdown).length > 0 && (
+                {categories.length > 0 && (
                   <div className="border-t pt-2 mt-2 flex justify-between font-semibold">
                     <span>รวมงบประมาณแยกหมวดหมู่:</span>
                     <span className="text-primary">{new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(totalCategoryBudget)}</span>
