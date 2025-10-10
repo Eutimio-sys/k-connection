@@ -9,7 +9,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
-import { Send, Paperclip, X, AtSign } from "lucide-react";
+import { Send, Paperclip, X, AtSign, ArrowDown } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { isSameDay } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 
@@ -62,6 +64,7 @@ export default function Chat() {
   const [showMentionPopover, setShowMentionPopover] = useState(false);
   const [mentionSearch, setMentionSearch] = useState("");
   const [cursorPosition, setCursorPosition] = useState(0);
+  const [showScrollButton, setShowScrollButton] = useState(false);
   
   const { toast } = useToast();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -160,6 +163,17 @@ export default function Chat() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
+  };
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLDivElement;
+    const isNearBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 100;
+    setShowScrollButton(!isNearBottom);
+  };
+
+  const shouldShowDateSeparator = (currentMsg: Message, previousMsg: Message | null): boolean => {
+    if (!previousMsg) return false;
+    return !isSameDay(new Date(currentMsg.created_at), new Date(previousMsg.created_at));
   };
 
   const fetchMessages = async () => {
@@ -423,15 +437,27 @@ export default function Chat() {
               {selectedProjectId === "general" ? "ห้องสนทนากลาง" : projects.find(p => p.id === selectedProjectId)?.name || "แชทโครงการ"}
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
-            <ScrollArea className="flex-1 px-4" ref={scrollRef}>
+          <CardContent className="flex-1 flex flex-col p-0 overflow-hidden relative">
+            <div className="flex-1 overflow-y-auto px-4" ref={scrollRef} onScroll={handleScroll}>
               <div className="space-y-4 py-4">
-                {messages.map((msg) => {
+                {messages.map((msg, index) => {
                   const profile = profileMap[msg.user_id];
                   const userColor = getUserColor(msg.user_id);
+                  const previousMsg = index > 0 ? messages[index - 1] : null;
+                  const showDateSep = shouldShowDateSeparator(msg, previousMsg);
                   
                   return (
-                    <div key={msg.id} className="flex gap-3">
+                    <div key={msg.id}>
+                      {showDateSep && (
+                        <div className="flex items-center gap-4 my-6">
+                          <Separator className="flex-1" />
+                          <span className="text-xs text-muted-foreground px-2">
+                            {format(new Date(msg.created_at), 'dd MMMM yyyy', { locale: th })}
+                          </span>
+                          <Separator className="flex-1" />
+                        </div>
+                      )}
+                      <div className="flex gap-3">
                       <Avatar className="w-10 h-10">
                         {profile?.avatar_url ? (
                           <AvatarImage src={profile.avatar_url} alt={profile.full_name} />
@@ -482,10 +508,22 @@ export default function Chat() {
                         </div>
                       </div>
                     </div>
+                    </div>
                   );
                 })}
               </div>
-            </ScrollArea>
+            </div>
+
+            {showScrollButton && (
+              <Button
+                size="icon"
+                variant="secondary"
+                className="absolute bottom-24 right-8 rounded-full shadow-lg z-10"
+                onClick={scrollToBottom}
+              >
+                <ArrowDown className="w-4 h-4" />
+              </Button>
+            )}
 
             <div className="p-4 border-t flex-shrink-0 space-y-2">
               {file && (
