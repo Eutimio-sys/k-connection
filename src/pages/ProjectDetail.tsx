@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +42,7 @@ const ProjectDetail = () => {
   const [laborWorkerFilter, setLaborWorkerFilter] = useState("all");
   
   const [workers, setWorkers] = useState<any[]>([]);
+  const refreshTimeout = useRef<number | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -59,16 +60,34 @@ const ProjectDetail = () => {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [id]);
 
-  // Refresh data every 5 seconds to keep totals updated
+  // ใช้ realtime แทนการ polling เพื่อลดการกระตุกของหน้า
   useEffect(() => {
-    const interval = setInterval(() => {
-      fetchData();
-    }, 5000);
-    return () => clearInterval(interval);
+    if (!id) return;
+    const handleChange = () => {
+      if (refreshTimeout.current) {
+        clearTimeout(refreshTimeout.current);
+      }
+      refreshTimeout.current = window.setTimeout(() => {
+        fetchData(false);
+      }, 400);
+    };
+
+    const channel = supabase
+      .channel(`project-detail-${id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses', filter: `project_id=eq.${id}` }, handleChange)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'labor_expenses', filter: `project_id=eq.${id}` }, handleChange)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'project_income', filter: `project_id=eq.${id}` }, handleChange)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'purchase_requests', filter: `project_id=eq.${id}` }, handleChange)
+      .subscribe();
+
+    return () => {
+      if (refreshTimeout.current) clearTimeout(refreshTimeout.current);
+      supabase.removeChannel(channel);
+    };
   }, [id]);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (showLoading: boolean = true) => {
+    if (showLoading) setLoading(true);
     
     const { data: projectData, error: projectError } = await supabase
       .from("projects")
@@ -144,7 +163,7 @@ const ProjectDetail = () => {
 
     setProjectIncome(incomeData || []);
     
-    setLoading(false);
+    if (showLoading) setLoading(false);
   };
 
   const getStatusBadge = (status: string) => {
