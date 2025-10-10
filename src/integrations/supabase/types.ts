@@ -416,6 +416,8 @@ export type Database = {
       }
       expenses: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           company_id: string
           created_at: string
           created_by: string | null
@@ -423,7 +425,9 @@ export type Database = {
           id: string
           invoice_date: string
           invoice_number: string
+          modified_after_approval: boolean | null
           notes: string | null
+          paid_at: string | null
           payment_terms: string | null
           project_id: string
           receipt_image_url: string | null
@@ -438,6 +442,8 @@ export type Database = {
           vendor_id: string | null
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           company_id: string
           created_at?: string
           created_by?: string | null
@@ -445,7 +451,9 @@ export type Database = {
           id?: string
           invoice_date?: string
           invoice_number: string
+          modified_after_approval?: boolean | null
           notes?: string | null
+          paid_at?: string | null
           payment_terms?: string | null
           project_id: string
           receipt_image_url?: string | null
@@ -460,6 +468,8 @@ export type Database = {
           vendor_id?: string | null
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           company_id?: string
           created_at?: string
           created_by?: string | null
@@ -467,7 +477,9 @@ export type Database = {
           id?: string
           invoice_date?: string
           invoice_number?: string
+          modified_after_approval?: boolean | null
           notes?: string | null
+          paid_at?: string | null
           payment_terms?: string | null
           project_id?: string
           receipt_image_url?: string | null
@@ -757,14 +769,18 @@ export type Database = {
       }
       labor_expenses: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           company_id: string
           created_at: string
           created_by: string | null
           id: string
           invoice_date: string
           invoice_number: string
+          modified_after_approval: boolean | null
           net_amount: number | null
           notes: string | null
+          paid_at: string | null
           project_id: string
           receipt_image_url: string | null
           status: string
@@ -777,14 +793,18 @@ export type Database = {
           worker_id: string | null
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           company_id: string
           created_at?: string
           created_by?: string | null
           id?: string
           invoice_date?: string
           invoice_number: string
+          modified_after_approval?: boolean | null
           net_amount?: number | null
           notes?: string | null
+          paid_at?: string | null
           project_id: string
           receipt_image_url?: string | null
           status?: string
@@ -797,14 +817,18 @@ export type Database = {
           worker_id?: string | null
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           company_id?: string
           created_at?: string
           created_by?: string | null
           id?: string
           invoice_date?: string
           invoice_number?: string
+          modified_after_approval?: boolean | null
           net_amount?: number | null
           notes?: string | null
+          paid_at?: string | null
           project_id?: string
           receipt_image_url?: string | null
           status?: string

@@ -199,6 +199,16 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    // Check if editing and already approved/paid
+    if (expense) {
+      if (expense.paid_at) {
+        toast.error("ไม่สามารถแก้ไขได้ เนื่องจากจ่ายเงินเรียบร้อยแล้ว");
+        setLoading(false);
+        return;
+      }
+    }
+    
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
@@ -214,46 +224,11 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
       return;
     }
 
-    // Generate invoice number
-    const invoiceNumber = await generateInvoiceNumber();
-    if (!invoiceNumber) {
-      toast.error("ไม่สามารถสร้างเลขที่บิลได้");
-      setLoading(false);
-      return;
-    }
-
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       toast.error("กรุณาเข้าสู่ระบบ");
       setLoading(false);
       return;
-    }
-
-    let receiptUrl = "";
-    if (imageFile) {
-      const invDate = new Date(invoiceDate);
-      const year = invDate.getFullYear();
-      const month = String(invDate.getMonth() + 1).padStart(2, '0');
-      const fileExt = imageFile.name.split(".").pop();
-      
-      // Use the already generated invoice number
-      const safeInvoiceNumber = invoiceNumber.replace(/[\/\\]/g, '-');
-      
-      // Structure: labor_expenses/YYYY/MM/invoice-number.ext
-      const fileName = `labor_expenses/${year}/${month}/${safeInvoiceNumber}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from("receipts")
-        .upload(fileName, imageFile);
-
-      if (uploadError) {
-        toast.error("เกิดข้อผิดพลาดในการอัพโหลดรูปภาพ");
-        setLoading(false);
-        return;
-      }
-
-      const { data: { publicUrl } } = supabase.storage.from("receipts").getPublicUrl(fileName);
-      receiptUrl = publicUrl;
     }
 
     const subtotal = calculateSubtotal();
@@ -262,70 +237,176 @@ const LaborExpenseDialog = ({ onSuccess, expense, open: controlledOpen, onOpenCh
     const netAmount = calculateNetAmount(subtotal, withholdingTaxAmount, totalDeductions);
     const totalAmount = subtotal;
 
-    const { data: expense, error: expenseError } = await supabase
-      .from("labor_expenses")
-      .insert({
-        invoice_number: invoiceNumber,
-        worker_id: workerId || null,
-        project_id: projectId,
-        company_id: companyId,
-        invoice_date: invoiceDate,
-        subtotal,
-        withholding_tax_rate: withholdingTaxRate,
-        withholding_tax_amount: withholdingTaxAmount,
-        total_amount: totalAmount,
-        net_amount: netAmount,
-        notes,
-        receipt_image_url: receiptUrl,
-        created_by: user.id,
-      })
-      .select()
-      .single();
+    if (expense) {
+      // Update existing expense
+      const { error: updateError } = await supabase
+        .from("labor_expenses")
+        .update({
+          worker_id: workerId || null,
+          project_id: projectId,
+          company_id: companyId,
+          invoice_date: invoiceDate,
+          subtotal,
+          withholding_tax_rate: withholdingTaxRate,
+          withholding_tax_amount: withholdingTaxAmount,
+          total_amount: totalAmount,
+          net_amount: netAmount,
+          notes,
+          updated_by: user.id,
+        })
+        .eq("id", expense.id);
 
-    if (expenseError) {
-      toast.error("เกิดข้อผิดพลาด");
-      console.error(expenseError);
-      setLoading(false);
-      return;
-    }
-
-    const itemsToInsert = items.map(item => ({
-      labor_expense_id: expense.id,
-      category_id: item.category_id,
-      description: item.description,
-      amount: item.amount,
-      notes: item.notes,
-    }));
-
-    const { error: itemsError } = await supabase
-      .from("labor_expense_items")
-      .insert(itemsToInsert);
-
-    if (itemsError) {
-      toast.error("เกิดข้อผิดพลาดในการบันทึกรายการ");
-      setLoading(false);
-      return;
-    }
-
-    if (deductions.length > 0) {
-      const deductionsToInsert = deductions.map(d => ({
-        labor_expense_id: expense.id,
-        description: d.description,
-        amount: d.amount,
-      }));
-
-      const { error: deductionsError } = await supabase
-        .from("labor_expense_deductions")
-        .insert(deductionsToInsert);
-
-      if (deductionsError) {
-        toast.error("เกิดข้อผิดพลาดในการบันทึกรายการหัก");
+      if (updateError) {
+        toast.error("เกิดข้อผิดพลาด");
+        console.error(updateError);
         setLoading(false);
         return;
       }
-    }
 
-    toast.success("บันทึกสำเร็จ");
+      // Delete old items and deductions, then insert new ones
+      await supabase.from("labor_expense_items").delete().eq("labor_expense_id", expense.id);
+      await supabase.from("labor_expense_deductions").delete().eq("labor_expense_id", expense.id);
+
+      const itemsToInsert = items.map(item => ({
+        labor_expense_id: expense.id,
+        category_id: item.category_id,
+        description: item.description,
+        amount: item.amount,
+        notes: item.notes,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from("labor_expense_items")
+        .insert(itemsToInsert);
+
+      if (itemsError) {
+        toast.error("เกิดข้อผิดพลาดในการบันทึกรายการ");
+        setLoading(false);
+        return;
+      }
+
+      if (deductions.length > 0) {
+        const deductionsToInsert = deductions.map(d => ({
+          labor_expense_id: expense.id,
+          description: d.description,
+          amount: d.amount,
+        }));
+
+        const { error: deductionsError } = await supabase
+          .from("labor_expense_deductions")
+          .insert(deductionsToInsert);
+
+        if (deductionsError) {
+          toast.error("เกิดข้อผิดพลาดในการบันทึกรายการหัก");
+          setLoading(false);
+          return;
+        }
+      }
+
+      toast.success("แก้ไขสำเร็จ");
+    } else {
+      // Insert new expense
+      // Generate invoice number
+      const invoiceNumber = await generateInvoiceNumber();
+      if (!invoiceNumber) {
+        toast.error("ไม่สามารถสร้างเลขที่บิลได้");
+        setLoading(false);
+        return;
+      }
+
+      let receiptUrl = "";
+      if (imageFile) {
+        const invDate = new Date(invoiceDate);
+        const year = invDate.getFullYear();
+        const month = String(invDate.getMonth() + 1).padStart(2, '0');
+        const fileExt = imageFile.name.split(".").pop();
+        
+        // Use the already generated invoice number
+        const safeInvoiceNumber = invoiceNumber.replace(/[\/\\]/g, '-');
+        
+        // Structure: labor_expenses/YYYY/MM/invoice-number.ext
+        const fileName = `labor_expenses/${year}/${month}/${safeInvoiceNumber}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from("receipts")
+          .upload(fileName, imageFile);
+
+        if (uploadError) {
+          toast.error("เกิดข้อผิดพลาดในการอัพโหลดรูปภาพ");
+          setLoading(false);
+          return;
+        }
+
+        const { data: { publicUrl } } = supabase.storage.from("receipts").getPublicUrl(fileName);
+        receiptUrl = publicUrl;
+      }
+
+      const { data: expenseData, error: expenseError } = await supabase
+        .from("labor_expenses")
+        .insert({
+          invoice_number: invoiceNumber,
+          worker_id: workerId || null,
+          project_id: projectId,
+          company_id: companyId,
+          invoice_date: invoiceDate,
+          subtotal,
+          withholding_tax_rate: withholdingTaxRate,
+          withholding_tax_amount: withholdingTaxAmount,
+          total_amount: totalAmount,
+          net_amount: netAmount,
+          notes,
+          receipt_image_url: receiptUrl,
+          created_by: user.id,
+        })
+        .select()
+        .single();
+
+      if (expenseError) {
+        toast.error("เกิดข้อผิดพลาด");
+        console.error(expenseError);
+        setLoading(false);
+        return;
+      }
+
+      const itemsToInsert = items.map(item => ({
+        labor_expense_id: expenseData.id,
+        category_id: item.category_id,
+        description: item.description,
+        amount: item.amount,
+        notes: item.notes,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from("labor_expense_items")
+        .insert(itemsToInsert);
+
+      if (itemsError) {
+        toast.error("เกิดข้อผิดพลาดในการบันทึกรายการ");
+        setLoading(false);
+        return;
+      }
+
+      if (deductions.length > 0) {
+        const deductionsToInsert = deductions.map(d => ({
+          labor_expense_id: expenseData.id,
+          description: d.description,
+          amount: d.amount,
+        }));
+
+        const { error: deductionsError } = await supabase
+          .from("labor_expense_deductions")
+          .insert(deductionsToInsert);
+
+        if (deductionsError) {
+          toast.error("เกิดข้อผิดพลาดในการบันทึกรายการหัก");
+          setLoading(false);
+          return;
+        }
+      }
+
+      toast.success("บันทึกสำเร็จ");
+    }
+    
     setOpen(false);
     resetForm();
     if (onSuccess) onSuccess();

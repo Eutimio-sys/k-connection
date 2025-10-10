@@ -200,6 +200,14 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check if editing and already approved/paid
+    if (expense) {
+      if (expense.paid_at) {
+        toast.error("ไม่สามารถแก้ไขได้ เนื่องจากจ่ายเงินเรียบร้อยแล้ว");
+        return;
+      }
+    }
+    
     // Validate main form data
     const formValidation = validateData(expenseSchema, {
       invoiceNumber: invoiceNumber || "AUTO",
@@ -252,102 +260,148 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Generate auto invoice number if not manually set
-      let finalInvoiceNumber = invoiceNumber;
-      if (!finalInvoiceNumber) {
-        const autoNumber = await generateAutoInvoiceNumber();
-        if (autoNumber) {
-          finalInvoiceNumber = autoNumber;
-        } else {
-          toast.error("ไม่สามารถสร้างเลขที่บิลอัตโนมัติได้");
-          setLoading(false);
-          return;
-        }
-      }
-
-      let receiptImageUrl = null;
-
-      // Upload image if exists with organized folder structure
-      if (receiptImage) {
-        const invDate = new Date(invoiceDate);
-        const year = invDate.getFullYear();
-        const month = String(invDate.getMonth() + 1).padStart(2, '0');
-        const fileExt = receiptImage.name.split('.').pop();
-        
-        // Generate invoice number first to use in filename
-        const { data: invoiceData } = await supabase.rpc('generate_invoice_number', {
-          p_company_id: companyId,
-          p_project_id: projectId,
-          p_invoice_date: invoiceDate,
-          p_expense_type: 'expense'
-        });
-        
-        const invNumber = invoiceData || `TEMP-${Date.now()}`;
-        const safeInvoiceNumber = invNumber.replace(/[\/\\]/g, '-');
-        
-        // Structure: expenses/YYYY/MM/invoice-number.ext
-        const fileName = `expenses/${year}/${month}/${safeInvoiceNumber}.${fileExt}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('receipts')
-          .upload(fileName, receiptImage);
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('receipts')
-          .getPublicUrl(fileName);
-
-        receiptImageUrl = publicUrl;
-      }
-
       const subtotal = calculateSubtotal();
       const vatAmount = calculateVAT();
       const totalAmount = calculateTotal();
 
-      // Insert expense
-      const { data: expense, error: expenseError } = await supabase
-        .from("expenses")
-        .insert({
-          invoice_number: finalInvoiceNumber,
-          tax_invoice_number: taxInvoiceNumber || null,
-          vendor_id: vendorId || null,
-          project_id: projectId,
-          company_id: companyId,
-          invoice_date: invoiceDate,
-          subtotal: subtotal,
-          vat_rate: parseFloat(vatRate),
-          vat_amount: vatAmount,
-          total_amount: totalAmount,
-          receipt_image_url: receiptImageUrl,
-          notes: notes || null,
-          payment_terms: paymentTerms,
-          credit_days: paymentTerms === "credit" ? parseInt(creditDays) || null : null,
-          created_by: user.id,
-        })
-        .select()
-        .single();
+      if (expense) {
+        // Update existing expense
+        const { error: updateError } = await supabase
+          .from("expenses")
+          .update({
+            vendor_id: vendorId || null,
+            project_id: projectId,
+            company_id: companyId,
+            invoice_date: invoiceDate,
+            subtotal: subtotal,
+            vat_rate: parseFloat(vatRate),
+            vat_amount: vatAmount,
+            total_amount: totalAmount,
+            notes: notes || null,
+            payment_terms: paymentTerms,
+            credit_days: paymentTerms === "credit" ? parseInt(creditDays) || null : null,
+            updated_by: user.id,
+          })
+          .eq("id", expense.id);
 
-      if (expenseError) throw expenseError;
+        if (updateError) throw updateError;
 
-      // Insert expense items
-      const itemsData = validItems.map(item => ({
-        expense_id: expense.id,
-        category_id: item.category_id,
-        description: item.description,
-        unit_price: parseFloat(item.unit_price),
-        quantity: parseFloat(item.quantity),
-        amount: item.amount,
-        notes: item.notes || null,
-      }));
+        // Delete old items and insert new ones
+        await supabase.from("expense_items").delete().eq("expense_id", expense.id);
+        
+        const itemsData = validItems.map(item => ({
+          expense_id: expense.id,
+          category_id: item.category_id,
+          description: item.description,
+          unit_price: parseFloat(item.unit_price),
+          quantity: parseFloat(item.quantity),
+          amount: item.amount,
+          notes: item.notes || null,
+        }));
 
-      const { error: itemsError } = await supabase
-        .from("expense_items")
-        .insert(itemsData);
+        const { error: itemsError } = await supabase
+          .from("expense_items")
+          .insert(itemsData);
 
-      if (itemsError) throw itemsError;
+        if (itemsError) throw itemsError;
 
-      toast.success("บันทึกค่าใช้จ่ายสำเร็จ");
+        toast.success("แก้ไขค่าใช้จ่ายสำเร็จ");
+      } else {
+        // Insert new expense
+        // Generate auto invoice number if not manually set
+        let finalInvoiceNumber = invoiceNumber;
+        if (!finalInvoiceNumber) {
+          const autoNumber = await generateAutoInvoiceNumber();
+          if (autoNumber) {
+            finalInvoiceNumber = autoNumber;
+          } else {
+            toast.error("ไม่สามารถสร้างเลขที่บิลอัตโนมัติได้");
+            setLoading(false);
+            return;
+          }
+        }
+
+        let receiptImageUrl = null;
+
+        // Upload image if exists with organized folder structure
+        if (receiptImage) {
+          const invDate = new Date(invoiceDate);
+          const year = invDate.getFullYear();
+          const month = String(invDate.getMonth() + 1).padStart(2, '0');
+          const fileExt = receiptImage.name.split('.').pop();
+          
+          // Generate invoice number first to use in filename
+          const { data: invoiceData } = await supabase.rpc('generate_invoice_number', {
+            p_company_id: companyId,
+            p_project_id: projectId,
+            p_invoice_date: invoiceDate,
+            p_expense_type: 'expense'
+          });
+          
+          const invNumber = invoiceData || `TEMP-${Date.now()}`;
+          const safeInvoiceNumber = invNumber.replace(/[\/\\]/g, '-');
+          
+          // Structure: expenses/YYYY/MM/invoice-number.ext
+          const fileName = `expenses/${year}/${month}/${safeInvoiceNumber}.${fileExt}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('receipts')
+            .upload(fileName, receiptImage);
+
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('receipts')
+            .getPublicUrl(fileName);
+
+          receiptImageUrl = publicUrl;
+        }
+
+        // Insert expense
+        const { data: expenseData, error: expenseError } = await supabase
+          .from("expenses")
+          .insert({
+            invoice_number: finalInvoiceNumber,
+            tax_invoice_number: taxInvoiceNumber || null,
+            vendor_id: vendorId || null,
+            project_id: projectId,
+            company_id: companyId,
+            invoice_date: invoiceDate,
+            subtotal: subtotal,
+            vat_rate: parseFloat(vatRate),
+            vat_amount: vatAmount,
+            total_amount: totalAmount,
+            receipt_image_url: receiptImageUrl,
+            notes: notes || null,
+            payment_terms: paymentTerms,
+            credit_days: paymentTerms === "credit" ? parseInt(creditDays) || null : null,
+            created_by: user.id,
+          })
+          .select()
+          .single();
+
+        if (expenseError) throw expenseError;
+
+        // Insert expense items
+        const itemsData = validItems.map(item => ({
+          expense_id: expenseData.id,
+          category_id: item.category_id,
+          description: item.description,
+          unit_price: parseFloat(item.unit_price),
+          quantity: parseFloat(item.quantity),
+          amount: item.amount,
+          notes: item.notes || null,
+        }));
+
+        const { error: itemsError } = await supabase
+          .from("expense_items")
+          .insert(itemsData);
+
+        if (itemsError) throw itemsError;
+
+        toast.success("บันทึกค่าใช้จ่ายสำเร็จ");
+      }
+      
       setOpen(false);
       resetForm();
       onSuccess();
@@ -385,7 +439,7 @@ const ExpenseDialog = ({ children, onSuccess, expense, open: controlledOpen, onO
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>เพิ่มบิล/ค่าใช้จ่าย</DialogTitle>
+          <DialogTitle>{expense ? 'แก้ไขบิล/ค่าใช้จ่าย' : 'เพิ่มบิล/ค่าใช้จ่าย'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
