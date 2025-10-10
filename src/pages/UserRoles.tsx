@@ -51,6 +51,7 @@ interface Role {
 
 export default function UserRoles() {
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [inactiveUsers, setInactiveUsers] = useState<UserProfile[]>([]);
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [features, setFeatures] = useState<Feature[]>([]);
@@ -71,7 +72,7 @@ export default function UserRoles() {
     try {
       setLoading(true);
       
-      // Fetch all users (only active users)
+      // Fetch active users
       const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
         .select("id, full_name, email, position, department")
@@ -79,6 +80,15 @@ export default function UserRoles() {
         .order("full_name");
 
       if (profilesError) throw profilesError;
+
+      // Fetch inactive users (soft deleted)
+      const { data: inactiveProfilesData, error: inactiveError } = await supabase
+        .from("profiles")
+        .select("id, full_name, email, position, department")
+        .eq("is_active", false)
+        .order("full_name");
+
+      if (inactiveError) throw inactiveError;
 
       // Fetch all user roles
       const { data: rolesData, error: rolesError } = await supabase
@@ -114,8 +124,10 @@ export default function UserRoles() {
       if (permissionsError) throw permissionsError;
 
       setUsers(profilesData || []);
+      setInactiveUsers(inactiveProfilesData || []);
       setUserRoles(rolesData || []);
       setRoles(allRolesData || []);
+      setFeatures(featuresData || []);
       setFeatures(featuresData || []);
       setRolePermissions(permissionsData || []);
     } catch (error: any) {
@@ -191,6 +203,7 @@ export default function UserRoles() {
       
       // Update local state immediately
       setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
+      setInactiveUsers(prev => prev.filter(u => u.id !== userToDelete.id));
       setUserRoles(prev => prev.filter(ur => ur.user_id !== userToDelete.id));
     } catch (error: any) {
       console.error('Delete user error:', error);
@@ -299,10 +312,14 @@ export default function UserRoles() {
       </div>
 
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="users">
             <UserCog className="h-4 w-4 mr-2" />
             จัดการสิทธิ์ผู้ใช้
+          </TabsTrigger>
+          <TabsTrigger value="deleted">
+            <UserCog className="h-4 w-4 mr-2" />
+            ผู้ใช้ที่ถูกลบ ({inactiveUsers.length})
           </TabsTrigger>
           <TabsTrigger value="permissions">
             <Settings className="h-4 w-4 mr-2" />
@@ -398,6 +415,66 @@ export default function UserRoles() {
                   <p className="text-sm text-muted-foreground">{role.description}</p>
                 </div>
               ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="deleted" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserCog className="h-5 w-5" />
+                ผู้ใช้ที่ถูกลบชั่วคราว ({inactiveUsers.length})
+              </CardTitle>
+              <CardDescription>
+                ผู้ใช้เหล่านี้ยังสามารถ login ได้ กดลบเพื่อลบออกจากระบบอย่างถาวร
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {inactiveUsers.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">ไม่มีผู้ใช้ที่ถูกลบชั่วคราว</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ชื่อ-นามสกุล</TableHead>
+                      <TableHead>อีเมล</TableHead>
+                      <TableHead>ตำแหน่ง</TableHead>
+                      <TableHead>แผนก</TableHead>
+                      <TableHead className="text-right">ลบอย่างถาวร</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {inactiveUsers.map((user) => {
+                      const isSaving = saving === user.id;
+                      
+                      return (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">{user.full_name}</TableCell>
+                          <TableCell>{user.email}</TableCell>
+                          <TableCell>{user.position || "-"}</TableCell>
+                          <TableCell>{user.department || "-"}</TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              disabled={isSaving}
+                              onClick={() => {
+                                setUserToDelete(user);
+                                setDeleteDialogOpen(true);
+                              }}
+                              className="gap-1"
+                            >
+                              <Trash2 size={14} />
+                              {isSaving ? "กำลังลบ..." : "ลบอย่างถาวร"}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
