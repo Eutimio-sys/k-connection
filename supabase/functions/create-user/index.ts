@@ -23,12 +23,24 @@ serve(async (req) => {
       }
     );
 
-    const { email, password, full_name, position, department, phone, id_card } = await req.json();
+    const { email, password, full_name, position, department, phone, id_card, role } = await req.json();
 
     // Validate required fields
     if (!email || !password || !full_name) {
       return new Response(
         JSON.stringify({ error: "Missing required fields: email, password, full_name" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid email format" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -84,16 +96,27 @@ serve(async (req) => {
       );
     }
 
-    // Create default worker role
+    // Create user role (default to worker if not specified)
+    const userRole = role || "worker";
     const { error: roleError } = await supabaseClient
       .from("user_roles")
       .insert({
         user_id: authData.user.id,
-        role: "worker",
+        role: userRole,
       });
 
     if (roleError) {
       console.error("Role error:", roleError);
+      // Try to delete the auth user and profile if role creation fails
+      await supabaseClient.auth.admin.deleteUser(authData.user.id);
+      await supabaseClient.from("profiles").delete().eq("id", authData.user.id);
+      return new Response(
+        JSON.stringify({ error: "Failed to assign role: " + roleError.message }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     return new Response(

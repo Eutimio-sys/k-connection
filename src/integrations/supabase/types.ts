@@ -268,6 +268,13 @@ export type Database = {
             referencedRelation: "document_types"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "document_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       document_types: {

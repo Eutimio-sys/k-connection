@@ -74,7 +74,8 @@ export default function UserRoles() {
     position: '',
     department: '',
     phone: '',
-    id_card: ''
+    id_card: '',
+    role: 'worker'
   });
   const [creatingUser, setCreatingUser] = useState(false);
 
@@ -255,7 +256,8 @@ export default function UserRoles() {
         position: '',
         department: '',
         phone: '',
-        id_card: ''
+        id_card: '',
+        role: 'worker'
       });
       await fetchData();
     } catch (error: any) {
@@ -404,7 +406,7 @@ export default function UserRoles() {
                     <DialogHeader>
                       <DialogTitle>เพิ่มผู้ใช้ใหม่</DialogTitle>
                       <DialogDescription>
-                        กรอกข้อมูลผู้ใช้ใหม่ ระบบจะสร้างบัญชีและกำหนดบทบาทเป็น "พนักงาน" โดยอัตโนมัติ
+                        กรอกข้อมูลผู้ใช้ใหม่และกำหนดบทบาท
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
@@ -436,6 +438,24 @@ export default function UserRoles() {
                           onChange={(e) => setNewUserData({ ...newUserData, full_name: e.target.value })}
                           placeholder="นาย/นาง/นางสาว..."
                         />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="role">บทบาท *</Label>
+                        <Select
+                          value={newUserData.role}
+                          onValueChange={(value) => setNewUserData({ ...newUserData, role: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="เลือกบทบาท" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {roles.map((role) => (
+                              <SelectItem key={role.code} value={role.code}>
+                                {role.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="position">ตำแหน่ง</Label>

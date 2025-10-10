@@ -260,19 +260,16 @@ const HRManagement = () => {
 
   return (
     <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-4 mb-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-              <ArrowLeft size={16} />
-            </Button>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              จัดการทรัพยากรบุคคล
-            </h1>
-          </div>
-          <p className="text-muted-foreground text-lg ml-14">จัดการข้อมูลพนักงานและคำขอเอกสาร</p>
+      <div>
+        <div className="flex items-center gap-4 mb-2">
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+            <ArrowLeft size={16} />
+          </Button>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            จัดการทรัพยากรบุคคล
+          </h1>
         </div>
-        <AddEmployeeDialog onSuccess={fetchData} companies={companies} />
+        <p className="text-muted-foreground text-lg ml-14">จัดการข้อมูลพนักงานและคำขอเอกสาร</p>
       </div>
 
       <Card className="bg-gradient-to-r from-background to-muted/20">
