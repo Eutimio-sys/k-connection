@@ -61,6 +61,7 @@ const menuItems = [
 
 export function AppSidebar() {
   const [pendingCount, setPendingCount] = useState(0);
+  const [pendingDocCount, setPendingDocCount] = useState(0);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const { role, permissions, loading } = usePermissions();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -84,6 +85,7 @@ export function AppSidebar() {
 
   useEffect(() => {
     fetchPendingCount();
+    fetchPendingDocCount();
     if (currentUserId) {
       fetchUnreadChatCount();
     }
@@ -105,6 +107,7 @@ export function AppSidebar() {
       .on("postgres_changes", { event: "*", schema: "public", table: "expenses" }, fetchPendingCount)
       .on("postgres_changes", { event: "*", schema: "public", table: "labor_expenses" }, fetchPendingCount)
       .on("postgres_changes", { event: "*", schema: "public", table: "leave_requests" }, fetchPendingCount)
+      .on("postgres_changes", { event: "*", schema: "public", table: "document_requests" }, fetchPendingDocCount)
       .on("postgres_changes", { event: "*", schema: "public", table: "general_chat" }, () => {
         if (currentUserId) fetchUnreadChatCount();
       })
@@ -129,6 +132,14 @@ export function AppSidebar() {
 
     const total = (expenses.count || 0) + (laborExpenses.count || 0) + (leaveRequests.count || 0);
     setPendingCount(total);
+  };
+
+  const fetchPendingDocCount = async () => {
+    const { count } = await supabase
+      .from("document_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending");
+    setPendingDocCount(count || 0);
   };
 
   const fetchUnreadChatCount = async () => {
@@ -204,13 +215,18 @@ export function AppSidebar() {
                     >
                       <item.icon className="w-5 h-5" />
                       <span className="text-sm">{item.title}</span>
-                      {item.url === "/approvals" && pendingCount > 0 && (
+                      {item.url === "/hr-management" && pendingDocCount > 0 && (
                         <Badge variant="destructive" className="ml-auto">
+                          {pendingDocCount}
+                        </Badge>
+                      )}
+                      {item.url === "/approvals" && pendingCount > 0 && (
+                        <Badge variant="destructive">
                           {pendingCount}
                         </Badge>
                       )}
                       {item.url === "/chat" && unreadChatCount > 0 && (
-                        <Badge variant="destructive" className="ml-auto">
+                        <Badge variant="destructive">
                           {unreadChatCount}
                         </Badge>
                       )}

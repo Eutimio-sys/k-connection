@@ -69,10 +69,10 @@ serve(async (req) => {
       );
     }
 
-    // Create profile
+    // Upsert profile to avoid conflicts with signup trigger
     const { error: profileError } = await supabaseClient
       .from("profiles")
-      .insert({
+      .upsert({
         id: authData.user.id,
         email,
         full_name,
@@ -81,7 +81,8 @@ serve(async (req) => {
         phone: phone || null,
         id_card: id_card || null,
         is_active: true,
-      });
+      }, { onConflict: 'id' });
+
 
     if (profileError) {
       console.error("Profile error:", profileError);
