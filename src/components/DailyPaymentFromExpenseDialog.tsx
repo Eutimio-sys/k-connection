@@ -65,7 +65,7 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
       supabase.from("payment_accounts").select("*").eq("is_active", true).order("name").then(({ data }) => setPaymentAccounts(data || []));
       supabase.from("payment_types").select("*").eq("is_active", true).order("name").then(({ data }) => setPaymentTypes(data || []));
     }
-  }, [open, expenseType, filterDate]);
+  }, [open, expenseType]);
 
   const fetchPaidExpenses = async () => {
     const { data } = await supabase
@@ -96,7 +96,7 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
           vendor:vendors(id, name, bank_name, bank_account)
         `)
         .eq("status", "approved")
-        .eq("invoice_date", filterDate);
+        .order("invoice_date", { ascending: false });
 
       if (!error && data) {
         setMaterialItems(data as any);
@@ -115,7 +115,7 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
           worker:workers(id, full_name, bank_name, bank_account)
         `)
         .eq("status", "approved")
-        .eq("invoice_date", filterDate);
+        .order("invoice_date", { ascending: false });
 
       if (!error && data) {
         setLaborItems(data as any);
@@ -354,32 +354,14 @@ const DailyPaymentFromExpenseDialog = ({ onSuccess }: { onSuccess?: () => void }
 
           <div className="border rounded-lg p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <Label>เลือกรายการที่ต้องจ่าย</Label>
-              <div className="flex items-center gap-2">
-                <Label className="text-sm text-muted-foreground">
-                  {expenseType === "salary" ? "เดือน/ปี:" : "วันที่ใบแจ้งหนี้:"}
-                </Label>
-                <Input 
-                  type={expenseType === "salary" ? "month" : "date"}
-                  value={expenseType === "salary" ? filterDate.slice(0, 7) : filterDate}
-                  onChange={(e) => {
-                    if (expenseType === "salary") {
-                      setFilterDate(e.target.value + "-01");
-                    } else {
-                      setFilterDate(e.target.value);
-                    }
-                    setSelectedItems([]);
-                  }}
-                  className="w-40"
-                />
-              </div>
+              <Label>เลือกรายการที่ต้องจ่าย ({items.length} รายการ)</Label>
             </div>
             <div className="max-h-80 overflow-y-auto">
               {items.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground py-8 text-center">
                   {expenseType === "salary" 
-                    ? "ไม่มีรายการเงินเดือนที่บันทึกแล้วในเดือนนี้" 
-                    : "ไม่มีรายการที่อนุมัติแล้วในวันที่นี้"}
+                    ? "ไม่มีรายการเงินเดือนที่บันทึกแล้ว" 
+                    : "ไม่มีรายการที่อนุมัติแล้ว กรุณาอนุมัติบิลก่อน"}
                 </p>
               ) : (
                 <div className="space-y-2">
