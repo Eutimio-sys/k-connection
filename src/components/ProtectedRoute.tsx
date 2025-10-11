@@ -1,37 +1,13 @@
 import { useEffect, useState, useRef } from "react";
 import { usePermissions } from "@/hooks/usePermissions";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { AccessDenied } from "./AccessDenied";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   featureCode?: string;
   requiredRoles?: string[];
 }
-
-export const ROLE_FEATURES: Record<string, string[]> = {
-  admin: ["*"],
-  manager: [
-    "dashboard","projects","tasks","approvals","expenses","labor_expenses",
-    "daily_payments","accounting","payroll","attendance","leave_management",
-    "hr_management","foreign_workers","employees","settings"
-  ],
-  purchaser: [
-    "dashboard","projects","expenses","labor_expenses","daily_payments",
-    "accounting","attendance","leave_management","foreign_workers","settings"
-  ],
-  project_manager: [
-    "dashboard","projects","tasks","approvals","expenses","labor_expenses",
-    "daily_payments","attendance","leave_management"
-  ],
-  foreman: [
-    "dashboard","projects","tasks","daily_payments","attendance","leave_management"
-  ],
-  worker: [
-    "dashboard","projects","tasks","attendance","leave_management"
-  ],
-};
 
 export const ProtectedRoute = ({
   children,
@@ -46,10 +22,15 @@ export const ProtectedRoute = ({
   useEffect(() => {
     if (loading) return;
 
+    // If no role assigned, deny access
+    if (!role) {
+      setHasAccess(false);
+      return;
+    }
+
     // Admin bypass: full access
     if (role === "admin") {
       setHasAccess(true);
-      console.log("ProtectedRoute", { role, featureCode, requiredRoles, decision: "admin-bypass" });
       return;
     }
 
@@ -57,7 +38,6 @@ export const ProtectedRoute = ({
     if (requiredRoles && requiredRoles.length > 0) {
       if (!requiredRoles.includes(role)) {
         setHasAccess(false);
-        console.log("ProtectedRoute", { role, featureCode, requiredRoles, decision: "blocked-requiredRoles" });
         return;
       }
     }
@@ -66,16 +46,8 @@ export const ProtectedRoute = ({
     if (featureCode) {
       const allowed = permissions[featureCode] === true;
       setHasAccess(allowed);
-      console.log("ProtectedRoute", {
-        role,
-        featureCode,
-        requiredRoles,
-        permissionsKeys: Object.keys(permissions || {}),
-        allowed,
-      });
     } else {
       setHasAccess(true);
-      console.log("ProtectedRoute", { role, featureCode, requiredRoles, decision: "no-featureCode-allow" });
     }
   }, [loading, role, permissions, featureCode, requiredRoles]);
 
@@ -98,11 +70,6 @@ export const ProtectedRoute = ({
     );
   }
 
-  // Immediate bypass for admin to prevent a one-render redirect flicker
-  if (role === "admin") {
-    return <>{children}</>;
-  }
-
   // Wait until access is determined
   if (hasAccess === null) {
     return (
@@ -113,19 +80,7 @@ export const ProtectedRoute = ({
   }
 
   if (hasAccess === false) {
-    return (
-      <main className="min-h-screen flex items-center justify-center p-6">
-        <div className="max-w-md w-full">
-          <Alert variant="destructive">
-            <ShieldAlert className="h-4 w-4" />
-            <AlertTitle>ไม่มีสิทธิ์เข้าถึง</AlertTitle>
-            <AlertDescription>
-              คุณไม่มีสิทธิ์เข้าถึงหน้านี้ โปรดติดต่อผู้ดูแลระบบ
-            </AlertDescription>
-          </Alert>
-        </div>
-      </main>
-    );
+    return <AccessDenied />;
   }
 
   return <>{children}</>;

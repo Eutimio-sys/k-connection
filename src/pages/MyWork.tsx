@@ -141,23 +141,45 @@ export default function MyWork() {
     const endOfDay = new Date(selectedDate);
     endOfDay.setHours(23, 59, 59, 999);
 
-    let query = supabase
+    const { data, error } = await supabase
       .from("tasks")
       .select(`
         *,
         profiles!tasks_assigned_to_fkey(full_name),
         projects(name),
-        created_by_profile:profiles!tasks_created_by_fkey(full_name),
-        task_assignees(profiles(full_name))
+        created_by_profile:profiles!tasks_created_by_fkey(full_name)
       `)
       .gte("due_date", startOfDay.toISOString())
-      .lte("due_date", endOfDay.toISOString());
+      .lte("due_date", endOfDay.toISOString())
+      .order("due_time", { ascending: true });
 
-    // ให้ทุกคนเห็นงานทั้งหมดในวันนั้น โดยไม่จำกัดตามบทบาท
-    // หมายเหตุ: สิทธิ์การมองเห็นจริงจะเป็นไปตามนโยบาย RLS ของฐานข้อมูล
+    if (error) {
+      console.error("Error fetching tasks:", error);
+      return;
+    }
 
-    const { data } = await query.order("due_time", { ascending: true });
-    if (data) setTasks(data as any);
+    // Fetch task assignees separately
+    if (data && data.length > 0) {
+      const taskIds = data.map(t => t.id);
+      const { data: assignees } = await supabase
+        .from("task_assignees")
+        .select(`
+          task_id,
+          profiles(full_name)
+        `)
+        .in("task_id", taskIds);
+
+      const tasksWithAssignees = data.map(task => ({
+        ...task,
+        task_assignees: (assignees || [])
+          .filter(a => a.task_id === task.id)
+          .map(a => ({ profiles: a.profiles }))
+      }));
+
+      setTasks(tasksWithAssignees as any);
+    } else {
+      setTasks([]);
+    }
   };
 
   // Fetch avatars for days with tasks in the current month

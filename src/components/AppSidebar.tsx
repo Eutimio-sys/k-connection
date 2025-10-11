@@ -67,17 +67,15 @@ export function AppSidebar() {
   const { role, permissions, loading } = usePermissions();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  // Filter menu items based on permissions
-  const visibleMenuItems = menuItems.filter((item) => {
-        if (role === "admin") return true; // Admin sees all
-        // Hide items restricted to specific roles
-        if ((item as any).requiredRoles && !(item as any).requiredRoles.includes(role)) {
-          return false;
-        }
-        if (!item.featureCode) return true; // Always show items without feature code
-        if (loading) return false; // Hide during loading
-        return hasFeatureAccess(permissions, item.featureCode);
-      });
+  // Filter menu items based on permissions - wait until loading is complete
+  const visibleMenuItems = loading ? [] : menuItems.filter((item) => {
+    if (role === "admin") return true;
+    if ((item as any).requiredRoles && !(item as any).requiredRoles.includes(role)) {
+      return false;
+    }
+    if (!item.featureCode) return true;
+    return hasFeatureAccess(permissions, item.featureCode);
+  });
 
   useEffect(() => {
     // Get current user
