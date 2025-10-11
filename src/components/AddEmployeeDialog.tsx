@@ -111,7 +111,20 @@ export default function AddEmployeeDialog({ onSuccess, companies }: AddEmployeeD
         onSuccess();
       }
     } catch (error: any) {
-      toast.error(error.message || "เกิดข้อผิดพลาด");
+      console.error("Error creating employee:", error);
+      
+      // Handle specific error cases
+      let errorMessage = "เกิดข้อผิดพลาด";
+      
+      if (error.message?.includes("already been registered") || error.message?.includes("already registered")) {
+        errorMessage = "อีเมลนี้ถูกใช้งานแล้ว กรุณาใช้อีเมลอื่น";
+      } else if (error.message?.includes("email")) {
+        errorMessage = "รูปแบบอีเมลไม่ถูกต้อง";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
