@@ -23,6 +23,7 @@ import { NavLink } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useFeatureVisibility } from "@/contexts/FeatureVisibilityContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   Sidebar,
   SidebarContent,
@@ -38,26 +39,26 @@ import { Badge } from "@/components/ui/badge";
 
 
 const menuItems = [
-  { title: "หน้าแรก", url: "/", icon: Home },
-  { title: "แดชบอร์ด", url: "/dashboard", icon: LayoutDashboard },
-  { title: "งานของฉัน", url: "/mywork", icon: CheckCircle },
-  { title: "เช็คอิน/เอาท์", url: "/attendance", icon: Clock },
-  { title: "แชทรวม", url: "/chat", icon: MessageCircle },
-  { title: "โครงการ", url: "/projects", icon: FolderKanban },
-  { title: "อนุมัติรายการ", url: "/approvals", icon: CheckCircle },
-  { title: "บัญชีวัสดุ", url: "/accounting", icon: FileText },
-  { title: "บัญชีค่าแรง", url: "/labor-accounting", icon: Wallet },
-  { title: "บัญชีเงินเดือน", url: "/payroll", icon: Wallet },
-  { title: "รายการโอนเงิน", url: "/daily-payments", icon: Wallet },
-  { title: "ติดตามเอกสารภาษี", url: "/tax-documents", icon: Receipt },
-  { title: "วางแผนภาษี", url: "/tax-planning", icon: TrendingUp },
-  { title: "ระบบลา", url: "/leave", icon: Calendar },
-  { title: "จัดการสิทธิ์การมองเห็น", url: "/visibility", icon: Shield },
-  { title: "จัดการสิทธิ์โครงการ", url: "/project-access", icon: UserCheck },
-  { title: "จัดการพนักงาน", url: "/hr-management", icon: UserCog },
-  { title: "จัดการคนงานต่างด้าว", url: "/foreign-workers", icon: Globe },
-  { title: "โปรไฟล์", url: "/profile", icon: User },
-  { title: "ตั้งค่า", url: "/settings", icon: Settings },
+  { title: "หน้าแรก", url: "/", icon: Home, featureCode: null },
+  { title: "แดชบอร์ด", url: "/dashboard", icon: LayoutDashboard, featureCode: "dashboard" },
+  { title: "งานของฉัน", url: "/mywork", icon: CheckCircle, featureCode: "mywork" },
+  { title: "เช็คอิน/เอาท์", url: "/attendance", icon: Clock, featureCode: "attendance" },
+  { title: "แชทรวม", url: "/chat", icon: MessageCircle, featureCode: "chat" },
+  { title: "โครงการ", url: "/projects", icon: FolderKanban, featureCode: "projects" },
+  { title: "อนุมัติรายการ", url: "/approvals", icon: CheckCircle, featureCode: "approvals" },
+  { title: "บัญชีวัสดุ", url: "/accounting", icon: FileText, featureCode: "accounting" },
+  { title: "บัญชีค่าแรง", url: "/labor-accounting", icon: Wallet, featureCode: "labor-accounting" },
+  { title: "บัญชีเงินเดือน", url: "/payroll", icon: Wallet, featureCode: "payroll" },
+  { title: "รายการโอนเงิน", url: "/daily-payments", icon: Wallet, featureCode: "daily-payments" },
+  { title: "ติดตามเอกสารภาษี", url: "/tax-documents", icon: Receipt, featureCode: "tax-documents" },
+  { title: "วางแผนภาษี", url: "/tax-planning", icon: TrendingUp, featureCode: "tax-planning" },
+  { title: "ระบบลา", url: "/leave", icon: Calendar, featureCode: "leave" },
+  { title: "จัดการสิทธิ์การมองเห็น", url: "/visibility", icon: Shield, requiredRoles: ["admin"] },
+  { title: "จัดการสิทธิ์โครงการ", url: "/project-access", icon: UserCheck, requiredRoles: ["admin"] },
+  { title: "จัดการพนักงาน", url: "/hr-management", icon: UserCog, featureCode: "hr-management" },
+  { title: "จัดการคนงานต่างด้าว", url: "/foreign-workers", icon: Globe, featureCode: "foreign-workers" },
+  { title: "โปรไฟล์", url: "/profile", icon: User, featureCode: "profile" },
+  { title: "ตั้งค่า", url: "/settings", icon: Settings, requiredRoles: ["admin"] },
 ];
 
 export function AppSidebar() {
@@ -65,14 +66,26 @@ export function AppSidebar() {
   const [pendingDocCount, setPendingDocCount] = useState(0);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const { visibleFeatures, isAdmin } = useFeatureVisibility();
+  const { hasPermission, loading: permLoading } = usePermissions();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  // Filter menu items based on visibility
+  // Filter menu items based on RBAC permissions
   const visibleMenuItems = menuItems.filter((item) => {
+    if (permLoading) return false;
     if (isAdmin) return true;
     
-    const featureCode = item.url.substring(1); // Remove leading slash
-    return visibleFeatures.has(featureCode) || visibleFeatures.has('all') || item.url === '/' || item.url === '/profile';
+    // Check role-based access
+    if ('requiredRoles' in item && item.requiredRoles) {
+      return false; // Non-admin can't see admin-only items
+    }
+    
+    // Check feature-based access
+    if ('featureCode' in item && item.featureCode) {
+      return hasPermission(item.featureCode);
+    }
+    
+    // Allow home and profile for everyone
+    return item.url === '/' || item.url === '/profile';
   });
 
   useEffect(() => {
