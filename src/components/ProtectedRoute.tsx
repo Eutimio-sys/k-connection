@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { usePermissions } from "@/hooks/usePermissions";
+
 import { useToast } from "@/hooks/use-toast";
 import { AccessDenied } from "./AccessDenied";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,20 +15,19 @@ export const ProtectedRoute = ({
   featureCode,
   requiredRoles,
 }: ProtectedRouteProps) => {
-  const { loading } = usePermissions();
+  const [checking, setChecking] = useState(true);
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const { toast } = useToast();
   const deniedToastShown = useRef(false);
 
   useEffect(() => {
     const checkAccess = async () => {
-      if (loading) return;
-
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
         setHasAccess(false);
+        setChecking(false);
         return;
       }
 
@@ -41,16 +40,18 @@ export const ProtectedRoute = ({
         
         if (error || data !== true) {
           setHasAccess(false);
+          setChecking(false);
           return;
         }
       }
 
       // All authenticated users have access (except admin-only pages)
       setHasAccess(true);
+      setChecking(false);
     };
 
     checkAccess();
-  }, [loading, requiredRoles]);
+  }, [requiredRoles]);
 
   useEffect(() => {
     if (hasAccess === false && !deniedToastShown.current) {
@@ -63,7 +64,7 @@ export const ProtectedRoute = ({
     }
   }, [hasAccess, toast]);
 
-  if (loading) {
+  if (checking) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <p className="text-muted-foreground">กำลังตรวจสอบสิทธิ์...</p>
