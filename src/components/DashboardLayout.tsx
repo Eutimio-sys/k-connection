@@ -35,7 +35,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         if (!bootstrapped) {
           try {
             await supabase.rpc('ensure_profile_for_current_user');
-            await supabase.rpc('grant_admin_to_current_user');
           } catch (e) {
             console.error('Bootstrap RPC error', e);
           } finally {
@@ -55,7 +54,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         setUserEmail(session.user.email || "");
         try {
           await supabase.rpc('ensure_profile_for_current_user');
-          await supabase.rpc('grant_admin_to_current_user');
         } catch (e) {
           console.error('Bootstrap RPC error', e);
         } finally {
