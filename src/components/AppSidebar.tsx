@@ -67,6 +67,7 @@ export function AppSidebar() {
   const { role, permissions, loading } = usePermissions();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [verifiedMenuItems, setVerifiedMenuItems] = useState<typeof menuItems>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Verify menu items with backend for requiredRoles
   useEffect(() => {
@@ -82,10 +83,18 @@ export function AppSidebar() {
         return;
       }
 
+      // Check if user is admin
+      const { data: adminCheck } = await supabase.rpc('has_role', {
+        _user_id: user.id,
+        _role: 'admin'
+      });
+      const userIsAdmin = adminCheck === true;
+      setIsAdmin(userIsAdmin);
+
       const verified = await Promise.all(
         menuItems.map(async (item) => {
           // Admin sees everything
-          if (role === "admin") return { item, show: true };
+          if (userIsAdmin) return { item, show: true };
           
           // If item requires specific roles, verify with backend
           if ((item as any).requiredRoles && (item as any).requiredRoles.length > 0) {

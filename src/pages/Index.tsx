@@ -33,6 +33,24 @@ interface MenuItem {
 const Index = () => {
   const navigate = useNavigate();
   const { role, permissions, loading } = usePermissions();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      const { data } = await supabase.rpc('has_role', {
+        _user_id: user.id,
+        _role: 'admin'
+      });
+      setIsAdmin(data === true);
+    };
+    
+    if (!loading) {
+      checkAdmin();
+    }
+  }, [loading]);
 
   const allMenuItems: MenuItem[] = [
     {
@@ -158,7 +176,7 @@ const Index = () => {
   ];
 
   const visibleMenuItems = allMenuItems.filter((item) => {
-    if (role === "admin") return true; // Admin sees all
+    if (isAdmin) return true; // Admin sees all
     if (!item.featureCode) return true; // Always show items without feature code
     return hasFeatureAccess(permissions, item.featureCode);
   });
