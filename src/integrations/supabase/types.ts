@@ -1821,6 +1821,33 @@ export type Database = {
           },
         ]
       }
+      user_feature_visibility: {
+        Row: {
+          can_view: boolean
+          created_at: string
+          feature_code: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          can_view?: boolean
+          created_at?: string
+          feature_code: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          can_view?: boolean
+          created_at?: string
+          feature_code?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_permissions: {
         Row: {
           can_access: boolean
