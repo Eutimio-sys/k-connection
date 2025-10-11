@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -106,72 +106,32 @@ export default function UserRoles() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      
-      // Fetch active users
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, full_name, email, position, department")
-        .eq("is_active", true)
-        .order("full_name");
 
-      if (profilesError) throw profilesError;
+      const [profilesRes, inactiveProfilesRes, rolesRes, allRolesRes, featuresRes, permissionsRes, userPermsRes] = await Promise.all([
+        supabase.from("profiles").select("id, full_name, email, position, department").eq("is_active", true).order("full_name"),
+        supabase.from("profiles").select("id, full_name, email, position, department").eq("is_active", false).order("full_name"),
+        supabase.from("user_roles").select("*").order("created_at"),
+        supabase.from("roles").select("*").eq("is_active", true).order("name"),
+        supabase.from("features").select("*").eq("is_active", true).order("category, name"),
+        supabase.from("role_permissions").select("*"),
+        supabase.from("user_permissions").select("*")
+      ]);
 
-      // Fetch inactive users (soft deleted)
-      const { data: inactiveProfilesData, error: inactiveError } = await supabase
-        .from("profiles")
-        .select("id, full_name, email, position, department")
-        .eq("is_active", false)
-        .order("full_name");
+      if (profilesRes.error) throw profilesRes.error;
+      if (inactiveProfilesRes.error) throw inactiveProfilesRes.error;
+      if (rolesRes.error) throw rolesRes.error;
+      if (allRolesRes.error) throw allRolesRes.error;
+      if (featuresRes.error) throw featuresRes.error;
+      if (permissionsRes.error) throw permissionsRes.error;
+      if (userPermsRes.error) throw userPermsRes.error;
 
-      if (inactiveError) throw inactiveError;
-
-      // Fetch all user roles
-      const { data: rolesData, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("*")
-        .order("created_at");
-
-      if (rolesError) throw rolesError;
-
-      // Fetch all roles from roles table
-      const { data: allRolesData, error: allRolesError } = await supabase
-        .from("roles")
-        .select("*")
-        .eq("is_active", true)
-        .order("name");
-
-      if (allRolesError) throw allRolesError;
-
-      // Fetch all features
-      const { data: featuresData, error: featuresError } = await supabase
-        .from("features")
-        .select("*")
-        .eq("is_active", true)
-        .order("category, name");
-
-      if (featuresError) throw featuresError;
-
-      // Fetch role permissions
-      const { data: permissionsData, error: permissionsError } = await supabase
-        .from("role_permissions")
-        .select("*");
-
-      if (permissionsError) throw permissionsError;
-
-      // Fetch user permissions
-      const { data: userPermsData, error: userPermsError } = await supabase
-        .from("user_permissions")
-        .select("*");
-
-      if (userPermsError) throw userPermsError;
-
-      setUsers(profilesData || []);
-      setInactiveUsers(inactiveProfilesData || []);
-      setUserRoles(rolesData || []);
-      setRoles(allRolesData || []);
-      setFeatures(featuresData || []);
-      setRolePermissions(permissionsData || []);
-      setUserPermissions(userPermsData || []);
+      setUsers(profilesRes.data || []);
+      setInactiveUsers(inactiveProfilesRes.data || []);
+      setUserRoles(rolesRes.data || []);
+      setRoles(allRolesRes.data || []);
+      setFeatures(featuresRes.data || []);
+      setRolePermissions(permissionsRes.data || []);
+      setUserPermissions(userPermsRes.data || []);
     } catch (error: any) {
       toast.error("เกิดข้อผิดพลาดในการโหลดข้อมูล: " + error.message);
     } finally {
@@ -453,14 +413,16 @@ export default function UserRoles() {
     }
   };
 
-  // Group features by category
-  const featuresByCategory = features.reduce((acc, feature) => {
-    if (!acc[feature.category]) {
-      acc[feature.category] = [];
-    }
-    acc[feature.category].push(feature);
-    return acc;
-  }, {} as Record<string, Feature[]>);
+  // Group features by category (memoized)
+  const featuresByCategory = useMemo(() => {
+    return features.reduce((acc, feature) => {
+      if (!acc[feature.category]) {
+        acc[feature.category] = [];
+      }
+      acc[feature.category].push(feature);
+      return acc;
+    }, {} as Record<string, Feature[]>);
+  }, [features]);
 
 
   if (loading || permLoading) {
