@@ -9,105 +9,82 @@ interface UserPermissions {
 }
 
 export const usePermissions = (): UserPermissions => {
-  const [role, setRole] = useState<string>("");
+  const [role, setRole] = useState<string | null>(null);
   const [permissions, setPermissions] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     let mounted = true;
-    
-    const fetchPermissionsForUser = async (userId: string) => {
+
+    const fetchPermissions = async () => {
       try {
-        // Get user roles from user_roles table
+        setLoading(true);
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user || !mounted) {
+          setRole(null);
+          setPermissions({});
+          setIsAdmin(false);
+          setLoading(false);
+          return;
+        }
+
+        // Check if user is admin first
+        const { data: adminCheck } = await supabase.rpc('has_role', {
+          _user_id: user.id,
+          _role: 'admin'
+        });
+        
+        if (!mounted) return;
+        
+        const userIsAdmin = adminCheck === true;
+        setIsAdmin(userIsAdmin);
+
+        // Get user's primary role
         const { data: userRoles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", userId);
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .limit(1)
+          .single();
 
         if (!mounted) return;
+        setRole(userRoles?.role || null);
 
-        if (!userRoles || userRoles.length === 0) {
-          setRole("");
+        // If admin, grant all permissions
+        if (userIsAdmin) {
           setPermissions({});
           setLoading(false);
           return;
         }
 
-        // Use first role as primary role (or admin if exists)
-        const primaryRole = userRoles.find(r => r.role === "admin")?.role || userRoles[0].role;
-        setRole(primaryRole);
-
-        // Get role permissions for all user's roles
-        const allRoles = userRoles.map(r => r.role);
-        const { data: rolePermissions } = await supabase
-          .from("role_permissions")
-          .select("feature_code, can_access")
-          .in("role", allRoles);
-
-        // Get user-specific permissions
-        const { data: userPermissions } = await supabase
-          .from("user_permissions")
-          .select("feature_code, can_access")
-          .eq("user_id", userId);
-
-        if (!mounted) return;
-
-        // Convert to object for easy lookup
-        const permissionsMap: Record<string, boolean> = {};
-        
-        // First, add role permissions
-        rolePermissions?.forEach((perm) => {
-          permissionsMap[perm.feature_code] =
-            permissionsMap[perm.feature_code] === true || perm.can_access === true;
-        });
-
-        // Then, override with user-specific permissions
-        userPermissions?.forEach((perm) => {
-          permissionsMap[perm.feature_code] = perm.can_access;
-        });
-
-        setPermissions(permissionsMap);
+        setPermissions({});
         setLoading(false);
       } catch (error) {
-        console.error("Error fetching permissions:", error);
+        console.error('Error fetching permissions:', error);
         if (mounted) {
+          setRole(null);
+          setPermissions({});
+          setIsAdmin(false);
           setLoading(false);
         }
       }
     };
 
-    // Initial session fetch
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        fetchPermissionsForUser(session.user.id);
-      } else {
-        setRole("");
-        setPermissions({});
-        setLoading(false);
-      }
-    });
+    fetchPermissions();
 
-    // Listen to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user) {
-        setTimeout(() => {
-          fetchPermissionsForUser(session.user!.id);
-        }, 0);
-      } else {
-        setRole("");
-        setPermissions({});
-        setLoading(false);
-      }
+    const { data: authListener } = supabase.auth.onAuthStateChange(() => {
+      fetchPermissions();
     });
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      authListener?.subscription.unsubscribe();
     };
   }, []);
 
-
-  return { role, permissions, loading, isAdmin: role === 'admin' };
+  return { role, permissions, loading, isAdmin };
 };
 
 // Helper to check if user has access to a feature

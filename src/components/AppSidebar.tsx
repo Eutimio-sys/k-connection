@@ -64,48 +64,28 @@ export function AppSidebar() {
   const [pendingCount, setPendingCount] = useState(0);
   const [pendingDocCount, setPendingDocCount] = useState(0);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
-  const { loading } = usePermissions();
+  const { isAdmin, loading } = usePermissions();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [verifiedMenuItems, setVerifiedMenuItems] = useState<typeof menuItems>([]);
-  const [isAdmin, setIsAdmin] = useState(false);
 
-  // Verify menu items with backend for admin check
+  // Filter menu items based on admin status
   useEffect(() => {
-    const verifyMenuAccess = async () => {
-      if (loading) {
-        setVerifiedMenuItems([]);
-        return;
+    if (loading) {
+      setVerifiedMenuItems([]);
+      return;
+    }
+
+    // Filter menu items - hide admin-only items from non-admin users
+    const filtered = menuItems.filter((item) => {
+      const requiredRoles = (item as any).requiredRoles as string[] | undefined;
+      if (requiredRoles && requiredRoles.includes('admin') && !isAdmin) {
+        return false;
       }
+      return true;
+    });
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setVerifiedMenuItems([]);
-        return;
-      }
-
-      // Check if user is admin
-      const { data: adminCheck } = await supabase.rpc('has_role', {
-        _user_id: user.id,
-        _role: 'admin'
-      });
-      const userIsAdmin = adminCheck === true;
-      setIsAdmin(userIsAdmin);
-
-      // Filter menu items - hide admin-only items from non-admin users
-      const filtered = menuItems.filter((item) => {
-        // Check if item requires admin role
-        const requiredRoles = (item as any).requiredRoles as string[] | undefined;
-        if (requiredRoles && requiredRoles.includes('admin') && !userIsAdmin) {
-          return false;
-        }
-        return true;
-      });
-
-      setVerifiedMenuItems(filtered);
-    };
-
-    verifyMenuAccess();
-  }, [loading]);
+    setVerifiedMenuItems(filtered);
+  }, [loading, isAdmin]);
 
   useEffect(() => {
     // Get current user

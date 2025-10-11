@@ -32,25 +32,7 @@ interface MenuItem {
 
 const Index = () => {
   const navigate = useNavigate();
-  const { loading } = usePermissions();
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    const checkAdmin = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      
-      const { data } = await supabase.rpc('has_role', {
-        _user_id: user.id,
-        _role: 'admin'
-      });
-      setIsAdmin(data === true);
-    };
-    
-    if (!loading) {
-      checkAdmin();
-    }
-  }, [loading]);
+  const { isAdmin, loading } = usePermissions();
 
   const allMenuItems: MenuItem[] = [
     {
