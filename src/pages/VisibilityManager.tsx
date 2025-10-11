@@ -35,15 +35,23 @@ export default function VisibilityManager() {
   const [userVisibility, setUserVisibility] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
       try {
+        setLoading(true);
+        setError(null);
+
         // Load non-admin users
-        const { data: profiles } = await supabase
+        const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
           .select('id, full_name, email')
           .eq('is_active', true);
+
+        if (profilesError) {
+          throw profilesError;
+        }
 
         if (profiles) {
           // Filter out admins
@@ -61,25 +69,33 @@ export default function VisibilityManager() {
         }
 
         // Load features
-        const { data: featuresData } = await supabase
+        const { data: featuresData, error: featuresError } = await supabase
           .from('features')
           .select('code, name, category')
           .eq('is_active', true)
           .order('category', { ascending: true })
           .order('name', { ascending: true });
 
+        if (featuresError) {
+          throw featuresError;
+        }
+
         setFeatures(featuresData || []);
       } catch (error) {
         console.error('Error loading data:', error);
+        setError('ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
       } finally {
         setLoading(false);
       }
     };
 
-    if (isAdmin && !contextLoading) {
-      loadData();
-    } else if (!contextLoading) {
-      setLoading(false);
+    // Only load if context is ready
+    if (!contextLoading) {
+      if (isAdmin) {
+        loadData();
+      } else {
+        setLoading(false);
+      }
     }
   }, [isAdmin, contextLoading]);
 
@@ -159,7 +175,10 @@ export default function VisibilityManager() {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-screen">
-          <Loader2 className="h-8 w-8 animate-spin" />
+          <div className="text-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+            <p className="text-muted-foreground">กำลังโหลดข้อมูล...</p>
+          </div>
         </div>
       </DashboardLayout>
     );
@@ -174,6 +193,24 @@ export default function VisibilityManager() {
               <CardTitle>ไม่มีสิทธิ์เข้าถึง</CardTitle>
               <CardDescription>หน้านี้สำหรับผู้ดูแลระบบเท่านั้น</CardDescription>
             </CardHeader>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <Card>
+            <CardHeader>
+              <CardTitle>เกิดข้อผิดพลาด</CardTitle>
+              <CardDescription>{error}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={() => window.location.reload()}>โหลดใหม่</Button>
+            </CardContent>
           </Card>
         </div>
       </DashboardLayout>
