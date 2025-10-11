@@ -31,7 +31,8 @@ export default function VisibilityManager() {
   const { toast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [features, setFeatures] = useState<Feature[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const LAST_SELECTED_KEY = 'visibility_manager_last_user';
+  const [selectedUserId, setSelectedUserId] = useState<string>(() => localStorage.getItem(LAST_SELECTED_KEY) || '');
   const [userVisibility, setUserVisibility] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -99,27 +100,38 @@ export default function VisibilityManager() {
     }
   }, [isAdmin, contextLoading]);
 
+  const refreshUserVisibility = async (userId: string) => {
+    try {
+      const { data } = await supabase
+        .from('user_feature_visibility')
+        .select('feature_code, can_view')
+        .eq('user_id', userId);
+
+      const visibilityMap: Record<string, boolean> = {};
+      data?.forEach((v: UserVisibility) => {
+        visibilityMap[v.feature_code] = v.can_view;
+      });
+      setUserVisibility(visibilityMap);
+    } catch (error) {
+      console.error('Error loading user visibility:', error);
+      setUserVisibility({});
+    }
+  };
+
   useEffect(() => {
-    const loadUserVisibility = async () => {
-      if (!selectedUserId) return;
+    if (selectedUserId) {
+      refreshUserVisibility(selectedUserId);
+    } else {
+      setUserVisibility({});
+    }
+  }, [selectedUserId]);
 
-      try {
-        const { data } = await supabase
-          .from('user_feature_visibility')
-          .select('feature_code, can_view')
-          .eq('user_id', selectedUserId);
-
-        const visibilityMap: Record<string, boolean> = {};
-        data?.forEach((v: UserVisibility) => {
-          visibilityMap[v.feature_code] = v.can_view;
-        });
-        setUserVisibility(visibilityMap);
-      } catch (error) {
-        console.error('Error loading user visibility:', error);
-      }
-    };
-
-    loadUserVisibility();
+  useEffect(() => {
+    if (selectedUserId) {
+      localStorage.setItem(LAST_SELECTED_KEY, selectedUserId);
+    } else {
+      localStorage.removeItem(LAST_SELECTED_KEY);
+    }
   }, [selectedUserId]);
 
   const handleToggle = (featureCode: string, checked: boolean) => {
@@ -154,6 +166,9 @@ export default function VisibilityManager() {
           .from('user_feature_visibility')
           .insert(visibilityRecords);
       }
+
+      // Reload to reflect saved state
+      await refreshUserVisibility(selectedUserId);
 
       toast({
         title: 'บันทึกสำเร็จ',

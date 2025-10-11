@@ -21,36 +21,43 @@ export const ProtectedRoute = ({
   const deniedToastShown = useRef(false);
 
   useEffect(() => {
-    const checkAccess = async () => {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        setHasAccess(false);
-        setChecking(false);
-        return;
-      }
+    let isMounted = true;
 
-      // Check if admin is required
-      if (requiredRoles && requiredRoles.includes("admin")) {
-        const { data, error } = await supabase.rpc('has_role', {
-          _user_id: user.id,
-          _role: 'admin'
-        });
-        
-        if (error || data !== true) {
-          setHasAccess(false);
-          setChecking(false);
+    const checkAccess = async () => {
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError) throw userError;
+
+        if (!user) {
+          if (isMounted) setHasAccess(false);
           return;
         }
-      }
 
-      // All authenticated users have access (except admin-only pages)
-      setHasAccess(true);
-      setChecking(false);
+        if (requiredRoles && requiredRoles.includes("admin")) {
+          const { data, error } = await supabase.rpc('has_role', {
+            _user_id: user.id,
+            _role: 'admin'
+          });
+          if (error || data !== true) {
+            if (isMounted) setHasAccess(false);
+            return;
+          }
+        }
+
+        if (isMounted) setHasAccess(true);
+      } catch (err) {
+        console.error('ProtectedRoute check failed:', err);
+        if (isMounted) setHasAccess(false);
+      } finally {
+        if (isMounted) setChecking(false);
+      }
     };
 
     checkAccess();
+
+    return () => {
+      isMounted = false;
+    };
   }, [requiredRoles]);
 
   useEffect(() => {
