@@ -32,7 +32,7 @@ interface MenuItem {
 
 const Index = () => {
   const navigate = useNavigate();
-  const { role, permissions, loading } = usePermissions();
+  const { loading } = usePermissions();
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
@@ -176,9 +176,10 @@ const Index = () => {
   ];
 
   const visibleMenuItems = allMenuItems.filter((item) => {
-    if (isAdmin) return true; // Admin sees all
-    if (!item.featureCode) return true; // Always show items without feature code
-    return hasFeatureAccess(permissions, item.featureCode);
+    // Hide admin-only items from non-admin users
+    if (item.title === "จัดการสิทธิ์ผู้ใช้" && !isAdmin) return false;
+    if (item.title === "ตั้งค่าระบบ" && !isAdmin) return false;
+    return true; // Everyone sees everything else
   });
 
   if (loading) {

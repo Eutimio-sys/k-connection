@@ -64,12 +64,12 @@ export function AppSidebar() {
   const [pendingCount, setPendingCount] = useState(0);
   const [pendingDocCount, setPendingDocCount] = useState(0);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
-  const { role, permissions, loading } = usePermissions();
+  const { loading } = usePermissions();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [verifiedMenuItems, setVerifiedMenuItems] = useState<typeof menuItems>([]);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Verify menu items with backend for requiredRoles
+  // Verify menu items with backend for admin check
   useEffect(() => {
     const verifyMenuAccess = async () => {
       if (loading) {
@@ -91,41 +91,21 @@ export function AppSidebar() {
       const userIsAdmin = adminCheck === true;
       setIsAdmin(userIsAdmin);
 
-      const verified = await Promise.all(
-        menuItems.map(async (item) => {
-          // Admin sees everything
-          if (userIsAdmin) return { item, show: true };
-          
-          // If item requires specific roles, verify with backend
-          if ((item as any).requiredRoles && (item as any).requiredRoles.length > 0) {
-            for (const requiredRole of (item as any).requiredRoles) {
-              const { data, error } = await supabase.rpc('has_role', {
-                _user_id: user.id,
-                _role: requiredRole
-              });
-              
-              if (!error && data === true) {
-                return { item, show: true };
-              }
-            }
-            return { item, show: false };
-          }
-          
-          // If item has feature code, check permissions
-          if (item.featureCode) {
-            return { item, show: hasFeatureAccess(permissions, item.featureCode) };
-          }
-          
-          // Default: show item
-          return { item, show: true };
-        })
-      );
+      // Filter menu items - hide admin-only items from non-admin users
+      const filtered = menuItems.filter((item) => {
+        // Check if item requires admin role
+        const requiredRoles = (item as any).requiredRoles as string[] | undefined;
+        if (requiredRoles && requiredRoles.includes('admin') && !userIsAdmin) {
+          return false;
+        }
+        return true;
+      });
 
-      setVerifiedMenuItems(verified.filter(v => v.show).map(v => v.item));
+      setVerifiedMenuItems(filtered);
     };
 
     verifyMenuAccess();
-  }, [role, permissions, loading]);
+  }, [loading]);
 
   useEffect(() => {
     // Get current user

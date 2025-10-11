@@ -15,7 +15,7 @@ export const ProtectedRoute = ({
   featureCode,
   requiredRoles,
 }: ProtectedRouteProps) => {
-  const { role, permissions, loading } = usePermissions();
+  const { loading } = usePermissions();
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const { toast } = useToast();
   const deniedToastShown = useRef(false);
@@ -32,51 +32,25 @@ export const ProtectedRoute = ({
         return;
       }
 
-      // If no role assigned, deny access
-      if (!role) {
-        setHasAccess(false);
-        return;
-      }
-
-      // Admin bypass: full access
-      if (role === "admin") {
-        setHasAccess(true);
-        return;
-      }
-
-      // Check role-based access using backend verification
-      if (requiredRoles && requiredRoles.length > 0) {
-        let hasRequiredRole = false;
+      // Check if admin is required
+      if (requiredRoles && requiredRoles.includes("admin")) {
+        const { data, error } = await supabase.rpc('has_role', {
+          _user_id: user.id,
+          _role: 'admin'
+        });
         
-        for (const requiredRole of requiredRoles) {
-          const { data, error } = await supabase.rpc('has_role', {
-            _user_id: user.id,
-            _role: requiredRole
-          });
-          
-          if (!error && data === true) {
-            hasRequiredRole = true;
-            break;
-          }
-        }
-        
-        if (!hasRequiredRole) {
+        if (error || data !== true) {
           setHasAccess(false);
           return;
         }
       }
 
-      // Check feature-based access
-      if (featureCode) {
-        const allowed = permissions[featureCode] === true;
-        setHasAccess(allowed);
-      } else {
-        setHasAccess(true);
-      }
+      // All authenticated users have access (except admin-only pages)
+      setHasAccess(true);
     };
 
     checkAccess();
-  }, [loading, role, permissions, featureCode, requiredRoles]);
+  }, [loading, requiredRoles]);
 
   useEffect(() => {
     if (hasAccess === false && !deniedToastShown.current) {
