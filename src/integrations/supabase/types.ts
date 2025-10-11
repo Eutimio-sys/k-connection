@@ -1990,6 +1990,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      ensure_profile_for_current_user: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       generate_invoice_number: {
         Args: {
           p_company_id: string
@@ -1998,6 +2002,10 @@ export type Database = {
           p_project_id: string
         }
         Returns: string
+      }
+      grant_admin_to_current_user: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       has_role: {
         Args: { _role: string; _user_id: string }

@@ -22,7 +22,8 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const [userEmail, setUserEmail] = useState<string>("");
-
+  const [bootstrapped, setBootstrapped] = useState<boolean>(false);
+ 
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -30,16 +31,36 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         navigate("/auth");
       } else {
         setUserEmail(session.user.email || "");
+        // After reset, ensure profile exists and grant admin to current user (idempotent)
+        if (!bootstrapped) {
+          try {
+            await supabase.rpc('ensure_profile_for_current_user');
+            await supabase.rpc('grant_admin_to_current_user');
+          } catch (e) {
+            console.error('Bootstrap RPC error', e);
+          } finally {
+            setBootstrapped(true);
+          }
+        }
       }
     };
 
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_OUT") {
         navigate("/auth");
+        setBootstrapped(false);
       } else if (session) {
         setUserEmail(session.user.email || "");
+        try {
+          await supabase.rpc('ensure_profile_for_current_user');
+          await supabase.rpc('grant_admin_to_current_user');
+        } catch (e) {
+          console.error('Bootstrap RPC error', e);
+        } finally {
+          setBootstrapped(true);
+        }
       }
     });
 
