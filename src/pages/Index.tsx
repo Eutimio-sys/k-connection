@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { usePermissions, hasFeatureAccess } from "@/hooks/usePermissions";
+import { useFeatureVisibility } from "@/contexts/FeatureVisibilityContext";
+import { Loader2 } from "lucide-react";
 import {
   LayoutDashboard,
   FolderKanban,
@@ -32,7 +31,7 @@ interface MenuItem {
 
 const Index = () => {
   const navigate = useNavigate();
-  const { isAdmin, loading } = usePermissions();
+  const { visibleFeatures, isAdmin, loading } = useFeatureVisibility();
 
   const allMenuItems: MenuItem[] = [
     {
@@ -158,16 +157,17 @@ const Index = () => {
   ];
 
   const visibleMenuItems = allMenuItems.filter((item) => {
-    // Hide admin-only items from non-admin users
-    if (item.title === "จัดการสิทธิ์ผู้ใช้" && !isAdmin) return false;
-    if (item.title === "ตั้งค่าระบบ" && !isAdmin) return false;
-    return true; // Everyone sees everything else
+    if (isAdmin) return true;
+    
+    // Extract feature code from URL
+    const featureCode = item.url.substring(1); // Remove leading slash
+    return visibleFeatures.has(featureCode) || visibleFeatures.has('all');
   });
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-muted-foreground">กำลังโหลด...</p>
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }

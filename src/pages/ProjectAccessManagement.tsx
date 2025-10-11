@@ -7,11 +7,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { ArrowLeft, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { usePermissions } from "@/hooks/usePermissions";
+import { useFeatureVisibility } from "@/contexts/FeatureVisibilityContext";
 
 export default function ProjectAccessManagement() {
   const navigate = useNavigate();
-  const { role, loading: permLoading } = usePermissions();
+  const { isAdmin, loading: permLoading } = useFeatureVisibility();
   const [projects, setProjects] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [selectedProject, setSelectedProject] = useState<string>("");
@@ -22,14 +22,14 @@ export default function ProjectAccessManagement() {
   useEffect(() => {
     if (permLoading) return;
     
-    if (role !== "admin") {
+    if (!isAdmin) {
       toast.error("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
       navigate("/");
       return;
     }
     
     fetchData();
-  }, [permLoading, role, navigate]);
+  }, [permLoading, isAdmin, navigate]);
 
   const fetchData = async () => {
     setLoading(true);

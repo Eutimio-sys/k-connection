@@ -15,11 +15,11 @@ import { useNavigate } from "react-router-dom";
 import { EmployeeEditDialog } from "@/components/EmployeeEditDialog";
 import AddEmployeeDialog from "@/components/AddEmployeeDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { usePermissions } from "@/hooks/usePermissions";
+import { useFeatureVisibility } from "@/contexts/FeatureVisibilityContext";
 
 const HRManagement = () => {
   const navigate = useNavigate();
-  const { isAdmin } = usePermissions();
+  const { isAdmin } = useFeatureVisibility();
   const [employees, setEmployees] = useState<any[]>([]);
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
   const [companies, setCompanies] = useState<any[]>([]);

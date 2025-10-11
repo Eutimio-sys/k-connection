@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom
 import Auth from "./pages/Auth";
 import { DashboardLayout } from "./components/DashboardLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { FeatureVisibilityProvider } from "./contexts/FeatureVisibilityContext";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
@@ -14,7 +15,6 @@ import Kanban from "./pages/Kanban";
 import DailyPayments from "./pages/DailyPayments";
 import Approvals from "./pages/Approvals";
 import EmployeeDetail from "./pages/EmployeeDetail";
-import UserRoles from "./pages/UserRoles";
 import HRManagement from "./pages/HRManagement";
 import Payroll from "./pages/Payroll";
 import ForeignWorkers from "./pages/ForeignWorkers";
@@ -28,6 +28,7 @@ import TaxPlanning from "./pages/TaxPlanning";
 import TaxDocuments from "./pages/TaxDocuments";
 import MyWork from "./pages/MyWork";
 import Chat from "./pages/Chat";
+import VisibilityManager from "./pages/VisibilityManager";
 import NotFound from "./pages/NotFound";
 import ProjectAccessManagement from "./pages/ProjectAccessManagement";
 
@@ -39,7 +40,8 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
+        <FeatureVisibilityProvider>
+          <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route element={<DashboardLayout><Outlet /></DashboardLayout>}>
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
@@ -48,12 +50,12 @@ const App = () => (
             <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetail /></ProtectedRoute>} />
             <Route path="/kanban" element={<ProtectedRoute><Kanban /></ProtectedRoute>} />
             <Route path="/approvals" element={<ProtectedRoute><Approvals /></ProtectedRoute>} />
-            <Route path="/accounting" element={<ProtectedRoute><Accounting /></ProtectedRoute>} />
-            <Route path="/labor-accounting" element={<ProtectedRoute><LaborAccounting /></ProtectedRoute>} />
-            <Route path="/daily-payments" element={<ProtectedRoute><DailyPayments /></ProtectedRoute>} />
-            <Route path="/employees/:id" element={<ProtectedRoute><EmployeeDetail /></ProtectedRoute>} />
-            <Route path="/user-roles" element={<ProtectedRoute requiredRoles={["admin"]}><UserRoles /></ProtectedRoute>} />
-            <Route path="/hr-management" element={<ProtectedRoute><HRManagement /></ProtectedRoute>} />
+          <Route path="/accounting" element={<ProtectedRoute><Accounting /></ProtectedRoute>} />
+          <Route path="/labor-accounting" element={<ProtectedRoute><LaborAccounting /></ProtectedRoute>} />
+          <Route path="/daily-payments" element={<ProtectedRoute><DailyPayments /></ProtectedRoute>} />
+          <Route path="/employees/:id" element={<ProtectedRoute><EmployeeDetail /></ProtectedRoute>} />
+          <Route path="/visibility" element={<ProtectedRoute requiredRoles={["admin"]}><VisibilityManager /></ProtectedRoute>} />
+          <Route path="/hr-management" element={<ProtectedRoute><HRManagement /></ProtectedRoute>} />
             <Route path="/payroll" element={<ProtectedRoute><Payroll /></ProtectedRoute>} />
             <Route path="/foreign-workers" element={<ProtectedRoute><ForeignWorkers /></ProtectedRoute>} />
             <Route path="/tax-planning" element={<ProtectedRoute><TaxPlanning /></ProtectedRoute>} />
@@ -68,6 +70,7 @@ const App = () => (
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </FeatureVisibilityProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
