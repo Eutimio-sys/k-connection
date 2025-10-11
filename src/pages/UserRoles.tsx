@@ -14,8 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useNavigate } from "react-router-dom";
-
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 interface UserProfile {
   id: string;
   full_name: string;
@@ -62,8 +61,8 @@ interface Role {
 }
 
 export default function UserRoles() {
-  const navigate = useNavigate();
   const { role, loading: permLoading } = usePermissions();
+  const [accessDenied, setAccessDenied] = useState(false);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [inactiveUsers, setInactiveUsers] = useState<UserProfile[]>([]);
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
@@ -94,15 +93,14 @@ export default function UserRoles() {
 
   useEffect(() => {
     if (permLoading) return;
-    
     if (role !== "admin") {
-      toast.error("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
-      navigate("/");
+      setAccessDenied(true);
+      setLoading(false);
       return;
     }
-    
+    setAccessDenied(false);
     fetchData();
-  }, [permLoading, role, navigate]);
+  }, [permLoading, role]);
 
   const fetchData = async () => {
     try {
