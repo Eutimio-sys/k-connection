@@ -71,6 +71,8 @@ export default function MyWork() {
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [monthAvatars, setMonthAvatars] = useState<Record<string, string[]>>({});
   const [viewMode, setViewMode] = useState<"calendar" | "kanban">("calendar");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -87,11 +89,11 @@ export default function MyWork() {
   }, []);
 
   useEffect(() => {
+    fetchTasks();
     if (currentUser) {
-      fetchTasks();
       checkUserRoleAndFetchUsers();
     }
-  }, [currentUser, selectedDate]);
+  }, [selectedDate]);
 
   useEffect(() => {
     if (currentUser) {
@@ -134,51 +136,64 @@ export default function MyWork() {
   };
 
   const fetchTasks = async () => {
-    if (!selectedDate || !currentUser) return;
+    if (!selectedDate) return;
 
-    const startOfDay = new Date(selectedDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(selectedDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    try {
+      setIsLoading(true);
+      setError(null);
 
-    const { data, error } = await supabase
-      .from("tasks")
-      .select(`
-        *,
-        profiles!tasks_assigned_to_fkey(full_name),
-        projects(name),
-        created_by_profile:profiles!tasks_created_by_fkey(full_name)
-      `)
-      .gte("due_date", startOfDay.toISOString())
-      .lte("due_date", endOfDay.toISOString())
-      .order("due_time", { ascending: true });
+      const startOfDay = new Date(selectedDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(selectedDate);
+      endOfDay.setHours(23, 59, 59, 999);
 
-    if (error) {
-      console.error("Error fetching tasks:", error);
-      return;
-    }
-
-    // Fetch task assignees separately
-    if (data && data.length > 0) {
-      const taskIds = data.map(t => t.id);
-      const { data: assignees } = await supabase
-        .from("task_assignees")
+      const { data, error } = await supabase
+        .from("tasks")
         .select(`
-          task_id,
-          profiles(full_name)
+          *,
+          profiles!tasks_assigned_to_fkey(full_name),
+          projects(name),
+          created_by_profile:profiles!tasks_created_by_fkey(full_name)
         `)
-        .in("task_id", taskIds);
+        .gte("due_date", startOfDay.toISOString())
+        .lte("due_date", endOfDay.toISOString())
+        .order("due_time", { ascending: true })
+        .limit(1000);
 
-      const tasksWithAssignees = data.map(task => ({
-        ...task,
-        task_assignees: (assignees || [])
-          .filter(a => a.task_id === task.id)
-          .map(a => ({ profiles: a.profiles }))
-      }));
+      if (error) throw error;
 
-      setTasks(tasksWithAssignees as any);
-    } else {
-      setTasks([]);
+      // Fetch task assignees separately
+      if (data && data.length > 0) {
+        const taskIds = data.map(t => t.id);
+        const { data: assignees } = await supabase
+          .from("task_assignees")
+          .select(`
+            task_id,
+            profiles(full_name)
+          `)
+          .in("task_id", taskIds);
+
+        const tasksWithAssignees = data.map(task => ({
+          ...task,
+          task_assignees: (assignees || [])
+            .filter(a => a.task_id === task.id)
+            .map(a => ({ profiles: a.profiles }))
+        }));
+
+        setTasks(tasksWithAssignees as any);
+      } else {
+        setTasks([]);
+      }
+    } catch (err) {
+      console.error("Error fetching tasks:", err);
+      setError("ไม่สามารถโหลดงานได้");
+      toast({
+        variant: "destructive",
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถโหลดงานได้ กรุณาลองใหม่อีกครั้ง"
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -361,6 +376,25 @@ export default function MyWork() {
       </div>
     );
   };
+
+  if (isLoading && tasks.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">กำลังโหลดงาน...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <p className="text-destructive">{error}</p>
+          <Button onClick={() => fetchTasks()}>ลองใหม่อีกครั้ง</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 space-y-6">

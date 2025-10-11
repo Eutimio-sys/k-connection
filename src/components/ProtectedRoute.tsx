@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { AccessDenied } from "./AccessDenied";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -20,35 +21,61 @@ export const ProtectedRoute = ({
   const deniedToastShown = useRef(false);
 
   useEffect(() => {
-    if (loading) return;
+    const checkAccess = async () => {
+      if (loading) return;
 
-    // If no role assigned, deny access
-    if (!role) {
-      setHasAccess(false);
-      return;
-    }
-
-    // Admin bypass: full access
-    if (role === "admin") {
-      setHasAccess(true);
-      return;
-    }
-
-    // Check role-based access
-    if (requiredRoles && requiredRoles.length > 0) {
-      if (!requiredRoles.includes(role)) {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
         setHasAccess(false);
         return;
       }
-    }
 
-    // Check feature-based access
-    if (featureCode) {
-      const allowed = permissions[featureCode] === true;
-      setHasAccess(allowed);
-    } else {
-      setHasAccess(true);
-    }
+      // If no role assigned, deny access
+      if (!role) {
+        setHasAccess(false);
+        return;
+      }
+
+      // Admin bypass: full access
+      if (role === "admin") {
+        setHasAccess(true);
+        return;
+      }
+
+      // Check role-based access using backend verification
+      if (requiredRoles && requiredRoles.length > 0) {
+        let hasRequiredRole = false;
+        
+        for (const requiredRole of requiredRoles) {
+          const { data, error } = await supabase.rpc('has_role', {
+            _user_id: user.id,
+            _role: requiredRole
+          });
+          
+          if (!error && data === true) {
+            hasRequiredRole = true;
+            break;
+          }
+        }
+        
+        if (!hasRequiredRole) {
+          setHasAccess(false);
+          return;
+        }
+      }
+
+      // Check feature-based access
+      if (featureCode) {
+        const allowed = permissions[featureCode] === true;
+        setHasAccess(allowed);
+      } else {
+        setHasAccess(true);
+      }
+    };
+
+    checkAccess();
   }, [loading, role, permissions, featureCode, requiredRoles]);
 
   useEffect(() => {

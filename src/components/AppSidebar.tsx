@@ -66,16 +66,57 @@ export function AppSidebar() {
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const { role, permissions, loading } = usePermissions();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [verifiedMenuItems, setVerifiedMenuItems] = useState<typeof menuItems>([]);
 
-  // Filter menu items based on permissions - wait until loading is complete
-  const visibleMenuItems = loading ? [] : menuItems.filter((item) => {
-    if (role === "admin") return true;
-    if ((item as any).requiredRoles && !(item as any).requiredRoles.includes(role)) {
-      return false;
-    }
-    if (!item.featureCode) return true;
-    return hasFeatureAccess(permissions, item.featureCode);
-  });
+  // Verify menu items with backend for requiredRoles
+  useEffect(() => {
+    const verifyMenuAccess = async () => {
+      if (loading) {
+        setVerifiedMenuItems([]);
+        return;
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setVerifiedMenuItems([]);
+        return;
+      }
+
+      const verified = await Promise.all(
+        menuItems.map(async (item) => {
+          // Admin sees everything
+          if (role === "admin") return { item, show: true };
+          
+          // If item requires specific roles, verify with backend
+          if ((item as any).requiredRoles && (item as any).requiredRoles.length > 0) {
+            for (const requiredRole of (item as any).requiredRoles) {
+              const { data, error } = await supabase.rpc('has_role', {
+                _user_id: user.id,
+                _role: requiredRole
+              });
+              
+              if (!error && data === true) {
+                return { item, show: true };
+              }
+            }
+            return { item, show: false };
+          }
+          
+          // If item has feature code, check permissions
+          if (item.featureCode) {
+            return { item, show: hasFeatureAccess(permissions, item.featureCode) };
+          }
+          
+          // Default: show item
+          return { item, show: true };
+        })
+      );
+
+      setVerifiedMenuItems(verified.filter(v => v.show).map(v => v.item));
+    };
+
+    verifyMenuAccess();
+  }, [role, permissions, loading]);
 
   useEffect(() => {
     // Get current user
@@ -203,7 +244,7 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
-              {visibleMenuItems.map((item) => (
+              {verifiedMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
