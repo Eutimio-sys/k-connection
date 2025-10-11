@@ -73,6 +73,7 @@ export default function UserRoles() {
   const [selectedUser, setSelectedUser] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
+  const [pendingChanges, setPendingChanges] = useState<Record<string, boolean>>({});
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [newRoleData, setNewRoleData] = useState({ code: '', name: '', description: '' });
@@ -319,49 +320,77 @@ export default function UserRoles() {
 
 
   const hasPermission = (roleCode: string, featureCode: string): boolean => {
+    const key = `${roleCode}-${featureCode}`;
+    // Check pending changes first
+    if (pendingChanges.hasOwnProperty(key)) {
+      return pendingChanges[key];
+    }
     const permission = rolePermissions.find(
       p => p.role === roleCode && p.feature_code === featureCode
     );
     return permission?.can_access || false;
   };
 
-  const handleTogglePermission = async (roleCode: string, featureCode: string, currentValue: boolean) => {
+  const handleTogglePermission = (roleCode: string, featureCode: string, currentValue: boolean) => {
+    const key = `${roleCode}-${featureCode}`;
+    setPendingChanges(prev => ({
+      ...prev,
+      [key]: !currentValue
+    }));
+  };
+
+  const handleSaveAllChanges = async () => {
+    if (Object.keys(pendingChanges).length === 0) {
+      toast.info("ไม่มีการเปลี่ยนแปลง");
+      return;
+    }
+
     try {
-      setSaving(`${roleCode}-${featureCode}`);
+      setSaving("all");
+      
+      for (const [key, newValue] of Object.entries(pendingChanges)) {
+        const [roleCode, featureCode] = key.split('-');
+        
+        // Check if permission exists
+        const existing = rolePermissions.find(
+          p => p.role === roleCode && p.feature_code === featureCode
+        );
 
-      // Check if permission exists
-      const existing = rolePermissions.find(
-        p => p.role === roleCode && p.feature_code === featureCode
-      );
+        if (existing) {
+          // Update existing permission
+          const { error } = await supabase
+            .from("role_permissions")
+            .update({ can_access: newValue })
+            .eq("id", existing.id);
 
-      if (existing) {
-        // Update existing permission
-        const { error } = await supabase
-          .from("role_permissions")
-          .update({ can_access: !currentValue })
-          .eq("id", existing.id);
+          if (error) throw error;
+        } else {
+          // Create new permission
+          const { error } = await supabase
+            .from("role_permissions")
+            .insert({
+              role: roleCode,
+              feature_code: featureCode,
+              can_access: newValue
+            });
 
-        if (error) throw error;
-      } else {
-        // Create new permission
-        const { error } = await supabase
-          .from("role_permissions")
-          .insert({
-            role: roleCode,
-            feature_code: featureCode,
-            can_access: !currentValue
-          });
-
-        if (error) throw error;
+          if (error) throw error;
+        }
       }
 
-      toast.success("อัปเดตสิทธิ์สำเร็จ");
+      toast.success(`บันทึกการเปลี่ยนแปลง ${Object.keys(pendingChanges).length} รายการสำเร็จ`);
+      setPendingChanges({});
       await fetchData();
     } catch (error: any) {
       toast.error("เกิดข้อผิดพลาด: " + error.message);
     } finally {
       setSaving(null);
     }
+  };
+
+  const handleCancelChanges = () => {
+    setPendingChanges({});
+    toast.info("ยกเลิกการเปลี่ยนแปลง");
   };
 
   const getUserPermission = (userId: string, featureCode: string): boolean | null => {
@@ -871,13 +900,46 @@ export default function UserRoles() {
         <TabsContent value="permissions" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                จัดการสิทธิ์การเข้าถึงตามบทบาท
-              </CardTitle>
-              <CardDescription>
-                กำหนดว่าแต่ละบทบาทสามารถเข้าถึงฟีเจอร์ใดได้บ้าง แบ่งตามหมวดหมู่ของระบบ
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="h-5 w-5" />
+                    จัดการสิทธิ์การเข้าถึงตามบทบาท
+                  </CardTitle>
+                  <CardDescription>
+                    กำหนดว่าแต่ละบทบาทสามารถเข้าถึงฟีเจอร์ใดได้บ้าง แบ่งตามหมวดหมู่ของระบบ
+                  </CardDescription>
+                </div>
+                {Object.keys(pendingChanges).length > 0 && (
+                  <div className="flex gap-2">
+                    <Badge variant="outline" className="text-orange-600 border-orange-600">
+                      {Object.keys(pendingChanges).length} รายการรอบันทึก
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCancelChanges}
+                      disabled={saving === "all"}
+                    >
+                      ยกเลิก
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleSaveAllChanges}
+                      disabled={saving === "all"}
+                    >
+                      {saving === "all" ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          กำลังบันทึก...
+                        </>
+                      ) : (
+                        "บันทึกการเปลี่ยนแปลง"
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="space-y-8">
               {Object.entries(featuresByCategory).map(([category, categoryFeatures]) => (
@@ -922,16 +984,20 @@ export default function UserRoles() {
                             </TableCell>
                             {roles.map(role => {
                               const hasAccess = hasPermission(role.code, feature.code);
-                              const isSaving = saving === `${role.code}-${feature.code}`;
+                              const key = `${role.code}-${feature.code}`;
+                              const isPending = pendingChanges.hasOwnProperty(key);
                               
                               return (
                                 <TableCell key={role.code} className="text-center">
-                                  <div className="flex items-center justify-center">
+                                  <div className="flex items-center justify-center gap-1">
                                     <Switch
                                       checked={hasAccess}
-                                      disabled={isSaving}
+                                      disabled={saving === "all"}
                                       onCheckedChange={() => handleTogglePermission(role.code, feature.code, hasAccess)}
                                     />
+                                    {isPending && (
+                                      <span className="text-xs text-orange-600">●</span>
+                                    )}
                                   </div>
                                 </TableCell>
                               );
