@@ -9,15 +9,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, FileText, ArrowLeft, Eye, Pencil, DollarSign, Plus, Trash2 } from "lucide-react";
+import { Users, FileText, ArrowLeft, Eye, Pencil, DollarSign, Plus, Trash2, UserX } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { EmployeeEditDialog } from "@/components/EmployeeEditDialog";
 import AddEmployeeDialog from "@/components/AddEmployeeDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const HRManagement = () => {
   const navigate = useNavigate();
+  const { isAdmin } = usePermissions();
   const [employees, setEmployees] = useState<any[]>([]);
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
   const [companies, setCompanies] = useState<any[]>([]);
@@ -27,6 +29,9 @@ const HRManagement = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<any>(null);
+  const [permanentDeleteDialogOpen, setPermanentDeleteDialogOpen] = useState(false);
+  const [employeeToPermanentDelete, setEmployeeToPermanentDelete] = useState<any>(null);
+  const [deletingPermanently, setDeletingPermanently] = useState(false);
   const [taxDialogOpen, setTaxDialogOpen] = useState(false);
   const [selectedEmployeeForTax, setSelectedEmployeeForTax] = useState<any>(null);
   const [taxFormData, setTaxFormData] = useState({
@@ -155,6 +160,29 @@ const HRManagement = () => {
       setEmployees(prev => prev.filter(emp => emp.id !== employeeToDelete.id));
       setDeleteDialogOpen(false);
       setEmployeeToDelete(null);
+    }
+  };
+
+  const handlePermanentDelete = async () => {
+    if (!employeeToPermanentDelete) return;
+
+    setDeletingPermanently(true);
+    try {
+      const { error } = await supabase.functions.invoke('delete-user', {
+        body: { userId: employeeToPermanentDelete.id }
+      });
+
+      if (error) throw error;
+
+      toast.success("ลบผู้ใช้ถาวรสำเร็จ");
+      setEmployees(prev => prev.filter(emp => emp.id !== employeeToPermanentDelete.id));
+      setPermanentDeleteDialogOpen(false);
+      setEmployeeToPermanentDelete(null);
+    } catch (error: any) {
+      console.error("Permanent delete error:", error);
+      toast.error("เกิดข้อผิดพลาด: " + (error.message || "ไม่สามารถลบผู้ใช้ได้"));
+    } finally {
+      setDeletingPermanently(false);
     }
   };
 
@@ -363,8 +391,22 @@ const HRManagement = () => {
                             className="gap-1 text-destructive hover:text-destructive"
                           >
                             <Trash2 size={14} />
-                            ลบ
+                            ปิดใช้งาน
                           </Button>
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setEmployeeToPermanentDelete(emp);
+                                setPermanentDeleteDialogOpen(true);
+                              }}
+                              className="gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <UserX size={14} />
+                              ลบถาวร
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -612,16 +654,51 @@ const HRManagement = () => {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>ยืนยันการลบพนักงาน</AlertDialogTitle>
+            <AlertDialogTitle>ยืนยันการปิดใช้งาน</AlertDialogTitle>
             <AlertDialogDescription>
-              คุณต้องการลบ {employeeToDelete?.full_name} ออกจากระบบใช่หรือไม่? 
-              การดำเนินการนี้ไม่สามารถย้อนกลับได้
+              คุณต้องการปิดการใช้งานพนักงาน {employeeToDelete?.full_name} ใช่หรือไม่?
+              <br />
+              <strong>หมายเหตุ:</strong> การปิดการใช้งานจะทำให้พนักงานไม่สามารถเข้าสู่ระบบได้ แต่ยังสามารถเปิดใช้งานใหม่ได้ในภายหลัง
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteEmployee} className="bg-destructive">
-              ลบ
+            <AlertDialogAction onClick={handleDeleteEmployee} className="bg-destructive hover:bg-destructive/90">
+              ยืนยัน
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={permanentDeleteDialogOpen} onOpenChange={setPermanentDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-600">⚠️ ลบผู้ใช้ถาวร</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p className="font-semibold text-foreground">
+                คุณกำลังจะลบบัญชีผู้ใช้ {employeeToPermanentDelete?.full_name} ({employeeToPermanentDelete?.email}) <span className="text-red-600">ถาวร</span>
+              </p>
+              <div className="bg-red-50 dark:bg-red-950 p-3 rounded border border-red-200 dark:border-red-800">
+                <p className="text-sm text-red-800 dark:text-red-200 font-medium">
+                  ⚠️ การกระทำนี้ไม่สามารถย้อนกลับได้!
+                </p>
+                <ul className="mt-2 text-xs text-red-700 dark:text-red-300 space-y-1 list-disc list-inside">
+                  <li>บัญชีผู้ใช้จะถูกลบออกจากระบบทั้งหมด</li>
+                  <li>ข้อมูลส่วนตัว บทบาท และสิทธิ์จะถูกลบ</li>
+                  <li>อีเมลนี้สามารถสร้างบัญชีใหม่ได้อีกครั้ง</li>
+                  <li>ข้อมูลที่เกี่ยวข้องอาจถูกลบหรือโอนให้แอดมินคนอื่น</li>
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingPermanently}>ยกเลิก</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handlePermanentDelete} 
+              disabled={deletingPermanently}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deletingPermanently ? "กำลังลบ..." : "ยืนยันลบถาวร"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

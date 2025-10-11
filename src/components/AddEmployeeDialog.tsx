@@ -42,82 +42,69 @@ export default function AddEmployeeDialog({ onSuccess, companies }: AddEmployeeD
 
     setSaving(true);
     try {
-      // Create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            full_name: formData.full_name,
-          },
-        },
+      // Call create-user edge function
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          email: formData.email,
+          password: formData.password,
+          full_name: formData.full_name,
+          phone: formData.phone,
+          address: formData.address,
+          position: formData.position,
+          department: formData.department,
+          id_card: formData.id_card,
+          emergency_contact: formData.emergency_contact,
+          emergency_phone: formData.emergency_phone,
+          hire_date: formData.hire_date || null,
+          date_of_birth: formData.date_of_birth || null,
+          company_id: formData.company_id || null,
+          role: 'worker',
+        }
       });
 
-      if (authError) throw authError;
+      if (error) throw error;
 
-      if (authData.user) {
-        // Update profile with additional info
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .update({
-            full_name: formData.full_name,
-            phone: formData.phone,
-            address: formData.address,
-            position: formData.position,
-            department: formData.department,
-            id_card: formData.id_card,
-            emergency_contact: formData.emergency_contact,
-            emergency_phone: formData.emergency_phone,
-            hire_date: formData.hire_date || null,
-            date_of_birth: formData.date_of_birth || null,
-            company_id: formData.company_id || null,
-          })
-          .eq("id", authData.user.id);
+      // Create initial salary record if salary is provided
+      if (data?.user && formData.salary && parseFloat(formData.salary) > 0) {
+        const { error: salaryError } = await supabase
+          .from("salary_records")
+          .insert({
+            user_id: data.user.id,
+            salary_amount: parseFloat(formData.salary),
+            effective_date: formData.hire_date || new Date().toISOString().split('T')[0],
+            created_by: data.user.id,
+          });
 
-        if (profileError) throw profileError;
-
-        // Create initial salary record if salary is provided
-        if (formData.salary && parseFloat(formData.salary) > 0) {
-          const { error: salaryError } = await supabase
-            .from("salary_records")
-            .insert({
-              user_id: authData.user.id,
-              salary_amount: parseFloat(formData.salary),
-              effective_date: formData.hire_date || new Date().toISOString().split('T')[0],
-              created_by: authData.user.id,
-            });
-
-          if (salaryError) throw salaryError;
-        }
-
-        toast.success("เพิ่มพนักงานสำเร็จ");
-        setOpen(false);
-        setFormData({
-          email: "",
-          password: "",
-          full_name: "",
-          phone: "",
-          address: "",
-          position: "",
-          department: "",
-          id_card: "",
-          emergency_contact: "",
-          emergency_phone: "",
-          hire_date: "",
-          date_of_birth: "",
-          company_id: "",
-          salary: "",
-        });
-        onSuccess();
+        if (salaryError) console.error("Salary record error:", salaryError);
       }
+
+      toast.success("เพิ่มพนักงานสำเร็จ");
+      setOpen(false);
+      setFormData({
+        email: "",
+        password: "",
+        full_name: "",
+        phone: "",
+        address: "",
+        position: "",
+        department: "",
+        id_card: "",
+        emergency_contact: "",
+        emergency_phone: "",
+        hire_date: "",
+        date_of_birth: "",
+        company_id: "",
+        salary: "",
+      });
+      onSuccess();
     } catch (error: any) {
       console.error("Error creating employee:", error);
       
       // Handle specific error cases
       let errorMessage = "เกิดข้อผิดพลาด";
       
-      if (error.message?.includes("already been registered") || error.message?.includes("already registered")) {
-        errorMessage = "อีเมลนี้ถูกใช้งานแล้ว กรุณาใช้อีเมลอื่น";
+      if (error.message?.includes("already been registered") || error.message?.includes("already registered") || error.message?.includes("email_exists")) {
+        errorMessage = "อีเมลนี้ถูกใช้งานแล้ว กรุณาใช้อีเมลอื่น หรือลบผู้ใช้เก่าออกจากระบบก่อน";
       } else if (error.message?.includes("email")) {
         errorMessage = "รูปแบบอีเมลไม่ถูกต้อง";
       } else if (error.message) {

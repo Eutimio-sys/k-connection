@@ -5,6 +5,7 @@ interface UserPermissions {
   role: string;
   permissions: Record<string, boolean>;
   loading: boolean;
+  isAdmin: boolean;
 }
 
 export const usePermissions = (): UserPermissions => {
@@ -106,7 +107,7 @@ export const usePermissions = (): UserPermissions => {
   }, []);
 
 
-  return { role, permissions, loading };
+  return { role, permissions, loading, isAdmin: role === 'admin' };
 };
 
 // Helper to check if user has access to a feature
