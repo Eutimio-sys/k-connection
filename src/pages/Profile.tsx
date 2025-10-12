@@ -111,12 +111,6 @@ const Profile = () => {
       } else {
         setProfile(data);
         setNickname(data.nickname || "");
-        // Fetch roles of current user
-        const { data: roleRows } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id);
-        setRoles((roleRows || []).map((r: any) => r.role));
       }
 
       // Fetch leave balance

@@ -37,26 +37,24 @@ import { Badge } from "@/components/ui/badge";
 
 
 const menuItems = [
-  { title: "หน้าแรก", url: "/", icon: Home, featureCode: null },
-  { title: "แดชบอร์ด", url: "/dashboard", icon: LayoutDashboard, featureCode: "dashboard" },
-  { title: "งานของฉัน", url: "/mywork", icon: CheckCircle, featureCode: "mywork" },
-  { title: "เช็คอิน/เอาท์", url: "/attendance", icon: Clock, featureCode: "attendance" },
-  { title: "แชทรวม", url: "/chat", icon: MessageCircle, featureCode: "chat" },
-  { title: "โครงการ", url: "/projects", icon: FolderKanban, featureCode: "projects" },
-  { title: "อนุมัติรายการ", url: "/approvals", icon: CheckCircle, featureCode: "approvals" },
-  { title: "บัญชีวัสดุ", url: "/accounting", icon: FileText, featureCode: "accounting" },
-  { title: "บัญชีค่าแรง", url: "/labor-accounting", icon: Wallet, featureCode: "labor-accounting" },
-  { title: "บัญชีเงินเดือน", url: "/payroll", icon: Wallet, featureCode: "payroll" },
-  { title: "รายการโอนเงิน", url: "/daily-payments", icon: Wallet, featureCode: "daily-payments" },
-  { title: "ติดตามเอกสารภาษี", url: "/tax-documents", icon: Receipt, featureCode: "tax-documents" },
-  { title: "วางแผนภาษี", url: "/tax-planning", icon: TrendingUp, featureCode: "tax-planning" },
-  { title: "ระบบลา", url: "/leave", icon: Calendar, featureCode: "leave" },
-  
-  
-  { title: "จัดการพนักงาน", url: "/hr-management", icon: UserCog, featureCode: "hr-management" },
-  { title: "จัดการคนงานต่างด้าว", url: "/foreign-workers", icon: Globe, featureCode: "foreign-workers" },
-  { title: "โปรไฟล์", url: "/profile", icon: User, featureCode: "profile" },
-  { title: "ตั้งค่า", url: "/settings", icon: Settings, requiredRoles: ["admin"] },
+  { title: "หน้าแรก", url: "/", icon: Home },
+  { title: "แดชบอร์ด", url: "/dashboard", icon: LayoutDashboard },
+  { title: "งานของฉัน", url: "/mywork", icon: CheckCircle },
+  { title: "เช็คอิน/เอาท์", url: "/attendance", icon: Clock },
+  { title: "แชทรวม", url: "/chat", icon: MessageCircle },
+  { title: "โครงการ", url: "/projects", icon: FolderKanban },
+  { title: "อนุมัติรายการ", url: "/approvals", icon: CheckCircle },
+  { title: "บัญชีวัสดุ", url: "/accounting", icon: FileText },
+  { title: "บัญชีค่าแรง", url: "/labor-accounting", icon: Wallet },
+  { title: "บัญชีเงินเดือน", url: "/payroll", icon: Wallet },
+  { title: "รายการโอนเงิน", url: "/daily-payments", icon: Wallet },
+  { title: "ติดตามเอกสารภาษี", url: "/tax-documents", icon: Receipt },
+  { title: "วางแผนภาษี", url: "/tax-planning", icon: TrendingUp },
+  { title: "ระบบลา", url: "/leave", icon: Calendar },
+  { title: "จัดการพนักงาน", url: "/hr-management", icon: UserCog },
+  { title: "จัดการคนงานต่างด้าว", url: "/foreign-workers", icon: Globe },
+  { title: "โปรไฟล์", url: "/profile", icon: User },
+  { title: "ตั้งค่า", url: "/settings", icon: Settings },
 ];
 
 export function AppSidebar() {

@@ -26,13 +26,7 @@ const Attendance = () => {
     const { data: { user } } = await supabase.auth.getUser();
     
     if (user) {
-      const { data: userRoles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id);
-      
-      const primaryRole = userRoles?.find(r => r.role === "admin")?.role || userRoles?.[0]?.role || "worker";
-      setUserRole(primaryRole);
+      // Skip role checks - everyone can view all records
 
       // Fetch active projects (not completed)
       const { data: projectsData } = await supabase
@@ -68,10 +62,6 @@ const Attendance = () => {
         .order("check_in_time", { ascending: false })
         .limit(30);
 
-      // Only show own attendance for workers
-      if (primaryRole === 'worker') {
-        query.eq("user_id", user.id);
-      }
 
       const { data, error } = await query;
 
@@ -270,7 +260,7 @@ const Attendance = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>วันที่</TableHead>
-                  {userRole !== 'worker' && <TableHead>พนักงาน</TableHead>}
+                  <TableHead>พนักงาน</TableHead>
                   <TableHead>สถานที่ทำงาน</TableHead>
                   <TableHead>เช็คอิน</TableHead>
                   <TableHead>เช็คเอาท์</TableHead>
@@ -284,16 +274,14 @@ const Attendance = () => {
                     <TableCell className="font-medium">
                       {new Date(record.work_date).toLocaleDateString("th-TH")}
                     </TableCell>
-                    {userRole !== 'worker' && (
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{record.user?.full_name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {record.user?.position} • {record.user?.department}
-                          </p>
-                        </div>
-                      </TableCell>
-                    )}
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{record.user?.full_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {record.user?.position} • {record.user?.department}
+                        </p>
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <MapPin size={14} className="text-muted-foreground" />

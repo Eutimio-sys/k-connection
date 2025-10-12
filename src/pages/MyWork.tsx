@@ -337,23 +337,7 @@ export default function MyWork() {
     }
   };
 
-  const [canAssignToOthers, setCanAssignToOthers] = useState(false);
-
-  useEffect(() => {
-    const checkCanAssign = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: userRoles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id);
-        
-        const hasAdminOrManager = userRoles?.some(r => r.role === 'admin' || r.role === 'manager');
-        setCanAssignToOthers(!!hasAdminOrManager);
-      }
-    };
-    checkCanAssign();
-  }, []);
+  const [canAssignToOthers, setCanAssignToOthers] = useState(true);
 
   // Custom day renderer for calendar
   const renderDayContent = (date: Date) => {

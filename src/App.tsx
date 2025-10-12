@@ -29,9 +29,6 @@ import Chat from "./pages/Chat";
 
 import NotFound from "./pages/NotFound";
 
-import UserRoles from "./pages/admin/UserRoles";
-import FeatureMatrix from "./pages/admin/FeatureMatrix";
-import AdminProjectAccess from "./pages/admin/ProjectAccess";
 import Expenses from "./pages/Accounting/Expenses";
 
 const queryClient = new QueryClient();
@@ -69,9 +66,6 @@ const App = () => (
             <Route path="/chat" element={<Chat />} />
             <Route path="/settings" element={<Settings />} />
             
-            <Route path="/admin/user-roles" element={<UserRoles />} />
-            <Route path="/admin/feature-matrix" element={<FeatureMatrix />} />
-            <Route path="/admin/project-access" element={<AdminProjectAccess />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

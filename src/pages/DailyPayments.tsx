@@ -66,12 +66,7 @@ const DailyPayments = () => {
 
   const fetchData = async () => {
     setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data: userRoles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
-      const primaryRole = userRoles?.find(r => r.role === "admin")?.role || userRoles?.[0]?.role || "worker";
-      setUserRole(primaryRole);
-    }
+    // Skip role checks - allow manage actions for everyone
 
     let query = supabase
       .from("daily_payments")
@@ -185,7 +180,7 @@ const DailyPayments = () => {
   const totalPaid = payments.filter(p => p.status === "paid").reduce((sum, p) => sum + p.amount, 0);
   const totalAmount = payments.filter(p => p.status !== "cancelled").reduce((sum, p) => sum + p.amount, 0);
 
-  const canManage = userRole === "admin" || userRole === "manager" || userRole === "accountant";
+  const canManage = true;
 
   return (
     <div className="p-8 space-y-6">
