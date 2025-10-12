@@ -42,10 +42,8 @@ export default function TaxDocuments() {
   }, []);
 
   useEffect(() => {
-    if (currentUserId) {
-      fetchDocuments();
-    }
-  }, [currentUserId, selectedCompany, startDate, endDate, documentStatus]);
+    fetchDocuments();
+  }, [selectedCompany, startDate, endDate, documentStatus]);
 
   const fetchCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
