@@ -46,19 +46,27 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") {
-        navigate("/auth");
         setBootstrapped(false);
-      } else if (session) {
-        setUserEmail(session.user.email || "");
-        try {
-          await supabase.rpc('ensure_profile_for_current_user');
-        } catch (e) {
-          console.error('Bootstrap RPC error', e);
-        } finally {
-          setBootstrapped(true);
-        }
+        navigate("/auth");
+        return;
+      }
+
+      // Update basic UI state synchronously
+      setUserEmail(session?.user?.email || "");
+
+      // Defer any Supabase calls to avoid auth deadlocks
+      if (session?.user) {
+        setTimeout(async () => {
+          try {
+            await supabase.rpc('ensure_profile_for_current_user');
+          } catch (e) {
+            console.error('Bootstrap RPC error', e);
+          } finally {
+            setBootstrapped(true);
+          }
+        }, 0);
       }
     });
 
@@ -66,9 +74,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }, [navigate]);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Sign out error', error);
+    }
     toast.success("ออกจากระบบสำเร็จ");
-    navigate("/auth");
+    // Force hard navigation to clear any lingering state
+    window.location.href = "/auth";
   };
 
   return (
