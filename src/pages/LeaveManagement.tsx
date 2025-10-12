@@ -377,35 +377,33 @@ const LeaveManagement = () => {
                     <TableCell className="max-w-xs truncate">{request.reason}</TableCell>
                     <TableCell>{getStatusBadge(request.status)}</TableCell>
                     <TableCell className="text-right">
-                      <TableCell className="text-right">
-                        {request.status === 'pending' && (
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => handleApprove(request.id, 'approved')}
-                              className="gap-1"
-                            >
-                              <CheckCircle size={14} />
-                              อนุมัติ
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleApprove(request.id, 'rejected')}
-                              className="gap-1"
-                            >
-                              <XCircle size={14} />
-                              ปฏิเสธ
-                            </Button>
-                          </div>
-                        )}
-                        {request.status !== 'pending' && request.approver && (
-                          <p className="text-xs text-muted-foreground">
-                            โดย {request.approver.full_name}
-                          </p>
-                        )}
-                      </TableCell>
-                    )}
+                      {request.status === 'pending' && (
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleApprove(request.id, 'approved')}
+                            className="gap-1"
+                          >
+                            <CheckCircle size={14} />
+                            อนุมัติ
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleApprove(request.id, 'rejected')}
+                            className="gap-1"
+                          >
+                            <XCircle size={14} />
+                            ปฏิเสธ
+                          </Button>
+                        </div>
+                      )}
+                      {request.status !== 'pending' && request.approver && (
+                        <p className="text-xs text-muted-foreground">
+                          โดย {request.approver.full_name}
+                        </p>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

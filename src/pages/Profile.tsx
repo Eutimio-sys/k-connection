@@ -434,7 +434,7 @@ const Profile = () => {
               <div className="flex items-center gap-2 text-sm">
                 <Briefcase size={16} className="text-muted-foreground" />
                 <span className="text-muted-foreground">บทบาท:</span>
-                <span className="font-medium">{roles.length ? roles.map((r) => r === 'admin' ? 'ผู้ดูแลระบบ' : r === 'manager' ? 'ผู้จัดการ' : r === 'accountant' ? 'บัญชี' : r === 'purchaser' ? 'จัดซื้อ' : 'พนักงาน').join(', ') : 'พนักงาน'}</span>
+                <span className="font-medium">พนักงาน</span>
               </div>
               {profile?.hire_date && (
                 <div className="flex items-center gap-2 text-sm">
