@@ -26,9 +26,9 @@ import TaxPlanning from "./pages/TaxPlanning";
 import TaxDocuments from "./pages/TaxDocuments";
 import MyWork from "./pages/MyWork";
 import Chat from "./pages/Chat";
-import VisibilityManager from "./pages/VisibilityManager";
+
 import NotFound from "./pages/NotFound";
-import ProjectAccessManagement from "./pages/ProjectAccessManagement";
+
 import UserRoles from "./pages/admin/UserRoles";
 import FeatureMatrix from "./pages/admin/FeatureMatrix";
 import AdminProjectAccess from "./pages/admin/ProjectAccess";
@@ -56,7 +56,7 @@ const App = () => (
             <Route path="/labor-accounting" element={<LaborAccounting />} />
             <Route path="/daily-payments" element={<DailyPayments />} />
             <Route path="/employees/:id" element={<EmployeeDetail />} />
-            <Route path="/visibility" element={<VisibilityManager />} />
+            
             <Route path="/hr-management" element={<HRManagement />} />
             <Route path="/payroll" element={<Payroll />} />
             <Route path="/foreign-workers" element={<ForeignWorkers />} />
@@ -68,7 +68,7 @@ const App = () => (
             <Route path="/mywork" element={<MyWork />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/project-access" element={<ProjectAccessManagement />} />
+            
             <Route path="/admin/user-roles" element={<UserRoles />} />
             <Route path="/admin/feature-matrix" element={<FeatureMatrix />} />
             <Route path="/admin/project-access" element={<AdminProjectAccess />} />

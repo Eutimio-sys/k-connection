@@ -51,8 +51,8 @@ const menuItems = [
   { title: "ติดตามเอกสารภาษี", url: "/tax-documents", icon: Receipt, featureCode: "tax-documents" },
   { title: "วางแผนภาษี", url: "/tax-planning", icon: TrendingUp, featureCode: "tax-planning" },
   { title: "ระบบลา", url: "/leave", icon: Calendar, featureCode: "leave" },
-  { title: "จัดการสิทธิ์การมองเห็น", url: "/visibility", icon: Shield, requiredRoles: ["admin"] },
-  { title: "จัดการสิทธิ์โครงการ", url: "/project-access", icon: UserCheck, requiredRoles: ["admin"] },
+  
+  
   { title: "จัดการพนักงาน", url: "/hr-management", icon: UserCog, featureCode: "hr-management" },
   { title: "จัดการคนงานต่างด้าว", url: "/foreign-workers", icon: Globe, featureCode: "foreign-workers" },
   { title: "โปรไฟล์", url: "/profile", icon: User, featureCode: "profile" },
