@@ -29,7 +29,7 @@ const Profile = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [nickname, setNickname] = useState("");
   const [savingNickname, setSavingNickname] = useState(false);
-  const [roles, setRoles] = useState<string[]>([]);
+  
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [salaryHistoryOpen, setSalaryHistoryOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState("");
@@ -343,7 +343,7 @@ const Profile = () => {
             </div>
             <div className="text-center">
               <p className="font-semibold text-lg">{profile?.full_name}</p>
-              <p className="text-sm text-muted-foreground">{roles.length ? roles.map((r) => r === 'admin' ? 'ผู้ดูแลระบบ' : r === 'manager' ? 'ผู้จัดการ' : r === 'accountant' ? 'บัญชี' : r === 'purchaser' ? 'จัดซื้อ' : 'พนักงาน').join(', ') : 'พนักงาน'}</p>
+              <p className="text-sm text-muted-foreground">พนักงาน</p>
             </div>
           </CardContent>
         </Card>

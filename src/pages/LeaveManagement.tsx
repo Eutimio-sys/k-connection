@@ -17,7 +17,7 @@ const LeaveManagement = () => {
   const [balance, setBalance] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [userRole, setUserRole] = useState<string>("");
+  
   const [formData, setFormData] = useState({
     leave_type: "vacation",
     start_date: "",
@@ -349,36 +349,34 @@ const LeaveManagement = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  {userRole !== 'worker' && <TableHead>พนักงาน</TableHead>}
+                  <TableHead>พนักงาน</TableHead>
                   <TableHead>ประเภท</TableHead>
                   <TableHead>วันที่เริ่มต้น</TableHead>
                   <TableHead>วันที่สิ้นสุด</TableHead>
                   <TableHead>จำนวนวัน</TableHead>
                   <TableHead>เหตุผล</TableHead>
                   <TableHead>สถานะ</TableHead>
-                  {(userRole === 'admin' || userRole === 'manager') && <TableHead className="text-right">จัดการ</TableHead>}
+                  <TableHead className="text-right">จัดการ</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {requests.map((request) => (
                   <TableRow key={request.id}>
-                    {userRole !== 'worker' && (
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{request.user?.full_name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {request.user?.position}
-                          </p>
-                        </div>
-                      </TableCell>
-                    )}
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{request.user?.full_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {request.user?.position}
+                        </p>
+                      </div>
+                    </TableCell>
                     <TableCell>{getLeaveTypeLabel(request.leave_type)}</TableCell>
                     <TableCell>{new Date(request.start_date).toLocaleDateString("th-TH")}</TableCell>
                     <TableCell>{new Date(request.end_date).toLocaleDateString("th-TH")}</TableCell>
                     <TableCell className="font-medium">{request.days_count} วัน</TableCell>
                     <TableCell className="max-w-xs truncate">{request.reason}</TableCell>
                     <TableCell>{getStatusBadge(request.status)}</TableCell>
-                    {(userRole === 'admin' || userRole === 'manager') && (
+                    <TableCell className="text-right">
                       <TableCell className="text-right">
                         {request.status === 'pending' && (
                           <div className="flex items-center justify-end gap-2">

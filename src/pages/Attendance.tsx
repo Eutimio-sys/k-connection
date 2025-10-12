@@ -13,7 +13,7 @@ const Attendance = () => {
   const [attendance, setAttendance] = useState<any[]>([]);
   const [todayAttendanceList, setTodayAttendanceList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState<string>("");
+  
   const [projects, setProjects] = useState<any[]>([]);
   const [selectedProject, setSelectedProject] = useState<string>("");
 
