@@ -129,7 +129,7 @@ const EmployeeDetail = () => {
           <h1 className="text-4xl font-bold mb-2">{employee.full_name}</h1>
           <p className="text-muted-foreground text-lg">{employee.position || "ไม่ระบุตำแหน่ง"} • {employee.department || "ไม่ระบุแผนก"}</p>
         </div>
-        <Badge variant="default">{employee.role === 'admin' ? 'ผู้ดูแลระบบ' : employee.role === 'manager' ? 'ผู้จัดการ' : employee.role === 'accountant' ? 'บัญชี' : employee.role === 'purchaser' ? 'จัดซื้อ' : 'พนักงาน'}</Badge>
+        <Badge variant="default">พนักงาน</Badge>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

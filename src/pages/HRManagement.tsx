@@ -60,8 +60,6 @@ const HRManagement = () => {
 
       if (employeesError) throw employeesError;
 
-      // Skip fetching roles - show all data without role-based access
-      const userRolesMap: Record<string, string> = {};
 
       // Fetch companies
       const { data: companiesData, error: companiesError } = await supabase
@@ -94,7 +92,6 @@ const HRManagement = () => {
       const processedEmployees = (employeesData || []).map((emp: any) => ({
         ...emp,
         current_salary: latestSalaryByUser[emp.id] ?? null,
-        role: userRolesMap[emp.id] || "worker", // Add role from user_roles table
       }));
 
       setEmployees(processedEmployees);
@@ -198,17 +195,6 @@ const HRManagement = () => {
     return <Badge variant={c.variant}>{c.label}</Badge>;
   };
 
-  const getRoleBadge = (role: string) => {
-    const roles: Record<string, { label: string; className: string }> = {
-      admin: { label: "ผู้ดูแลระบบ", className: "bg-purple-100 text-purple-800" },
-      manager: { label: "ผู้จัดการ", className: "bg-blue-100 text-blue-800" },
-      accountant: { label: "บัญชี", className: "bg-green-100 text-green-800" },
-      purchaser: { label: "จัดซื้อ", className: "bg-orange-100 text-orange-800" },
-      worker: { label: "พนักงาน", className: "bg-gray-100 text-gray-800" },
-    };
-    const r = roles[role] || roles.worker;
-    return <span className={`px-2 py-1 rounded-full text-xs ${r.className}`}>{r.label}</span>;
-  };
 
   const formatCurrency = (amount: number | null) => {
     if (!amount) return "-";
@@ -324,7 +310,7 @@ const HRManagement = () => {
                     <TableHead>ตำแหน่ง</TableHead>
                     <TableHead>แผนก</TableHead>
                     <TableHead>เบอร์โทร</TableHead>
-                    <TableHead>บทบาท</TableHead>
+                    
                     <TableHead className="text-right">จัดการ</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -336,7 +322,7 @@ const HRManagement = () => {
                       <TableCell>{emp.position || "-"}</TableCell>
                       <TableCell>{emp.department || "-"}</TableCell>
                       <TableCell>{emp.phone || "-"}</TableCell>
-                      <TableCell>{getRoleBadge(emp.role)}</TableCell>
+                      
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button

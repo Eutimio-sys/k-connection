@@ -25,7 +25,7 @@ const DailyPayments = () => {
   const [companies, setCompanies] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [showFilters, setShowFilters] = useState(false);
-  const [userRole, setUserRole] = useState<string>("");
+  
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
