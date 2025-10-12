@@ -5,8 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import Auth from "./pages/Auth";
 import { DashboardLayout } from "./components/DashboardLayout";
-import { ProtectedRoute } from "./components/ProtectedRoute";
-import { FeatureVisibilityProvider } from "./contexts/FeatureVisibilityContext";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
@@ -44,41 +42,39 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <FeatureVisibilityProvider>
           <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route element={<DashboardLayout><Outlet /></DashboardLayout>}>
-            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute featureCode="dashboard"><Dashboard /></ProtectedRoute>} />
-            <Route path="/projects" element={<ProtectedRoute featureCode="projects"><Projects /></ProtectedRoute>} />
-            <Route path="/projects/:id" element={<ProtectedRoute featureCode="projects"><ProjectDetail /></ProtectedRoute>} />
-            <Route path="/kanban" element={<ProtectedRoute featureCode="kanban"><Kanban /></ProtectedRoute>} />
-            <Route path="/approvals" element={<ProtectedRoute featureCode="approvals"><Approvals /></ProtectedRoute>} />
-            <Route path="/accounting" element={<ProtectedRoute featureCode="accounting"><Accounting /></ProtectedRoute>} />
-            <Route path="/expenses" element={<ProtectedRoute featureCode="accounting"><Expenses /></ProtectedRoute>} />
-            <Route path="/labor-accounting" element={<ProtectedRoute featureCode="labor-accounting"><LaborAccounting /></ProtectedRoute>} />
-            <Route path="/daily-payments" element={<ProtectedRoute featureCode="daily-payments"><DailyPayments /></ProtectedRoute>} />
-            <Route path="/employees/:id" element={<ProtectedRoute featureCode="hr-management"><EmployeeDetail /></ProtectedRoute>} />
-            <Route path="/visibility" element={<ProtectedRoute requiredRoles={["admin"]}><VisibilityManager /></ProtectedRoute>} />
-            <Route path="/hr-management" element={<ProtectedRoute featureCode="hr-management"><HRManagement /></ProtectedRoute>} />
-            <Route path="/payroll" element={<ProtectedRoute featureCode="payroll"><Payroll /></ProtectedRoute>} />
-            <Route path="/foreign-workers" element={<ProtectedRoute featureCode="foreign-workers"><ForeignWorkers /></ProtectedRoute>} />
-            <Route path="/tax-planning" element={<ProtectedRoute featureCode="tax-planning"><TaxPlanning /></ProtectedRoute>} />
-            <Route path="/tax-documents" element={<ProtectedRoute featureCode="tax-documents"><TaxDocuments /></ProtectedRoute>} />
-            <Route path="/profile" element={<ProtectedRoute featureCode="profile"><Profile /></ProtectedRoute>} />
-            <Route path="/attendance" element={<ProtectedRoute featureCode="attendance"><Attendance /></ProtectedRoute>} />
-            <Route path="/leave" element={<ProtectedRoute featureCode="leave"><LeaveManagement /></ProtectedRoute>} />
-            <Route path="/mywork" element={<ProtectedRoute featureCode="mywork"><MyWork /></ProtectedRoute>} />
-            <Route path="/chat" element={<ProtectedRoute featureCode="chat"><Chat /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute requiredRoles={["admin"]}><Settings /></ProtectedRoute>} />
-            <Route path="/project-access" element={<ProtectedRoute requiredRoles={["admin"]}><ProjectAccessManagement /></ProtectedRoute>} />
-            <Route path="/admin/user-roles" element={<ProtectedRoute requiredRoles={["admin"]}><UserRoles /></ProtectedRoute>} />
-            <Route path="/admin/feature-matrix" element={<ProtectedRoute requiredRoles={["admin"]}><FeatureMatrix /></ProtectedRoute>} />
-            <Route path="/admin/project-access" element={<ProtectedRoute requiredRoles={["admin"]}><AdminProjectAccess /></ProtectedRoute>} />
+            <Route path="/" element={<Index />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/projects/:id" element={<ProjectDetail />} />
+            <Route path="/kanban" element={<Kanban />} />
+            <Route path="/approvals" element={<Approvals />} />
+            <Route path="/accounting" element={<Accounting />} />
+            <Route path="/expenses" element={<Expenses />} />
+            <Route path="/labor-accounting" element={<LaborAccounting />} />
+            <Route path="/daily-payments" element={<DailyPayments />} />
+            <Route path="/employees/:id" element={<EmployeeDetail />} />
+            <Route path="/visibility" element={<VisibilityManager />} />
+            <Route path="/hr-management" element={<HRManagement />} />
+            <Route path="/payroll" element={<Payroll />} />
+            <Route path="/foreign-workers" element={<ForeignWorkers />} />
+            <Route path="/tax-planning" element={<TaxPlanning />} />
+            <Route path="/tax-documents" element={<TaxDocuments />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/attendance" element={<Attendance />} />
+            <Route path="/leave" element={<LeaveManagement />} />
+            <Route path="/mywork" element={<MyWork />} />
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/project-access" element={<ProjectAccessManagement />} />
+            <Route path="/admin/user-roles" element={<UserRoles />} />
+            <Route path="/admin/feature-matrix" element={<FeatureMatrix />} />
+            <Route path="/admin/project-access" element={<AdminProjectAccess />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
-        </FeatureVisibilityProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

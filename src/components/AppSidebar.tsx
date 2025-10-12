@@ -22,8 +22,6 @@ import {
 import { NavLink } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useFeatureVisibility } from "@/contexts/FeatureVisibilityContext";
-import { usePermissions } from "@/hooks/usePermissions";
 import {
   Sidebar,
   SidebarContent,
@@ -65,28 +63,10 @@ export function AppSidebar() {
   const [pendingCount, setPendingCount] = useState(0);
   const [pendingDocCount, setPendingDocCount] = useState(0);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
-  const { visibleFeatures, isAdmin } = useFeatureVisibility();
-  const { hasPermission, loading: permLoading } = usePermissions();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  // Filter menu items based on RBAC permissions
-  const visibleMenuItems = menuItems.filter((item) => {
-    if (permLoading) return false;
-    if (isAdmin) return true;
-    
-    // Check role-based access
-    if ('requiredRoles' in item && item.requiredRoles) {
-      return false; // Non-admin can't see admin-only items
-    }
-    
-    // Check feature-based access
-    if ('featureCode' in item && item.featureCode) {
-      return hasPermission(item.featureCode);
-    }
-    
-    // Allow home and profile for everyone
-    return item.url === '/' || item.url === '/profile';
-  });
+  // Show all menu items - no permission filtering
+  const visibleMenuItems = menuItems;
 
   useEffect(() => {
     // Get current user
