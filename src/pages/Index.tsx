@@ -1,7 +1,5 @@
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useFeatureVisibility } from "@/contexts/FeatureVisibilityContext";
-import { Loader2 } from "lucide-react";
 import {
   LayoutDashboard,
   FolderKanban,
@@ -31,7 +29,6 @@ interface MenuItem {
 
 const Index = () => {
   const navigate = useNavigate();
-  const { visibleFeatures, isAdmin, loading } = useFeatureVisibility();
 
   const allMenuItems: MenuItem[] = [
     {
@@ -156,21 +153,8 @@ const Index = () => {
     },
   ];
 
-  const visibleMenuItems = allMenuItems.filter((item) => {
-    if (isAdmin) return true;
-    
-    // Extract feature code from URL
-    const featureCode = item.url.substring(1); // Remove leading slash
-    return visibleFeatures.has(featureCode) || visibleFeatures.has('all');
-  });
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
+  // Show all menu items - no permission filtering
+  const visibleMenuItems = allMenuItems;
 
   return (
     <div className="min-h-screen bg-gradient-page p-6 md:p-8 space-y-8">
