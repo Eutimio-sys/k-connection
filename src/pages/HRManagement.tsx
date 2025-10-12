@@ -15,11 +15,9 @@ import { useNavigate } from "react-router-dom";
 import { EmployeeEditDialog } from "@/components/EmployeeEditDialog";
 import AddEmployeeDialog from "@/components/AddEmployeeDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { useFeatureVisibility } from "@/contexts/FeatureVisibilityContext";
 
 const HRManagement = () => {
   const navigate = useNavigate();
-  const { isAdmin } = useFeatureVisibility();
   const [employees, setEmployees] = useState<any[]>([]);
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
   const [companies, setCompanies] = useState<any[]>([]);
@@ -393,20 +391,6 @@ const HRManagement = () => {
                             <Trash2 size={14} />
                             ปิดใช้งาน
                           </Button>
-                          {isAdmin && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setEmployeeToPermanentDelete(emp);
-                                setPermanentDeleteDialogOpen(true);
-                              }}
-                              className="gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <UserX size={14} />
-                              ลบถาวร
-                            </Button>
-                          )}
                         </div>
                       </TableCell>
                     </TableRow>
