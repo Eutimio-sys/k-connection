@@ -370,7 +370,7 @@ const Approvals = () => {
 
         const { error: balanceError } = await supabase
           .from("leave_balances")
-          .update({ [updateField]: newUsed })
+          .update({ [updateField]: newUsed } as any)
           .eq("user_id", leaveRequest.user_id)
           .eq("year", currentYear);
 

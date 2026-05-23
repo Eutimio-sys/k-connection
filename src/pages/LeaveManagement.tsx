@@ -175,7 +175,7 @@ const LeaveManagement = () => {
         if (field) {
           const { error: balErr } = await supabase
             .from("leave_balances")
-            .update({ [field]: Number(balance[field] || 0) + Number(leaveRequest.days_count) })
+            .update({ [field]: Number(balance[field] || 0) + Number(leaveRequest.days_count) } as any)
             .eq("user_id", leaveRequest.user_id)
             .eq("year", year);
 
