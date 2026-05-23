@@ -2013,14 +2013,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      count_pending_approvals: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      ensure_profile_for_current_user: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      count_pending_approvals: { Args: never; Returns: number }
+      ensure_profile_for_current_user: { Args: never; Returns: undefined }
       generate_invoice_number: {
         Args: {
           p_company_id: string
@@ -2030,18 +2024,9 @@ export type Database = {
         }
         Returns: string
       }
-      grant_admin_to_current_user: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      has_role: {
-        Args: { _role: string; _user_id: string }
-        Returns: boolean
-      }
-      is_admin_or_manager: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
+      grant_admin_to_current_user: { Args: never; Returns: undefined }
+      has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
+      is_admin_or_manager: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       category_type: "material" | "labor" | "labor_contractor" | "other"
