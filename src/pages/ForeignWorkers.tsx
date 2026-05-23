@@ -311,7 +311,7 @@ const ForeignWorkers = () => {
       const columnName = `${docType}_url`;
       const { error: updateError } = await supabase
         .from('foreign_workers')
-        .update({ [columnName]: urlData.publicUrl })
+        .update({ [columnName]: urlData.publicUrl } as any)
         .eq('id', workerId);
 
       if (updateError) throw updateError;
